@@ -3,10 +3,10 @@
 
 import { useState } from 'react';
 import AppLayout from '@/components/layout/app-layout';
-import JourneyForm from '@/components/journeys/journey-form';
 import RecentJourneys from '@/components/journeys/recent-journeys';
 import TemplateManager from '@/components/templates/template-manager';
 import type { JourneyTemplate } from '@/types';
+import JourneyBuilder from '@/components/journeys/journey-builder';
 
 export type ActiveView = 'new-journey' | 'my-journeys' | 'templates';
 
@@ -19,6 +19,11 @@ export default function Home() {
     setActiveView('new-journey');
   };
 
+  const handleNewJourney = () => {
+    setJourneyToEdit(null); // Clear any template data
+    setActiveView('new-journey');
+  }
+
   const renderContent = () => {
     switch (activeView) {
       case 'my-journeys':
@@ -27,13 +32,14 @@ export default function Home() {
         return <TemplateManager onLoadTemplate={handleLoadTemplate} />;
       case 'new-journey':
       default:
-        return <JourneyForm key={journeyToEdit?.id || 'new'} initialData={journeyToEdit} />;
+        // Using key to force re-mount when a template is loaded or cleared
+        return <JourneyBuilder key={journeyToEdit?.id || 'new'} initialData={journeyToEdit} onNewJourneyClick={handleNewJourney}/>;
     }
   };
 
   return (
       <AppLayout activeView={activeView} setActiveView={setActiveView}>
-        <div className="flex flex-col flex-1 space-y-4 p-4 sm:p-8 pt-6">
+        <div className="flex flex-col flex-1 p-4 sm:p-8 pt-6">
           {renderContent()}
         </div>
       </AppLayout>
