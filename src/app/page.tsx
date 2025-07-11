@@ -32,12 +32,10 @@ export default function Home() {
   };
 
   return (
-    <main>
       <AppLayout activeView={activeView} setActiveView={setActiveView}>
-        <div className="flex-1 space-y-4 p-4 sm:p-8 pt-6">
+        <div className="flex flex-col flex-1 space-y-4 p-4 sm:p-8 pt-6">
           {renderContent()}
         </div>
       </AppLayout>
-    </main>
   );
 }
