@@ -1,0 +1,108 @@
+
+'use client';
+
+import { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import useLocalStorage from '@/hooks/use-local-storage';
+import type { JourneyTemplate } from '@/types';
+import { FileText, MapPin, Users, Trash2, Plus, Bot } from 'lucide-react';
+import AiTemplateModal from './ai-template-modal';
+import { useToast } from '@/hooks/use-toast';
+
+interface TemplateManagerProps {
+  onLoadTemplate: (template: JourneyTemplate) => void;
+}
+
+export default function TemplateManager({ onLoadTemplate }: TemplateManagerProps) {
+  const [templates, setTemplates] = useLocalStorage<JourneyTemplate[]>('journey-templates', []);
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const { toast } = useToast();
+
+  const deleteTemplate = (id: string) => {
+    setTemplates(templates.filter((t) => t.id !== id));
+    toast({
+        title: "Template Deleted",
+        description: "The template has been removed.",
+        variant: 'destructive'
+    });
+  };
+
+  const handleAiTemplateCreate = (templateData: Omit<JourneyTemplate, 'id' | 'name'>) => {
+    const newTemplate = {
+        id: new Date().toISOString(),
+        name: prompt("Enter a name for this new AI-generated template:") || "AI Template",
+        ...templateData,
+    };
+    setTemplates([...templates, newTemplate]);
+  }
+
+  return (
+    <>
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight font-headline">Journey Templates</h2>
+          <p className="text-muted-foreground">Manage your saved journeys for quick booking.</p>
+        </div>
+        <div className="flex gap-2">
+            <Button onClick={() => setIsAiModalOpen(true)}>
+                <Bot className="mr-2 h-4 w-4" /> Create with AI
+            </Button>
+        </div>
+      </div>
+      
+      {templates.length > 0 ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {templates.map((template) => (
+            <Card key={template.id}>
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                    <div>
+                        <CardTitle className="font-headline flex items-center gap-2">
+                            <FileText className="h-5 w-5 text-primary" /> {template.name}
+                        </CardTitle>
+                        <CardDescription>A saved journey configuration.</CardDescription>
+                    </div>
+                    <Button variant="ghost" size="icon" onClick={() => deleteTemplate(template.id)}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                  <span><strong>From:</strong> {template.from}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                  <span><strong>To:</strong> {template.to}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <span><strong>Passengers:</strong> {template.passengers}</span>
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button className="w-full" onClick={() => onLoadTemplate(template)}>Load Template</Button>
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-16 border-2 border-dashed rounded-lg">
+          <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
+          <h3 className="mt-4 text-lg font-medium">No Templates Found</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Save a journey as a template to get started.
+          </p>
+        </div>
+      )}
+
+      <AiTemplateModal 
+        isOpen={isAiModalOpen} 
+        onOpenChange={setIsAiModalOpen}
+        onTemplateCreate={handleAiTemplateCreate}
+      />
+    </>
+  );
+}
