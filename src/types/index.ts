@@ -19,7 +19,6 @@ export interface Booking {
 
 export interface Journey {
   id: string;
-  // dateTime is removed from here
   bookings: Booking[];
   status: 'Scheduled' | 'Completed' | 'Cancelled';
 }
@@ -50,7 +49,6 @@ const BookingSchema = z.object({
 });
 
 export const JourneyInputSchema = z.object({
-  // dateTime is removed from here
   bookings: z.array(BookingSchema),
 });
 export type JourneyInput = z.infer<typeof JourneyInputSchema>;
@@ -61,5 +59,3 @@ export const JourneyOutputSchema = z.object({
   message: z.string(),
 });
 export type JourneyOutput = z.infer<typeof JourneyOutputSchema>;
-
-    
