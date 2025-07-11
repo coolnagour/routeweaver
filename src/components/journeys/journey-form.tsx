@@ -17,12 +17,10 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { CalendarIcon, MapPin, Users, PlusCircle, MinusCircle, Save, X } from 'lucide-react';
+import { CalendarIcon, MapPin, Users, PlusCircle, MinusCircle, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import useLocalStorage from '@/hooks/use-local-storage';
-import type { SavedBooking, Booking } from '@/types';
-import { useToast } from '@/hooks/use-toast';
+import type { Booking } from '@/types';
 import { Separator } from '@/components/ui/separator';
 import { useEffect } from 'react';
 
@@ -49,8 +47,6 @@ interface JourneyFormProps {
 }
 
 export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFormProps) {
-  const { toast } = useToast();
-  const [savedBookings, setSavedBookings] = useLocalStorage<SavedBooking[]>('saved-bookings', []);
 
   const form = useForm<BookingFormData>({
     resolver: zodResolver(formSchema),
@@ -83,32 +79,6 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
     onSave(values);
   }
 
-  const handleSaveToLibrary = () => {
-    const bookingData = form.getValues();
-    form.trigger().then(isValid => {
-      if(isValid) {
-        const newSavedBooking: SavedBooking = {
-          id: new Date().toISOString(),
-          date: bookingData.date,
-          passengerName: bookingData.passengerName,
-          passengers: bookingData.passengers,
-          stops: bookingData.stops.map((s: any) => ({ address: s.address, stopType: s.stopType }))
-        };
-        setSavedBookings([newSavedBooking, ...savedBookings]);
-        toast({
-          title: "Booking Saved",
-          description: `Booking for ${bookingData.passengerName} has been saved to your library.`
-        });
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Incomplete Booking",
-          description: "Please fill all required fields for this booking before saving."
-        });
-      }
-    });
-  };
-
   return (
       <Card>
         <Form {...form}>
@@ -117,9 +87,6 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
                 <div className="flex justify-between items-center">
                     <CardTitle className="font-headline text-xl">{initialData ? 'Edit Booking' : 'Add New Booking'}</CardTitle>
                     <div className="flex items-center gap-1">
-                        <Button type="button" variant="ghost" size="icon" onClick={handleSaveToLibrary} title="Save to library">
-                            <Save className="h-4 w-4" />
-                        </Button>
                         <Button type="button" variant="ghost" size="icon" onClick={onCancel} title="Cancel">
                             <X className="h-5 w-5" />
                         </Button>

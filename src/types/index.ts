@@ -23,11 +23,6 @@ export interface Journey {
   status: 'Scheduled' | 'Completed' | 'Cancelled';
 }
 
-export interface SavedBooking extends Omit<Booking, 'id' | 'date'> {
-  id: string;
-  date: string | Date; // Allow both for storage and runtime
-}
-
 export interface JourneyTemplate {
   id: string;
   name: string;

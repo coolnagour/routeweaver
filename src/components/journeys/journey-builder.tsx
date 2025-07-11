@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { useToast } from '@/hooks/use-toast';
 import useLocalStorage from '@/hooks/use-local-storage';
 import { saveJourney } from '@/ai/flows/journey-flow';
-import type { Booking, Journey, JourneyTemplate, SavedBooking, Stop } from '@/types';
+import type { Booking, Journey, JourneyTemplate, Stop } from '@/types';
 import JourneyForm from './journey-form';
 import { Book, Edit, History, List, MapPin, Package, Save, Trash2, UserPlus, Users } from 'lucide-react';
 import Image from 'next/image';
@@ -25,7 +25,6 @@ interface JourneyBuilderProps {
 export default function JourneyBuilder({ initialData, onNewJourneyClick }: JourneyBuilderProps) {
   const { toast } = useToast();
   const [journeys, setJourneys] = useLocalStorage<Journey[]>('recent-journeys', []);
-  const [savedBookings, setSavedBookings] = useLocalStorage<SavedBooking[]>('saved-bookings', []);
   const [templates, setTemplates] = useLocalStorage<JourneyTemplate[]>('journey-templates', []);
   const [templateName, setTemplateName] = useState('');
 
@@ -56,19 +55,6 @@ export default function JourneyBuilder({ initialData, onNewJourneyClick }: Journ
     });
   };
   
-  const handleAddBookingFromSaved = (booking: SavedBooking) => {
-    setBookings([...bookings, {
-      ...booking,
-      date: new Date(booking.date),
-      id: new Date().toISOString() + Math.random(),
-      stops: booking.stops.map(s => ({...s, id: new Date().toISOString() + Math.random()})),
-    }]);
-    toast({
-      title: "Booking Added",
-      description: `Booking for ${booking.passengerName} added to the current journey.`
-    });
-  };
-
   const handleSaveBooking = (bookingToSave: Booking) => {
     const existingIndex = bookings.findIndex(b => b.id === bookingToSave.id);
     if (existingIndex > -1) {
@@ -247,31 +233,7 @@ export default function JourneyBuilder({ initialData, onNewJourneyClick }: Journ
                 </div>
             </CardContent>
         </Card>
-        <Card>
-            <CardHeader>
-            <CardTitle className="font-headline text-xl flex items-center gap-2">
-                <Book /> Saved Bookings Library
-            </CardTitle>
-            <CardDescription>Add saved bookings to your journey.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2">
-            {savedBookings.length > 0 ? savedBookings.map(booking => (
-                <Card key={booking.id} className="p-3">
-                <div className="flex justify-between items-center">
-                    <div>
-                    <p className="font-semibold">{booking.passengerName}</p>
-                    <p className="text-sm text-muted-foreground">{booking.stops.length} stops</p>
-                    </div>
-                    <Button size="sm" onClick={() => handleAddBookingFromSaved(booking)}>Add to Journey</Button>
-                </div>
-                </Card>
-            )) : (
-                <p className="text-sm text-muted-foreground text-center py-4">No saved bookings yet.</p>
-            )}
-            </CardContent>
-        </Card>
       </div>
     </div>
   );
 }
-
