@@ -11,6 +11,7 @@ export interface Stop {
 
 export interface Booking {
   id: string;
+  date: Date;
   passengerName: string;
   passengers: number;
   stops: Stop[];
@@ -18,19 +19,20 @@ export interface Booking {
 
 export interface Journey {
   id: string;
-  dateTime: Date;
+  // dateTime is removed from here
   bookings: Booking[];
   status: 'Scheduled' | 'Completed' | 'Cancelled';
 }
 
-export interface SavedBooking extends Omit<Booking, 'id'> {
+export interface SavedBooking extends Omit<Booking, 'id' | 'date'> {
   id: string;
+  date: string | Date; // Allow both for storage and runtime
 }
 
 export interface JourneyTemplate {
   id: string;
   name: string;
-  bookings: Omit<Booking, 'id' | 'stops'> & { stops: Omit<Stop, 'id'>[] }[];
+  bookings: (Omit<Booking, 'id' | 'stops' | 'date'> & { date: Date | string, stops: Omit<Stop, 'id'>[] })[];
 }
 
 
@@ -41,13 +43,14 @@ const StopSchema = z.object({
 });
 
 const BookingSchema = z.object({
+  date: z.date(),
   passengerName: z.string(),
   passengers: z.number(),
   stops: z.array(StopSchema),
 });
 
 export const JourneyInputSchema = z.object({
-  dateTime: z.date(),
+  // dateTime is removed from here
   bookings: z.array(BookingSchema),
 });
 export type JourneyInput = z.infer<typeof JourneyInputSchema>;
@@ -58,3 +61,5 @@ export const JourneyOutputSchema = z.object({
   message: z.string(),
 });
 export type JourneyOutput = z.infer<typeof JourneyOutputSchema>;
+
+    

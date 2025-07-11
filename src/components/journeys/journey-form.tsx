@@ -47,13 +47,13 @@ const stopSchema = z.object({
 
 const bookingSchema = z.object({
   id: z.string().optional(),
+  date: z.date({ required_error: 'A date is required.' }),
   passengerName: z.string().min(2, { message: 'Passenger name is required.' }),
   passengers: z.coerce.number().min(1, { message: 'At least one passenger is required.' }),
   stops: z.array(stopSchema).min(1, 'At least one stop is required.'),
 });
 
 const formSchema = z.object({
-  dateTime: z.date({ required_error: 'A date and time is required.' }),
   bookings: z.array(bookingSchema).min(1, 'At least one booking is required.'),
 });
 
@@ -71,13 +71,14 @@ export default function JourneyForm({ initialData }: JourneyFormProps) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      dateTime: new Date(),
       bookings: initialData?.bookings.map(b => ({
         ...b,
+        date: new Date(b.date),
         id: new Date().toISOString() + Math.random(),
         stops: b.stops.map(s => ({ ...s, id: new Date().toISOString() + Math.random() }))
       })) || [{ 
         id: new Date().toISOString() + Math.random(),
+        date: new Date(),
         passengerName: '', 
         passengers: 1, 
         stops: [{ id: new Date().toISOString() + Math.random(), address: '', stopType: 'pickup' }, { id: new Date().toISOString() + Math.random(), address: '', stopType: 'dropoff' }] 
@@ -93,6 +94,7 @@ export default function JourneyForm({ initialData }: JourneyFormProps) {
   const handleAddBookingFromSaved = (booking: SavedBooking) => {
     appendBooking({
       ...booking,
+      date: new Date(booking.date),
       id: new Date().toISOString() + Math.random(),
       stops: booking.stops.map(s => ({...s, id: new Date().toISOString() + Math.random()})),
     });
@@ -112,8 +114,7 @@ export default function JourneyForm({ initialData }: JourneyFormProps) {
         description: `Your journey with ${values.bookings.length} booking(s) has been scheduled.`,
       });
       form.reset({
-        dateTime: new Date(),
-        bookings: [{ passengerName: '', passengers: 1, stops: [{ address: '', stopType: 'pickup' }, { address: '', stopType: 'dropoff' }] }]
+        bookings: [{ date: new Date(), passengerName: '', passengers: 1, stops: [{ address: '', stopType: 'pickup' }, { address: '', stopType: 'dropoff' }] }]
       });
     } catch (error) {
       console.error("Failed to save journey:", error);
@@ -133,6 +134,7 @@ export default function JourneyForm({ initialData }: JourneyFormProps) {
       id: new Date().toISOString(),
       name: templateName,
       bookings: values.bookings.map(b => ({
+        date: b.date,
         passengerName: b.passengerName,
         passengers: b.passengers,
         stops: b.stops.map(s => ({ address: s.address, stopType: s.stopType }))
@@ -158,42 +160,6 @@ export default function JourneyForm({ initialData }: JourneyFormProps) {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
               <div className="grid md:grid-cols-2 gap-8">
                 <div className="space-y-6">
-                  <FormField
-                    control={form.control}
-                    name="dateTime"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Date & Time</FormLabel>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant={'outline'}
-                                className={cn(
-                                  'w-full pl-3 text-left font-normal',
-                                  !field.value && 'text-muted-foreground'
-                                )}
-                              >
-                                {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={field.value}
-                              onSelect={field.onChange}
-                              disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
                   <div className="space-y-4">
                     <h3 className="text-lg font-medium flex items-center gap-2"><Package/> Bookings</h3>
                     {bookingFields.map((booking, bookingIndex) => (
@@ -201,7 +167,7 @@ export default function JourneyForm({ initialData }: JourneyFormProps) {
                     ))}
                   </div>
 
-                  <Button type="button" variant="outline" onClick={() => appendBooking({ id: new Date().toISOString() + Math.random(), passengerName: '', passengers: 1, stops: [{ id: new Date().toISOString() + Math.random(), address: '', stopType: 'pickup' }, { id: new Date().toISOString() + Math.random(), address: '', stopType: 'dropoff' }] })}>
+                  <Button type="button" variant="outline" onClick={() => appendBooking({ id: new Date().toISOString() + Math.random(), date: new Date(), passengerName: '', passengers: 1, stops: [{ id: new Date().toISOString() + Math.random(), address: '', stopType: 'pickup' }, { id: new Date().toISOString() + Math.random(), address: '', stopType: 'dropoff' }] })}>
                     <UserPlus className="mr-2 h-4 w-4" /> Add New Booking
                   </Button>
                 </div>
@@ -284,6 +250,7 @@ function BookingCard({ form, bookingIndex, removeBooking }: { form: any, booking
       if(isValid) {
         const newSavedBooking: SavedBooking = {
           id: new Date().toISOString(),
+          date: bookingData.date,
           passengerName: bookingData.passengerName,
           passengers: bookingData.passengers,
           stops: bookingData.stops.map((s: any) => ({ address: s.address, stopType: s.stopType }))
@@ -319,6 +286,44 @@ function BookingCard({ form, bookingIndex, removeBooking }: { form: any, booking
         </div>
       </CardHeader>
       <CardContent className="p-4 pt-0 space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+            <FormField
+                control={form.control}
+                name={`bookings.${bookingIndex}.date`}
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Date</FormLabel>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                        <FormControl>
+                            <Button
+                            variant={'outline'}
+                            className={cn(
+                                'w-full pl-3 text-left font-normal',
+                                !field.value && 'text-muted-foreground'
+                            )}
+                            >
+                            {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                        </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
+                            initialFocus
+                        />
+                        </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                    </FormItem>
+                )}
+            />
+        </div>
+        <Separator/>
         <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
@@ -398,3 +403,5 @@ function BookingCard({ form, bookingIndex, removeBooking }: { form: any, booking
     </Card>
   )
 }
+
+    
