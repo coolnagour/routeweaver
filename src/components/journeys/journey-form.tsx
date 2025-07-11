@@ -2,7 +2,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import {
@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { CalendarIcon, MapPin, Users, Save } from 'lucide-react';
+import { CalendarIcon, MapPin, Users, Save, Trash2, PlusCircle, MinusCircle, UserPlus, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import Image from 'next/image';
@@ -36,12 +36,24 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useState } from 'react';
+import { Separator } from '@/components/ui/separator';
+
+const stopSchema = z.object({
+  id: z.string().optional(),
+  address: z.string().min(2, { message: 'Address is required.' }),
+  stopType: z.enum(['pickup', 'dropoff']),
+});
+
+const bookingSchema = z.object({
+  id: z.string().optional(),
+  passengerName: z.string().min(2, { message: 'Passenger name is required.' }),
+  passengers: z.coerce.number().min(1, { message: 'At least one passenger is required.' }),
+  stops: z.array(stopSchema).min(1, 'At least one stop is required.'),
+});
 
 const formSchema = z.object({
-  from: z.string().min(2, { message: 'Origin is required.' }),
-  to: z.string().min(2, { message: 'Destination is required.' }),
-  passengers: z.coerce.number().min(1, { message: 'At least one passenger is required.' }),
   dateTime: z.date({ required_error: 'A date and time is required.' }),
+  bookings: z.array(bookingSchema).min(1, 'At least one booking is required.'),
 });
 
 interface JourneyFormProps {
@@ -56,20 +68,33 @@ export default function JourneyForm({ initialData }: JourneyFormProps) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      from: initialData?.from || '',
-      to: initialData?.to || '',
-      passengers: initialData?.passengers || 1,
       dateTime: new Date(),
+      bookings: initialData?.bookings.map(b => ({
+        ...b,
+        stops: b.stops.map(s => ({ ...s }))
+      })) || [{ 
+        passengerName: '', 
+        passengers: 1, 
+        stops: [{ address: '', stopType: 'pickup' }, { address: '', stopType: 'dropoff' }] 
+      }],
     },
+  });
+
+  const { fields: bookingFields, append: appendBooking, remove: removeBooking } = useFieldArray({
+    control: form.control,
+    name: "bookings"
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     console.log(values);
     toast({
       title: 'Journey Booked!',
-      description: `Your journey from ${values.from} to ${values.to} has been scheduled.`,
+      description: `Your journey with ${values.bookings.length} booking(s) has been scheduled.`,
     });
-    form.reset({ from: '', to: '', passengers: 1, dateTime: new Date() });
+    form.reset({
+      dateTime: new Date(),
+      bookings: [{ passengerName: '', passengers: 1, stops: [{ address: '', stopType: 'pickup' }, { address: '', stopType: 'dropoff' }] }]
+    });
   }
 
   const handleSaveTemplate = () => {
@@ -77,7 +102,11 @@ export default function JourneyForm({ initialData }: JourneyFormProps) {
     const newTemplate: JourneyTemplate = {
       id: new Date().toISOString(),
       name: templateName,
-      ...values,
+      bookings: values.bookings.map(b => ({
+        passengerName: b.passengerName,
+        passengers: b.passengers,
+        stops: b.stops.map(s => ({ address: s.address, stopType: s.stopType }))
+      })),
     };
     setTemplates([...templates, newTemplate]);
     toast({
@@ -100,101 +129,57 @@ export default function JourneyForm({ initialData }: JourneyFormProps) {
               <div className="space-y-6">
                 <FormField
                   control={form.control}
-                  name="from"
+                  name="dateTime"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>From</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input placeholder="Enter origin address" {...field} className="pl-10" />
-                        </div>
-                      </FormControl>
+                      <FormLabel>Date & Time</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant={'outline'}
+                              className={cn(
+                                'w-full pl-3 text-left font-normal',
+                                !field.value && 'text-muted-foreground'
+                              )}
+                            >
+                              {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="to"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>To</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input placeholder="Enter destination address" {...field} className="pl-10" />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="passengers"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Passengers</FormLabel>
-                        <FormControl>
-                           <div className="relative">
-                            <Users className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input type="number" placeholder="1" {...field} className="pl-10" />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="dateTime"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Date & Time</FormLabel>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant={'outline'}
-                                className={cn(
-                                  'w-full pl-3 text-left font-normal',
-                                  !field.value && 'text-muted-foreground'
-                                )}
-                              >
-                                {field.value ? (
-                                  format(field.value, 'PPP')
-                                ) : (
-                                  <span>Pick a date</span>
-                                )}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={field.value}
-                              onSelect={field.onChange}
-                              disabled={(date) =>
-                                date < new Date(new Date().setHours(0,0,0,0))
-                              }
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium flex items-center gap-2"><Package/> Bookings</h3>
+                  {bookingFields.map((booking, bookingIndex) => (
+                    <BookingCard key={booking.id} form={form} bookingIndex={bookingIndex} removeBooking={removeBooking} />
+                  ))}
                 </div>
+
+                <Button type="button" variant="outline" onClick={() => appendBooking({ passengerName: '', passengers: 1, stops: [{ address: '', stopType: 'pickup' }, { address: '', stopType: 'dropoff' }] })}>
+                  <UserPlus className="mr-2 h-4 w-4" /> Add Booking
+                </Button>
               </div>
               <div className="rounded-lg overflow-hidden border">
                 <Image src="https://placehold.co/800x600.png" width={800} height={600} alt="Map placeholder" data-ai-hint="map city" className="w-full h-full object-cover" />
               </div>
             </div>
-            <div className="flex justify-end gap-2">
+            
+            <div className="flex justify-end gap-2 mt-8">
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button type="button" variant="outline"><Save className="mr-2 h-4 w-4" /> Save as Template</Button>
@@ -202,9 +187,7 @@ export default function JourneyForm({ initialData }: JourneyFormProps) {
                 <AlertDialogContent>
                   <AlertDialogHeader>
                     <AlertDialogTitle>Save Journey Template</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Enter a name for your new template to save it for future use.
-                    </AlertDialogDescription>
+                    <AlertDialogDescription>Enter a name for your new template to save it for future use.</AlertDialogDescription>
                   </AlertDialogHeader>
                   <Input 
                     placeholder="e.g., Morning Commute" 
@@ -217,11 +200,111 @@ export default function JourneyForm({ initialData }: JourneyFormProps) {
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
-              <Button type="submit">Book Now</Button>
+              <Button type="submit">Book Journey</Button>
             </div>
           </form>
         </Form>
       </CardContent>
     </Card>
   );
+}
+
+
+function BookingCard({ form, bookingIndex, removeBooking }: { form: any, bookingIndex: number, removeBooking: (index: number) => void }) {
+  const { fields: stopFields, append: appendStop, remove: removeStop } = useFieldArray({
+    control: form.control,
+    name: `bookings.${bookingIndex}.stops`
+  });
+  
+  const bookings = form.watch('bookings');
+
+  return (
+    <Card className="bg-muted/50">
+      <CardHeader className="p-4 flex flex-row items-center justify-between">
+        <CardTitle className="text-base">Booking #{bookingIndex + 1}</CardTitle>
+        {bookings.length > 1 && (
+            <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => removeBooking(bookingIndex)}>
+                <Trash2 className="h-4 w-4" />
+            </Button>
+        )}
+      </CardHeader>
+      <CardContent className="p-4 pt-0 space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name={`bookings.${bookingIndex}.passengerName`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Passenger Name</FormLabel>
+                <FormControl>
+                  <Input placeholder="e.g. Jane Doe" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name={`bookings.${bookingIndex}.passengers`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Passengers</FormLabel>
+                <FormControl>
+                   <div className="relative">
+                    <Users className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input type="number" placeholder="1" {...field} className="pl-10" />
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        <Separator/>
+        <div className="space-y-2">
+            <h4 className="text-sm font-medium">Stops</h4>
+            {stopFields.map((stop, stopIndex) => (
+                <div key={stop.id} className="flex items-start gap-2">
+                    <FormField
+                        control={form.control}
+                        name={`bookings.${bookingIndex}.stops.${stopIndex}.address`}
+                        render={({ field }) => (
+                            <FormItem className="flex-1">
+                                <FormControl>
+                                    <div className="relative">
+                                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                    <Input placeholder={form.getValues(`bookings.${bookingIndex}.stops.${stopIndex}.stopType`) === 'pickup' ? 'Pickup location' : 'Drop-off location'} {...field} className="pl-10"/>
+                                    </div>
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                     <FormField
+                        control={form.control}
+                        name={`bookings.${bookingIndex}.stops.${stopIndex}.stopType`}
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormControl>
+                                    <Button type="button" variant="outline" size="sm" onClick={() => field.onChange(field.value === 'pickup' ? 'dropoff' : 'pickup')}>
+                                        {field.value === 'pickup' ? 'Pickup' : 'Drop-off'}
+                                    </Button>
+                                </FormControl>
+                            </FormItem>
+                        )}
+                    />
+                    {stopFields.length > 1 && (
+                      <Button type="button" variant="ghost" size="icon" className="h-9 w-9 text-destructive" onClick={() => removeStop(stopIndex)}>
+                          <MinusCircle className="h-4 w-4"/>
+                      </Button>
+                    )}
+                </div>
+            ))}
+            <Button type="button" variant="link" size="sm" onClick={() => appendStop({ address: '', stopType: 'dropoff'})}>
+                <PlusCircle className="mr-2 h-4 w-4"/> Add Stop
+            </Button>
+        </div>
+      </CardContent>
+    </Card>
+  )
 }

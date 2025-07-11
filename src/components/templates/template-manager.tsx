@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from '@/components/ui/button';
 import useLocalStorage from '@/hooks/use-local-storage';
 import type { JourneyTemplate } from '@/types';
-import { FileText, MapPin, Users, Trash2, Plus, Bot } from 'lucide-react';
+import { FileText, Users, Trash2, Bot, Package } from 'lucide-react';
 import AiTemplateModal from './ai-template-modal';
 import { useToast } from '@/hooks/use-toast';
 
@@ -35,6 +35,10 @@ export default function TemplateManager({ onLoadTemplate }: TemplateManagerProps
         ...templateData,
     };
     setTemplates([...templates, newTemplate]);
+  }
+
+  const getTotalPassengers = (template: JourneyTemplate) => {
+    return template.bookings.reduce((total, booking) => total + booking.passengers, 0);
   }
 
   return (
@@ -70,16 +74,12 @@ export default function TemplateManager({ onLoadTemplate }: TemplateManagerProps
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
                 <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                  <span><strong>From:</strong> {template.from}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                  <span><strong>To:</strong> {template.to}</span>
+                  <Package className="h-4 w-4 text-muted-foreground" />
+                  <span><strong>Bookings:</strong> {template.bookings.length}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Users className="h-4 w-4 text-muted-foreground" />
-                  <span><strong>Passengers:</strong> {template.passengers}</span>
+                  <span><strong>Total Passengers:</strong> {getTotalPassengers(template)}</span>
                 </div>
               </CardContent>
               <CardFooter>
