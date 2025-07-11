@@ -17,12 +17,12 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { CalendarIcon, MapPin, Users, Save, Trash2, PlusCircle, MinusCircle, UserPlus, Package } from 'lucide-react';
+import { CalendarIcon, MapPin, Users, Save, Trash2, PlusCircle, MinusCircle, UserPlus, Package, List } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import Image from 'next/image';
 import useLocalStorage from '@/hooks/use-local-storage';
-import type { JourneyTemplate } from '@/types';
+import type { JourneyTemplate, SavedBooking } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useState } from 'react';
 import { Separator } from '@/components/ui/separator';
+import { saveJourney } from '@/ai/flows/journey-flow';
 
 const stopSchema = z.object({
   id: z.string().optional(),
@@ -63,7 +64,9 @@ interface JourneyFormProps {
 export default function JourneyForm({ initialData }: JourneyFormProps) {
   const { toast } = useToast();
   const [templates, setTemplates] = useLocalStorage<JourneyTemplate[]>('journey-templates', []);
+  const [savedBookings, setSavedBookings] = useLocalStorage<SavedBooking[]>('saved-bookings', []);
   const [templateName, setTemplateName] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -71,11 +74,13 @@ export default function JourneyForm({ initialData }: JourneyFormProps) {
       dateTime: new Date(),
       bookings: initialData?.bookings.map(b => ({
         ...b,
-        stops: b.stops.map(s => ({ ...s }))
+        id: new Date().toISOString() + Math.random(),
+        stops: b.stops.map(s => ({ ...s, id: new Date().toISOString() + Math.random() }))
       })) || [{ 
+        id: new Date().toISOString() + Math.random(),
         passengerName: '', 
         passengers: 1, 
-        stops: [{ address: '', stopType: 'pickup' }, { address: '', stopType: 'dropoff' }] 
+        stops: [{ id: new Date().toISOString() + Math.random(), address: '', stopType: 'pickup' }, { id: new Date().toISOString() + Math.random(), address: '', stopType: 'dropoff' }] 
       }],
     },
   });
@@ -84,17 +89,42 @@ export default function JourneyForm({ initialData }: JourneyFormProps) {
     control: form.control,
     name: "bookings"
   });
-
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log(values);
+  
+  const handleAddBookingFromSaved = (booking: SavedBooking) => {
+    appendBooking({
+      ...booking,
+      id: new Date().toISOString() + Math.random(),
+      stops: booking.stops.map(s => ({...s, id: new Date().toISOString() + Math.random()})),
+    });
     toast({
-      title: 'Journey Booked!',
-      description: `Your journey with ${values.bookings.length} booking(s) has been scheduled.`,
+      title: "Booking Added",
+      description: `Booking for ${booking.passengerName} added to the current journey.`
     });
-    form.reset({
-      dateTime: new Date(),
-      bookings: [{ passengerName: '', passengers: 1, stops: [{ address: '', stopType: 'pickup' }, { address: '', stopType: 'dropoff' }] }]
-    });
+  };
+
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    setIsSubmitting(true);
+    try {
+      const result = await saveJourney(values);
+      console.log('Journey saved successfully:', result);
+      toast({
+        title: 'Journey Booked!',
+        description: `Your journey with ${values.bookings.length} booking(s) has been scheduled.`,
+      });
+      form.reset({
+        dateTime: new Date(),
+        bookings: [{ passengerName: '', passengers: 1, stops: [{ address: '', stopType: 'pickup' }, { address: '', stopType: 'dropoff' }] }]
+      });
+    } catch (error) {
+      console.error("Failed to save journey:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Could not save the journey. Please try again.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   const handleSaveTemplate = () => {
@@ -117,95 +147,123 @@ export default function JourneyForm({ initialData }: JourneyFormProps) {
   };
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="font-headline text-2xl">Create a New Journey</CardTitle>
-        <CardDescription>Fill in the details below to book your ride.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <div className="grid md:grid-cols-2 gap-8">
-              <div className="space-y-6">
-                <FormField
-                  control={form.control}
-                  name="dateTime"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Date & Time</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant={'outline'}
-                              className={cn(
-                                'w-full pl-3 text-left font-normal',
-                                !field.value && 'text-muted-foreground'
-                              )}
-                            >
-                              {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <div className="space-y-4">
-                  <h3 className="text-lg font-medium flex items-center gap-2"><Package/> Bookings</h3>
-                  {bookingFields.map((booking, bookingIndex) => (
-                    <BookingCard key={booking.id} form={form} bookingIndex={bookingIndex} removeBooking={removeBooking} />
-                  ))}
-                </div>
+    <div className="grid lg:grid-cols-3 gap-8">
+      <Card className="w-full lg:col-span-2">
+        <CardHeader>
+          <CardTitle className="font-headline text-2xl">Create a New Journey</CardTitle>
+          <CardDescription>Fill in the details below to book your ride.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+              <div className="grid md:grid-cols-2 gap-8">
+                <div className="space-y-6">
+                  <FormField
+                    control={form.control}
+                    name="dateTime"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Date & Time</FormLabel>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant={'outline'}
+                                className={cn(
+                                  'w-full pl-3 text-left font-normal',
+                                  !field.value && 'text-muted-foreground'
+                                )}
+                              >
+                                {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={field.value}
+                              onSelect={field.onChange}
+                              disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium flex items-center gap-2"><Package/> Bookings</h3>
+                    {bookingFields.map((booking, bookingIndex) => (
+                      <BookingCard key={booking.id} form={form} bookingIndex={bookingIndex} removeBooking={removeBooking} />
+                    ))}
+                  </div>
 
-                <Button type="button" variant="outline" onClick={() => appendBooking({ passengerName: '', passengers: 1, stops: [{ address: '', stopType: 'pickup' }, { address: '', stopType: 'dropoff' }] })}>
-                  <UserPlus className="mr-2 h-4 w-4" /> Add Booking
+                  <Button type="button" variant="outline" onClick={() => appendBooking({ id: new Date().toISOString() + Math.random(), passengerName: '', passengers: 1, stops: [{ id: new Date().toISOString() + Math.random(), address: '', stopType: 'pickup' }, { id: new Date().toISOString() + Math.random(), address: '', stopType: 'dropoff' }] })}>
+                    <UserPlus className="mr-2 h-4 w-4" /> Add New Booking
+                  </Button>
+                </div>
+                <div className="rounded-lg overflow-hidden border">
+                  <Image src="https://placehold.co/800x600.png" width={800} height={600} alt="Map placeholder" data-ai-hint="map city" className="w-full h-full object-cover" />
+                </div>
+              </div>
+              
+              <div className="flex justify-end gap-2 mt-8">
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button type="button" variant="outline"><Save className="mr-2 h-4 w-4" /> Save as Template</Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Save Journey Template</AlertDialogTitle>
+                      <AlertDialogDescription>Enter a name for your new template to save it for future use.</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <Input 
+                      placeholder="e.g., Morning Commute" 
+                      value={templateName}
+                      onChange={(e) => setTemplateName(e.target.value)}
+                    />
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleSaveTemplate} disabled={!templateName}>Save</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? 'Booking...' : 'Book Journey'}
                 </Button>
               </div>
-              <div className="rounded-lg overflow-hidden border">
-                <Image src="https://placehold.co/800x600.png" width={800} height={600} alt="Map placeholder" data-ai-hint="map city" className="w-full h-full object-cover" />
+            </form>
+          </Form>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-headline text-xl flex items-center gap-2">
+            <List /> Saved Bookings
+          </CardTitle>
+          <CardDescription>Add saved bookings to your journey.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {savedBookings.length > 0 ? savedBookings.map(booking => (
+            <Card key={booking.id} className="p-3">
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="font-semibold">{booking.passengerName}</p>
+                  <p className="text-sm text-muted-foreground">{booking.stops.length} stops</p>
+                </div>
+                <Button size="sm" onClick={() => handleAddBookingFromSaved(booking)}>Add</Button>
               </div>
-            </div>
-            
-            <div className="flex justify-end gap-2 mt-8">
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button type="button" variant="outline"><Save className="mr-2 h-4 w-4" /> Save as Template</Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Save Journey Template</AlertDialogTitle>
-                    <AlertDialogDescription>Enter a name for your new template to save it for future use.</AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <Input 
-                    placeholder="e.g., Morning Commute" 
-                    value={templateName}
-                    onChange={(e) => setTemplateName(e.target.value)}
-                  />
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleSaveTemplate} disabled={!templateName}>Save</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-              <Button type="submit">Book Journey</Button>
-            </div>
-          </form>
-        </Form>
-      </CardContent>
-    </Card>
+            </Card>
+          )) : (
+            <p className="text-sm text-muted-foreground text-center py-4">No saved bookings yet.</p>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
@@ -217,16 +275,48 @@ function BookingCard({ form, bookingIndex, removeBooking }: { form: any, booking
   });
   
   const bookings = form.watch('bookings');
+  const [savedBookings, setSavedBookings] = useLocalStorage<SavedBooking[]>('saved-bookings', []);
+  const { toast } = useToast();
+
+  const handleSaveBooking = () => {
+    const bookingData = form.getValues(`bookings.${bookingIndex}`);
+    form.trigger(`bookings.${bookingIndex}`).then(isValid => {
+      if(isValid) {
+        const newSavedBooking: SavedBooking = {
+          id: new Date().toISOString(),
+          passengerName: bookingData.passengerName,
+          passengers: bookingData.passengers,
+          stops: bookingData.stops.map((s: any) => ({ address: s.address, stopType: s.stopType }))
+        };
+        setSavedBookings([...savedBookings, newSavedBooking]);
+        toast({
+          title: "Booking Saved",
+          description: `Booking for ${bookingData.passengerName} has been saved.`
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Incomplete Booking",
+          description: "Please fill all required fields for this booking before saving."
+        });
+      }
+    });
+  };
 
   return (
     <Card className="bg-muted/50">
       <CardHeader className="p-4 flex flex-row items-center justify-between">
         <CardTitle className="text-base">Booking #{bookingIndex + 1}</CardTitle>
-        {bookings.length > 1 && (
-            <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => removeBooking(bookingIndex)}>
-                <Trash2 className="h-4 w-4" />
-            </Button>
-        )}
+        <div className="flex items-center gap-1">
+          <Button type="button" variant="ghost" size="sm" onClick={handleSaveBooking}>
+            <Save className="h-4 w-4" />
+          </Button>
+          {bookings.length > 1 && (
+              <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => removeBooking(bookingIndex)}>
+                  <Trash2 className="h-4 w-4" />
+              </Button>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="p-4 pt-0 space-y-4">
         <div className="grid grid-cols-2 gap-4">
@@ -300,7 +390,7 @@ function BookingCard({ form, bookingIndex, removeBooking }: { form: any, booking
                     )}
                 </div>
             ))}
-            <Button type="button" variant="link" size="sm" onClick={() => appendStop({ address: '', stopType: 'dropoff'})}>
+            <Button type="button" variant="link" size="sm" onClick={() => appendStop({ id: new Date().toISOString() + Math.random(), address: '', stopType: 'dropoff'})}>
                 <PlusCircle className="mr-2 h-4 w-4"/> Add Stop
             </Button>
         </div>
