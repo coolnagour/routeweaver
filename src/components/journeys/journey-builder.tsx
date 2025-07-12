@@ -9,13 +9,13 @@ import useLocalStorage from '@/hooks/use-local-storage';
 import { saveJourney } from '@/ai/flows/journey-flow';
 import type { Booking, Journey, JourneyTemplate, Stop } from '@/types';
 import JourneyForm from './journey-form';
-import { Book, Edit, History, List, MapPin, Package, Save, Trash2, UserPlus, Users } from 'lucide-react';
+import { Edit, History, List, MapPin, Package, Save, Trash2, UserPlus, Users, Phone } from 'lucide-react';
 import Image from 'next/image';
 import { format } from 'date-fns';
 
-const getTotalPassengers = (bookings: Booking[]) => {
-    return bookings.reduce((acc, booking) => acc + booking.passengers, 0);
-};
+const getPassengersFromStops = (stops: Stop[]) => {
+    return stops.filter(s => s.stopType === 'pickup');
+}
 
 interface JourneyBuilderProps {
   initialData?: JourneyTemplate | null;
@@ -29,7 +29,6 @@ export default function JourneyBuilder({ initialData, onNewJourneyClick }: Journ
   const [templateName, setTemplateName] = useState('');
 
   const [bookings, setBookings] = useState<Booking[]>(initialData?.bookings.map(b => ({
-    ...b,
     id: new Date().toISOString() + Math.random(),
     date: new Date(b.date),
     stops: b.stops.map(s => ({...s, id: new Date().toISOString() + Math.random()}))
@@ -46,10 +45,8 @@ export default function JourneyBuilder({ initialData, onNewJourneyClick }: Journ
     setEditingBooking({
       id: new Date().toISOString() + Math.random(),
       date: new Date(),
-      passengerName: '',
-      passengers: 1,
       stops: [
-        { id: new Date().toISOString() + Math.random(), address: '', stopType: 'pickup' },
+        { id: new Date().toISOString() + Math.random(), address: '', stopType: 'pickup', name: '', phone: '' },
         { id: new Date().toISOString() + Math.random(), address: '', stopType: 'dropoff' }
       ]
     });
@@ -85,9 +82,13 @@ export default function JourneyBuilder({ initialData, onNewJourneyClick }: Journ
       name: templateName,
       bookings: bookings.map(b => ({
         date: b.date,
-        passengerName: b.passengerName,
-        passengers: b.passengers,
-        stops: b.stops.map(s => ({ address: s.address, stopType: s.stopType }))
+        stops: b.stops.map(s => ({ 
+            address: s.address, 
+            stopType: s.stopType,
+            name: s.name,
+            phone: s.phone,
+            pickupStopId: s.pickupStopId,
+        }))
       })),
     };
     setTemplates([...templates, newTemplate]);
@@ -136,6 +137,12 @@ export default function JourneyBuilder({ initialData, onNewJourneyClick }: Journ
     }
   }
 
+  const getTotalPassengers = (bookings: Booking[]) => {
+      return bookings.reduce((total, booking) => {
+          return total + getPassengersFromStops(booking.stops).length;
+      }, 0);
+  }
+
   return (
     <div className="grid lg:grid-cols-3 gap-8 items-start">
       <div className="lg:col-span-2 space-y-6">
@@ -166,32 +173,54 @@ export default function JourneyBuilder({ initialData, onNewJourneyClick }: Journ
             </CardHeader>
             <CardContent className="space-y-3">
               {bookings.length > 0 ? (
-                bookings.map(booking => (
-                  <Card key={booking.id} className="p-3">
-                    <div className="flex justify-between items-start">
-                      <div className="space-y-1">
-                        <p className="font-semibold">{booking.passengerName}</p>
-                        <p className="text-sm text-muted-foreground flex items-center gap-2"><Users className="h-4 w-4" />{booking.passengers} passenger(s) on {format(new Date(booking.date), 'PPP')}</p>
-                        <div className="text-sm text-muted-foreground space-y-1 pt-1">
-                            {booking.stops.map(stop => (
-                                <div key={stop.id} className="flex items-center gap-2">
-                                    <MapPin className="h-4 w-4 text-primary"/>
-                                    <span><span className="capitalize font-medium">{stop.stopType}:</span> {stop.address}</span>
-                                </div>
-                            ))}
-                        </div>
-                      </div>
-                      <div className="flex items-center">
-                        <Button variant="ghost" size="icon" onClick={() => handleEditBooking(booking)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleRemoveBooking(booking.id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </Card>
-                ))
+                bookings.map(booking => {
+                    const pickups = getPassengersFromStops(booking.stops);
+                    return (
+                        <Card key={booking.id} className="p-3">
+                            <div className="flex justify-between items-start">
+                            <div className="space-y-2 flex-1">
+                                <p className="font-semibold text-primary">{format(new Date(booking.date), 'PPP')}</p>
+                                <p className="text-sm text-muted-foreground flex items-center gap-2"><Users className="h-4 w-4" />{pickups.length} passenger(s)</p>
+                                
+                                {booking.stops.map(stop => {
+                                    const isPickup = stop.stopType === 'pickup';
+                                    const dropoffPassenger = isPickup ? null : pickups.find(p => p.id === stop.pickupStopId);
+
+                                    return (
+                                        <div key={stop.id} className="text-sm text-muted-foreground space-y-1 pt-1 border-t first:border-t-0">
+                                            <div className="flex items-center gap-2">
+                                                <MapPin className="h-4 w-4 text-primary mt-1"/>
+                                                <div>
+                                                    <p><span className="capitalize font-medium">{stop.stopType}:</span> {stop.address}</p>
+                                                    {isPickup && stop.name && (
+                                                        <div className="flex items-center gap-4 text-xs pl-1">
+                                                            <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {stop.name}</span>
+                                                            <span className="flex items-center gap-1"><Phone className="h-3 w-3" /> {stop.phone}</span>
+                                                        </div>
+                                                    )}
+                                                    {!isPickup && dropoffPassenger && (
+                                                         <div className="flex items-center gap-4 text-xs pl-1">
+                                                            <span className="flex items-center gap-1"><Users className="h-3 w-3" /> Dropping off {dropoffPassenger.name}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            <div className="flex items-center">
+                                <Button variant="ghost" size="icon" onClick={() => handleEditBooking(booking)}>
+                                <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleRemoveBooking(booking.id)}>
+                                <Trash2 className="h-4 w-4" />
+                                </Button>
+                            </div>
+                            </div>
+                        </Card>
+                    )
+                })
               ) : (
                 <div className="text-center py-10 border-2 border-dashed rounded-lg">
                   <p className="text-muted-foreground">Your journey's bookings will appear here.</p>

@@ -7,13 +7,17 @@ export interface Stop {
   id: string;
   address: string;
   stopType: StopType;
+  // Fields for pickup
+  name?: string;
+  phone?: string;
+  // Field for dropoff to link back to a pickup
+  pickupStopId?: string; 
 }
 
 export interface Booking {
   id: string;
   date: Date;
-  passengerName: string;
-  passengers: number;
+  // passengerName and passengers are now derived from stops
   stops: Stop[];
 }
 
@@ -34,12 +38,13 @@ export interface JourneyTemplate {
 const StopSchema = z.object({
   address: z.string(),
   stopType: z.enum(['pickup', 'dropoff']),
+  name: z.string().optional(),
+  phone: z.string().optional(),
+  pickupStopId: z.string().optional(),
 });
 
 const BookingSchema = z.object({
   date: z.date(),
-  passengerName: z.string(),
-  passengers: z.number(),
   stops: z.array(StopSchema),
 });
 
