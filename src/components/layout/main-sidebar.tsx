@@ -30,12 +30,18 @@ const navItems = [
 ];
 
 export default function MainSidebar() {
-  const { state: sidebarState } = useSidebar();
+  const { state: sidebarState, isMobile, setOpenMobile } = useSidebar();
   const pathname = usePathname();
   const { user } = useAuth();
   const { server, setServer } = useServer();
   const router = useRouter();
   const isCollapsed = sidebarState === 'collapsed';
+
+  const handleLinkClick = () => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  };
 
   const handleSignOut = async () => {
     // In dev mode, just clear context and go to login
@@ -87,6 +93,7 @@ export default function MainSidebar() {
                 href={item.href}
                 isActive={pathname === item.href}
                 tooltip={{ children: item.label }}
+                onClick={handleLinkClick}
               >
                 <item.icon className="h-5 w-5" />
                 <span>{item.label}</span>
