@@ -98,7 +98,7 @@ export default function JourneyBuilder({ initialData, onNewJourneyClick }: Journ
   }
 
   return (
-    <div className="grid lg:grid-cols-3 gap-8 items-start">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
       <div className="lg:col-span-2 space-y-6">
         <Card>
           <CardHeader>
@@ -130,7 +130,7 @@ export default function JourneyBuilder({ initialData, onNewJourneyClick }: Journ
         </Card>
       </div>
       
-      <div className="space-y-6">
+      <div className="space-y-6 lg:col-span-1">
         <Card>
             <CardHeader>
             <CardTitle className="font-headline text-xl flex items-center gap-2">
