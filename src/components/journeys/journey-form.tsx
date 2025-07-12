@@ -89,9 +89,17 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
     resolver: zodResolver(formSchema),
     defaultValues: {
       id: initialData?.id || new Date().toISOString() + Math.random(),
-      stops: initialData?.stops?.length ? initialData.stops.map(s => ({ ...s, id: s.id || new Date().toISOString() + Math.random(), dateTime: s.dateTime ? new Date(s.dateTime) : undefined })) : [
+      stops: initialData?.stops?.length ? initialData.stops.map(s => ({
+          ...s,
+          id: s.id || new Date().toISOString() + Math.random(),
+          dateTime: s.dateTime ? new Date(s.dateTime) : undefined,
+          name: s.name || '',
+          phone: s.phone || '',
+          instructions: s.instructions || '',
+          pickupStopId: s.pickupStopId || ''
+      })) : [
         { id: 'pickup_start_' + Math.random(), location: emptyLocation, stopType: 'pickup', name: '', phone: '', dateTime: new Date(), instructions: '' },
-        { id: 'dropoff_end_' + Math.random(), location: emptyLocation, stopType: 'dropoff', pickupStopId: undefined, instructions: '' }
+        { id: 'dropoff_end_' + Math.random(), location: emptyLocation, stopType: 'dropoff', pickupStopId: '', instructions: '' }
       ] 
     },
   });
@@ -319,7 +327,7 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
 
                 {/* Add Stop Button */}
                 <div className="flex justify-center my-4">
-                    <Button type="button" variant="link" size="sm" onClick={() => insertStop(stopFields.length - 1, { id: new Date().toISOString() + Math.random(), location: emptyLocation, stopType: 'pickup'})}>
+                    <Button type="button" variant="link" size="sm" onClick={() => insertStop(stopFields.length - 1, { id: new Date().toISOString() + Math.random(), location: emptyLocation, stopType: 'pickup', name: '', phone: '', instructions: ''})}>
                         <PlusCircle className="mr-2 h-4 w-4"/> Add Stop
                     </Button>
                 </div>
