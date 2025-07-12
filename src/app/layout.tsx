@@ -8,7 +8,6 @@ import AppLayout from "@/components/layout/app-layout";
 import { AuthProvider } from "@/context/auth-context";
 import { ServerProvider } from "@/context/server-context";
 import { ThemeProvider } from "@/components/theme-provider";
-import { GoogleMapsProvider } from "@/context/google-maps-provider";
 
 const fontPoppins = Poppins({
   subsets: ["latin"],
@@ -52,7 +51,6 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <GoogleMapsProvider>
             <ServerProvider>
               <AuthProvider>
                 <AppLayout>
@@ -61,7 +59,6 @@ export default function RootLayout({
                 <Toaster />
               </AuthProvider>
             </ServerProvider>
-          </GoogleMapsProvider>
         </ThemeProvider>
       </body>
     </html>

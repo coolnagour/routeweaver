@@ -15,13 +15,15 @@ interface AddressAutocompleteProps {
   className?: string;
 }
 
+const libraries: ("places")[] = ["places"];
+
 export default function AddressAutocomplete({ value, onChange, placeholder, className }: AddressAutocompleteProps) {
   const { server } = useServer();
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
-    libraries: ["places"],
-    region: server?.countryCodes?.[0],
+    libraries: libraries,
+    region: server?.countryCodes?.[0], // Bias towards the first country
   });
 
   const [autocomplete, setAutocomplete] = useState<google.maps.places.Autocomplete | null>(null);
