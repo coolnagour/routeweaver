@@ -23,7 +23,6 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import type { Booking, Stop } from '@/types';
 import { Separator } from '@/components/ui/separator';
-import { useEffect } from 'react';
 
 const stopSchema = z.object({
   id: z.string().optional(),
@@ -37,9 +36,8 @@ const stopSchema = z.object({
 const formSchema = z.object({
   id: z.string().optional(),
   date: z.date({ required_error: 'A date is required.' }),
-  stops: z.array(stopSchema).min(1, 'At least one stop is required.')
+  stops: z.array(stopSchema).min(2, 'At least two stops are required.')
 }).refine(data => {
-    // Ensure all dropoffs have a selected pickup
     const dropoffs = data.stops.filter(s => s.stopType === 'dropoff');
     return dropoffs.every(d => d.pickupStopId);
 }, {
@@ -69,7 +67,7 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
     },
   });
   
-  const { fields: stopFields, append: appendStop, remove: removeStop } = useFieldArray({
+  const { fields: stopFields, insert: insertStop, remove: removeStop } = useFieldArray({
     control: form.control,
     name: "stops"
   });
@@ -78,9 +76,10 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
 
   const availablePickups = (currentIndex: number): Stop[] => {
     const previousStops = currentStops.slice(0, currentIndex);
-    const pickupStops = previousStops.filter(s => s.stopType === 'pickup');
+    const pickupStops = previousStops.filter(s => s.stopType === 'pickup' && s.name);
+    
     const assignedPickupIds = currentStops
-        .filter(s => s.stopType === 'dropoff' && s.pickupStopId)
+        .filter((s, i) => i !== currentIndex && s.stopType === 'dropoff' && s.pickupStopId)
         .map(s => s.pickupStopId);
 
     return pickupStops.filter(p => !assignedPickupIds.includes(p.id));
@@ -148,6 +147,10 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
                 <div className="space-y-2">
                     <h4 className="text-sm font-medium">Stops</h4>
                     {stopFields.map((stop, stopIndex) => {
+                        const isFirstStop = stopIndex === 0;
+                        const isLastStop = stopIndex === stopFields.length - 1;
+                        const isIntermediateStop = !isFirstStop && !isLastStop;
+
                         const isPickup = form.watch(`stops.${stopIndex}.stopType`) === 'pickup';
                         const pickupsForSelection = availablePickups(stopIndex);
 
@@ -177,14 +180,14 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
                                         <FormItem>
                                             <FormLabel>Type</FormLabel>
                                             <FormControl>
-                                                <Button type="button" variant="outline" className="w-full" onClick={() => field.onChange(field.value === 'pickup' ? 'dropoff' : 'pickup')}>
+                                                <Button type="button" variant="outline" className="w-full" onClick={() => field.onChange(field.value === 'pickup' ? 'dropoff' : 'pickup')} disabled={!isIntermediateStop}>
                                                     {field.value === 'pickup' ? 'Pickup' : 'Drop-off'}
                                                 </Button>
                                             </FormControl>
                                         </FormItem>
                                     )}
                                 />
-                                {stopFields.length > 1 && (
+                                {isIntermediateStop && (
                                 <Button type="button" variant="ghost" size="icon" className="h-9 w-9 text-destructive mt-8" onClick={() => removeStop(stopIndex)}>
                                     <MinusCircle className="h-4 w-4"/>
                                 </Button>
@@ -256,7 +259,7 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
                             )}
                         </div>
                     )})}
-                    <Button type="button" variant="link" size="sm" onClick={() => appendStop({ id: new Date().toISOString() + Math.random(), address: '', stopType: 'dropoff'})}>
+                    <Button type="button" variant="link" size="sm" onClick={() => insertStop(stopFields.length - 1, { id: new Date().toISOString() + Math.random(), address: '', stopType: 'dropoff'})}>
                         <PlusCircle className="mr-2 h-4 w-4"/> Add Stop
                     </Button>
                 </div>
