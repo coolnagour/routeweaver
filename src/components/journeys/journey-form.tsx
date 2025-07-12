@@ -18,12 +18,16 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { CalendarIcon, MapPin, PlusCircle, X, User, Phone, Clock, MessageSquare, ChevronsUpDown } from 'lucide-react';
+import { CalendarIcon, MapPin, PlusCircle, X, User, Phone, Clock, MessageSquare, ChevronsUpDown, Sparkles, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, setHours, setMinutes } from 'date-fns';
 import type { Booking, Stop } from '@/types';
 import ViaStop from './via-stop';
 import AddressAutocomplete from './address-autocomplete';
+import { generateSuggestion } from '@/ai/flows/suggestion-flow';
+import type { SuggestionInput } from '@/ai/flows/suggestion-flow';
+import { useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
 const locationSchema = z.object({
     address: z.string().min(2, { message: 'Address is required.' }),
@@ -79,6 +83,9 @@ interface JourneyFormProps {
 const emptyLocation = { address: '', lat: 0, lng: 0 };
 
 export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFormProps) {
+  const { toast } = useToast();
+  const [generatingFields, setGeneratingFields] = useState<Record<string, boolean>>({});
+
   const form = useForm<BookingFormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -108,6 +115,27 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
 
     // Return pickups that are not yet assigned
     return previousPickups.filter(p => !assignedPickupIds.includes(p.id!));
+  };
+
+  const handleGenerateField = async (
+    fieldType: SuggestionInput['type'],
+    fieldNameToUpdate: `stops.${number}.${'name' | 'phone' | 'instructions'}`
+  ) => {
+    const fieldKey = `${fieldNameToUpdate}-${fieldType}`;
+    setGeneratingFields(prev => ({ ...prev, [fieldKey]: true }));
+    try {
+      const result = await generateSuggestion({ type: fieldType });
+      form.setValue(fieldNameToUpdate, result.suggestion);
+    } catch (error) {
+      console.error(`AI ${fieldType} generation failed:`, error);
+      toast({
+        variant: "destructive",
+        title: "AI Suggestion Error",
+        description: `Could not generate a ${fieldType}. Please try again.`,
+      });
+    } finally {
+      setGeneratingFields(prev => ({ ...prev, [fieldKey]: false }));
+    }
   };
 
 
@@ -214,9 +242,12 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
                             <FormItem>
                                 <FormLabel>Passenger Name</FormLabel>
                                 <FormControl>
-                                    <div className="relative">
+                                    <div className="relative flex items-center">
                                         <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                        <Input placeholder="e.g. Jane Doe" {...field} className="pl-10 bg-background" />
+                                        <Input placeholder="e.g. Jane Doe" {...field} className="pl-10 pr-10 bg-background" />
+                                        <Button type="button" variant="ghost" size="icon" className="absolute right-1 h-8 w-8 text-primary" onClick={() => handleGenerateField('name', 'stops.0.name')} disabled={generatingFields['stops.0.name-name']}>
+                                            {generatingFields['stops.0.name-name'] ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                                        </Button>
                                     </div>
                                 </FormControl>
                                 <FormMessage />
@@ -230,9 +261,12 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
                             <FormItem>
                                 <FormLabel>Phone Number</FormLabel>
                                 <FormControl>
-                                    <div className="relative">
+                                    <div className="relative flex items-center">
                                         <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                        <Input placeholder="e.g. 555-1234" {...field} className="pl-10 bg-background" />
+                                        <Input placeholder="e.g. 555-1234" {...field} className="pl-10 pr-10 bg-background" />
+                                        <Button type="button" variant="ghost" size="icon" className="absolute right-1 h-8 w-8 text-primary" onClick={() => handleGenerateField('phone', 'stops.0.phone')} disabled={generatingFields['stops.0.phone-phone']}>
+                                            {generatingFields['stops.0.phone-phone'] ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                                        </Button>
                                     </div>
                                 </FormControl>
                                 <FormMessage />
@@ -255,9 +289,12 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
                                     <FormItem>
                                         <FormLabel>Instructions</FormLabel>
                                         <FormControl>
-                                            <div className="relative">
-                                            <MessageSquare className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                            <Input placeholder="e.g., Gate code #1234" {...field} className="pl-10 bg-background"/>
+                                            <div className="relative flex items-center">
+                                                <MessageSquare className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                                <Input placeholder="e.g., Gate code #1234" {...field} className="pl-10 pr-10 bg-background"/>
+                                                <Button type="button" variant="ghost" size="icon" className="absolute right-1 h-8 w-8 text-primary" onClick={() => handleGenerateField('instructions', 'stops.0.instructions')} disabled={generatingFields['stops.0.instructions-instructions']}>
+                                                    {generatingFields['stops.0.instructions-instructions'] ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                                                </Button>
                                             </div>
                                         </FormControl>
                                         <FormMessage />
@@ -276,6 +313,8 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
                         index={index + 1}
                         removeStop={removeStop}
                         getAvailablePickups={getAvailablePickups}
+                        onGenerateField={handleGenerateField}
+                        generatingFields={generatingFields}
                     />
                 ))}
 
@@ -292,6 +331,8 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
                     index={stopFields.length - 1}
                     isDestination
                     getAvailablePickups={getAvailablePickups}
+                    onGenerateField={handleGenerateField}
+                    generatingFields={generatingFields}
                 />
 
                  <div className="flex justify-end gap-2 mt-4">

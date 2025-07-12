@@ -15,11 +15,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { MapPin, MinusCircle, User, Phone, MessageSquare, ChevronsUpDown, CalendarIcon, Clock } from 'lucide-react';
+import { MapPin, MinusCircle, User, Phone, MessageSquare, ChevronsUpDown, CalendarIcon, Clock, Sparkles, Loader2 } from 'lucide-react';
 import type { Stop } from '@/types';
 import { cn } from '@/lib/utils';
 import { format, setHours, setMinutes } from 'date-fns';
 import AddressAutocomplete from './address-autocomplete';
+import type { SuggestionInput } from '@/ai/flows/suggestion-flow';
 
 interface ViaStopProps {
   control: any;
@@ -27,9 +28,22 @@ interface ViaStopProps {
   removeStop?: (index: number) => void;
   getAvailablePickups: (currentIndex: number) => Stop[];
   isDestination?: boolean;
+  onGenerateField: (
+    fieldType: SuggestionInput['type'],
+    fieldNameToUpdate: `stops.${number}.${'name' | 'phone' | 'instructions'}`
+  ) => void;
+  generatingFields: Record<string, boolean>;
 }
 
-export default function ViaStop({ control, index, removeStop, getAvailablePickups, isDestination = false }: ViaStopProps) {
+export default function ViaStop({ 
+    control, 
+    index, 
+    removeStop, 
+    getAvailablePickups, 
+    isDestination = false,
+    onGenerateField,
+    generatingFields
+}: ViaStopProps) {
   const { setValue } = useFormContext();
   const stopType = useWatch({ control, name: `stops.${index}.stopType` });
   const isPickup = stopType === 'pickup';
@@ -112,9 +126,12 @@ export default function ViaStop({ control, index, removeStop, getAvailablePickup
                  <FormItem>
                      <FormLabel>Passenger Name</FormLabel>
                      <FormControl>
-                         <div className="relative">
+                         <div className="relative flex items-center">
                              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                             <Input placeholder="e.g. John Smith" {...field} className="pl-10 bg-background" />
+                             <Input placeholder="e.g. John Smith" {...field} className="pl-10 pr-10 bg-background" />
+                             <Button type="button" variant="ghost" size="icon" className="absolute right-1 h-8 w-8 text-primary" onClick={() => onGenerateField('name', `stops.${index}.name`)} disabled={generatingFields[`stops.${index}.name-name`]}>
+                                {generatingFields[`stops.${index}.name-name`] ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                            </Button>
                          </div>
                      </FormControl>
                      <FormMessage />
@@ -128,9 +145,12 @@ export default function ViaStop({ control, index, removeStop, getAvailablePickup
                  <FormItem>
                      <FormLabel>Phone Number</FormLabel>
                      <FormControl>
-                         <div className="relative">
+                         <div className="relative flex items-center">
                              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                             <Input placeholder="e.g. 555-5678" {...field} className="pl-10 bg-background" />
+                             <Input placeholder="e.g. 555-5678" {...field} className="pl-10 pr-10 bg-background" />
+                             <Button type="button" variant="ghost" size="icon" className="absolute right-1 h-8 w-8 text-primary" onClick={() => onGenerateField('phone', `stops.${index}.phone`)} disabled={generatingFields[`stops.${index}.phone-phone`]}>
+                                {generatingFields[`stops.${index}.phone-phone`] ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                             </Button>
                          </div>
                      </FormControl>
                      <FormMessage />
@@ -239,9 +259,12 @@ export default function ViaStop({ control, index, removeStop, getAvailablePickup
                          <FormItem>
                              <FormLabel>Instructions</FormLabel>
                              <FormControl>
-                                 <div className="relative">
-                                 <MessageSquare className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                 <Input placeholder="e.g., Gate code #1234" {...field} className="pl-10 bg-background"/>
+                                 <div className="relative flex items-center">
+                                     <MessageSquare className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                     <Input placeholder="e.g., Gate code #1234" {...field} className="pl-10 pr-10 bg-background"/>
+                                     <Button type="button" variant="ghost" size="icon" className="absolute right-1 h-8 w-8 text-primary" onClick={() => onGenerateField('instructions', `stops.${index}.instructions`)} disabled={generatingFields[`stops.${index}.instructions-instructions`]}>
+                                        {generatingFields[`stops.${index}.instructions-instructions`] ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                                     </Button>
                                  </div>
                              </FormControl>
                              <FormMessage />
