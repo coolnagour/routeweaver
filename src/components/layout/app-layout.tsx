@@ -15,7 +15,7 @@ export default function AppLayout({ children, activeView, setActiveView }: AppLa
   return (
     <SidebarProvider>
       <div className="flex">
-        <Sidebar collapsible="icon">
+        <Sidebar>
           <MainSidebar activeView={activeView} setActiveView={setActiveView} />
         </Sidebar>
         <SidebarInset>{children}</SidebarInset>
