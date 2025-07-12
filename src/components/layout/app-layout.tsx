@@ -14,10 +14,12 @@ interface AppLayoutProps {
 export default function AppLayout({ children, activeView, setActiveView }: AppLayoutProps) {
   return (
     <SidebarProvider>
+      <div className="flex">
         <Sidebar collapsible="icon">
           <MainSidebar activeView={activeView} setActiveView={setActiveView} />
         </Sidebar>
         <SidebarInset>{children}</SidebarInset>
+      </div>
     </SidebarProvider>
   );
 }
