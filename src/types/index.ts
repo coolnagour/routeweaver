@@ -17,7 +17,7 @@ export interface Stop {
   instructions?: string;
   // Fields for pickup
   name?: string;
-  phone?: string;
+  phone?:string;
   // Field for dropoff to link back to a pickup
   pickupStopId?: string; 
 }
@@ -35,12 +35,28 @@ export interface Journey {
 }
 
 // Stored template has string dates
-export type TemplateBooking = Omit<Booking, 'stops'> & { stops: (Omit<Stop, 'dateTime' | 'id'> & { id?: string; dateTime?: string })[] };
+export type TemplateBooking = Omit<Booking, 'stops'> & { stops: (Omit<Stop, 'dateTime'> & { dateTime?: string })[] };
 
 export interface JourneyTemplate {
   id: string;
   name: string;
   bookings: TemplateBooking[];
+}
+
+// Type for AI-generated template suggestions before they are fully structured
+export type AITemplateSuggestion = {
+  name: string;
+  bookings: {
+    stops: {
+      location: { address: string };
+      stopType: StopType;
+      dateTime?: string;
+      instructions?: string;
+      name?: string;
+      phone?: string;
+      pickupStopId?: string;
+    }[];
+  }[];
 }
 
 

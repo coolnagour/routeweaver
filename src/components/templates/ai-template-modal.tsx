@@ -15,61 +15,76 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Bot, Loader2, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import type { JourneyTemplate } from '@/types';
+import type { AITemplateSuggestion, JourneyTemplate } from '@/types';
+import { suggestTemplates } from '@/ai/flows/template-suggestion-flow';
 
 interface AiTemplateModalProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  onTemplateCreate: (template: Omit<JourneyTemplate, 'id' | 'name'>) => void;
+  onTemplateCreate: (template: Omit<JourneyTemplate, 'id'>) => void;
 }
-
-const generateMockTemplate = (name: string, from: string, to: string, passengerName: string): Omit<JourneyTemplate, 'id'> => ({
-  name,
-  bookings: [{
-    id: `booking_${Math.random()}`,
-    stops: [
-      { stopType: 'pickup', location: { address: from, lat: 0, lng: 0 }, name: passengerName, phone: '555-1111', dateTime: new Date().toISOString() },
-      { stopType: 'dropoff', location: { address: to, lat: 0, lng: 0 } }
-    ]
-  }]
-});
-
-const mockSuggestions: Omit<JourneyTemplate, 'id'>[] = [
-    generateMockTemplate("Morning Commute", "123 Home Street", "Downtown Office", "Jane Doe"),
-    generateMockTemplate("Airport Run", "456 Suburb Avenue", "International Airport", "John Smith"),
-    generateMockTemplate("Weekly Groceries", "789 Residence Lane", "Supermarket", "Sam Jones"),
-];
-
 
 export default function AiTemplateModal({ isOpen, onOpenChange, onTemplateCreate }: AiTemplateModalProps) {
   const [prompt, setPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [suggestions, setSuggestions] = useState<Omit<JourneyTemplate, 'id'>[]>([]);
+  const [suggestions, setSuggestions] = useState<AITemplateSuggestion[]>([]);
   const { toast } = useToast();
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (!prompt) return;
     setIsLoading(true);
     setSuggestions([]);
     
-    // Simulate AI call
-    setTimeout(() => {
-      setSuggestions(mockSuggestions);
+    try {
+      const result = await suggestTemplates({ prompt });
+      setSuggestions(result.suggestions);
+    } catch (error) {
+      console.error("AI suggestion failed:", error);
+      toast({
+        variant: "destructive",
+        title: "AI Error",
+        description: "Could not generate suggestions. Please try again.",
+      });
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
-  const handleCreate = (suggestion: Omit<JourneyTemplate, 'id'>) => {
-    onTemplateCreate(suggestion);
+  const handleCreate = (suggestion: AITemplateSuggestion) => {
+     const templateToCreate: Omit<JourneyTemplate, 'id'> = {
+      name: suggestion.name,
+      bookings: suggestion.bookings.map(b => ({
+        id: `booking_${Math.random()}`,
+        stops: b.stops.map(s => ({
+          ...s,
+          id: `stop_${Math.random()}`,
+          // The AI provides a string address, which is what we need.
+          // Lat/Lng will be populated when the user confirms the address in the builder.
+          location: { address: s.location.address, lat: 0, lng: 0 },
+          dateTime: s.dateTime ? new Date(s.dateTime) : undefined
+        }))
+      }))
+    };
+    onTemplateCreate(templateToCreate);
     toast({
       title: 'Template Added!',
       description: `The "${suggestion.name}" template is ready to be saved.`
     });
     onOpenChange(false);
+    setSuggestions([]);
+    setPrompt('');
   };
+  
+  const handleDialogClose = (open: boolean) => {
+    if (!open) {
+        setSuggestions([]);
+        setPrompt('');
+    }
+    onOpenChange(open);
+  }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={handleDialogClose}>
       <DialogContent className="sm:max-w-[625px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 font-headline">
