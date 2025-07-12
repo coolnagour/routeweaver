@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview Manages journey-related operations using the iCabbi API.
@@ -8,8 +9,8 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { JourneyInputSchema, JourneyOutputSchema, ServerConfigSchema } from '@/types';
-import { createBooking, createJourney, getSites } from '@/services/icabbi';
-import type { Booking, JourneyOutput, Stop } from '@/types';
+import { createBooking, createJourney } from '@/services/icabbi';
+import type { Booking, JourneyOutput } from '@/types';
 
 // Extend the input schema to include server config and siteId
 const SaveJourneyInputSchema = JourneyInputSchema.extend({
@@ -21,11 +22,6 @@ type SaveJourneyInput = z.infer<typeof SaveJourneyInputSchema>;
 export async function saveJourney(input: SaveJourneyInput): Promise<JourneyOutput> {
   return await saveJourneyFlow(input);
 }
-
-export async function fetchSitesForServer(server: z.infer<typeof ServerConfigSchema>): Promise<{ id: number; name: string }[]> {
-    return getSites(server);
-}
-
 
 const saveJourneyFlow = ai.defineFlow(
   {

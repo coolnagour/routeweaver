@@ -7,7 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import useLocalStorage from '@/hooks/use-local-storage';
-import { saveJourney, fetchSitesForServer } from '@/ai/flows/journey-flow';
+import { saveJourney } from '@/ai/flows/journey-flow';
+import { getSites } from '@/services/icabbi';
 import type { Booking, Journey, JourneyTemplate } from '@/types';
 import { History, Save, Building, Loader2 } from 'lucide-react';
 import Image from 'next/image';
@@ -69,7 +70,7 @@ export default function JourneyBuilder({
         if (server) {
             setIsFetchingSites(true);
             try {
-                const fetchedSites = await fetchSitesForServer(server);
+                const fetchedSites = await getSites(server);
                 setSites(fetchedSites);
             } catch (error) {
                 console.error("Failed to fetch sites:", error);
