@@ -53,7 +53,10 @@ const formatBookingForIcabbi = (booking: Booking, server: ServerConfig) => {
 };
 
 export async function callIcabbiApi({ server, method, endpoint, body }: IcabbiApiCallOptions) {
-    const url = `https://${server.host}/${server.apiPath}/${endpoint}?app_key=${server.appKey}`;
+    let url = `https://${server.host}/${server.apiPath}/${endpoint}`;
+    const separator = url.includes('?') ? '&' : '?';
+    url += `${separator}app_key=${server.appKey}`;
+
     const bodyString = body ? JSON.stringify(body) : '';
     
     const headers = new Headers({
