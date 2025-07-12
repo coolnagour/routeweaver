@@ -178,7 +178,7 @@ export async function getAccountsByPage(server: ServerConfig, limit: number, off
     return response.body.accounts.map((acc: any) => ({
       id: acc.id,
       name: acc.name,
-      number: acc.account_no, // The API doc suggests account_no is not available here. Let's use `ref` as a fallback.
+      number: acc.account_no,
       ref: acc.ref,
     }));
   }

@@ -40,47 +40,51 @@ export default function AccountAutocomplete({ onAccountSelect }: AccountAutocomp
   const [isLoading, setIsLoading] = useState(false);
   const { server } = useServer();
   const { toast } = useToast();
+  
+  // Use a ref to manage the ongoing search query to prevent race conditions
+  const activeSearchQuery = useRef('');
 
-  const searchRef = useRef({
-    allFetchedAccounts: [] as Account[],
-    currentOffset: 0,
-    hasMore: true,
-    activeQuery: ''
-  });
-
-  const fetchAndFilterAccounts = useCallback(async (query: string, reset: boolean = false) => {
-    if (!server) return;
-
-    if (reset) {
-        searchRef.current.allFetchedAccounts = [];
-        searchRef.current.currentOffset = 0;
-        searchRef.current.hasMore = true;
+  const searchAccounts = useCallback(async (query: string) => {
+    if (!server || !query) {
         setFilteredAccounts([]);
+        setIsLoading(false);
+        return;
     }
-    
-    searchRef.current.activeQuery = query;
-    setIsLoading(true);
 
-    while (searchRef.current.hasMore && searchRef.current.activeQuery === query) {
+    activeSearchQuery.current = query;
+    setIsLoading(true);
+    setFilteredAccounts([]);
+
+    let offset = 0;
+    const limit = 100;
+    let hasMore = true;
+    let foundMatch = false;
+    const allFetchedAccounts: Account[] = [];
+
+    while (hasMore && !foundMatch && activeSearchQuery.current === query) {
         try {
-            const newAccounts = await getAccountsByPage(server, 100, searchRef.current.currentOffset);
+            const newAccounts = await getAccountsByPage(server, limit, offset);
 
             if (newAccounts.length === 0) {
-                searchRef.current.hasMore = false;
-                break; 
+                hasMore = false;
+                break;
             }
-
-            searchRef.current.allFetchedAccounts.push(...newAccounts);
-            searchRef.current.currentOffset += 100;
+            
+            allFetchedAccounts.push(...newAccounts);
             
             const lowercasedQuery = query.toLowerCase();
-            const filtered = searchRef.current.allFetchedAccounts.filter(account => 
+            const matchingAccounts = allFetchedAccounts.filter(account => 
                 account.ref?.toLowerCase().startsWith(lowercasedQuery)
             );
-            
-            if(searchRef.current.activeQuery === query) {
-               setFilteredAccounts(filtered);
+
+            // If we have found matches with the current set of fetched accounts,
+            // update the state and stop fetching more.
+            if (matchingAccounts.length > 0) {
+                setFilteredAccounts(matchingAccounts);
+                foundMatch = true; // Stop the loop
             }
+
+            offset += limit;
 
         } catch (error) {
             console.error("Failed to search accounts:", error);
@@ -89,21 +93,31 @@ export default function AccountAutocomplete({ onAccountSelect }: AccountAutocomp
                 title: 'Account Search Failed',
                 description: 'Could not retrieve accounts. Please try again.',
             });
-            searchRef.current.hasMore = false; 
+            hasMore = false; // Stop on error
             break;
         }
     }
-    if (searchRef.current.activeQuery === query) {
-      setIsLoading(false);
-    }
-  }, [server, toast]);
 
+    // Ensure we only stop loading if this is the most recent query
+    if (activeSearchQuery.current === query) {
+        setIsLoading(false);
+    }
+
+  }, [server, toast]);
+  
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const debouncedSearch = useCallback(debounce((query: string) => fetchAndFilterAccounts(query, true), 300), [fetchAndFilterAccounts]);
+  const debouncedSearch = useCallback(debounce((query: string) => searchAccounts(query), 500), [searchAccounts]);
 
   useEffect(() => {
-    debouncedSearch(searchTerm);
+    if (searchTerm) {
+        debouncedSearch(searchTerm);
+    } else {
+        // Clear results if search term is empty
+        setFilteredAccounts([]);
+        activeSearchQuery.current = '';
+    }
   }, [searchTerm, debouncedSearch]);
+
 
   const handleSelect = (account: Account) => {
     setSelectedAccount(account);
@@ -145,7 +159,7 @@ export default function AccountAutocomplete({ onAccountSelect }: AccountAutocomp
             onValueChange={handleInputChange}
           />
           <CommandList>
-            {isLoading && filteredAccounts.length === 0 && (
+            {isLoading && (
               <div className="p-2 flex items-center justify-center">
                  <Loader2 className="h-4 w-4 animate-spin" />
               </div>
