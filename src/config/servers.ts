@@ -2,6 +2,7 @@
 export interface ServerConfig {
     name: string;
     host: string;
+    apiPath: string;
     apiKey: string;
     secretKey: string;
     companyId: string;
@@ -9,24 +10,11 @@ export interface ServerConfig {
 
 export const servers: ServerConfig[] = [
     {
-        name: 'Production Server',
-        host: 'api.prod.example.com',
-        apiKey: 'prod_api_key_123',
-        secretKey: 'prod_secret_key_abc',
-        companyId: 'prod_1'
-    },
-    {
-        name: 'Staging Server',
-        host: 'api.staging.example.com',
-        apiKey: 'staging_api_key_456',
-        secretKey: 'staging_secret_key_def',
-        companyId: 'staging_2'
-    },
-    {
-        name: 'Development Server',
-        host: 'api.dev.example.com',
-        apiKey: 'dev_api_key_789',
-        secretKey: 'dev_secret_key_ghi',
-        companyId: 'dev_3'
+        name: '8 Staging - Mango Cabs S3 - Gerry',
+        host: 'https://8stagingapi.icabbi.com',
+        apiPath: '/8staging/',
+        apiKey: '3b79a230ee7532cbd250704e707f3021d7d271e3',
+        secretKey: '15fc2161e049a49044ccfb3fd048359bf0cba68d',
+        companyId: '1100'
     }
 ]

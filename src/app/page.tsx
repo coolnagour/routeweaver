@@ -36,6 +36,7 @@ export default function SelectServerPage() {
                         </CardHeader>
                         <CardContent>
                             <p className="text-sm text-muted-foreground">{server.host}</p>
+                            <p className="text-sm text-muted-foreground">{server.apiPath}</p>
                         </CardContent>
                         <CardFooter>
                             <Button className="w-full" onClick={() => handleSelectServer(server)}>
