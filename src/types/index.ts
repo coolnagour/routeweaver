@@ -87,9 +87,10 @@ export const ServerConfigSchema = z.object({
     name: z.string(),
     host: z.string(),
     apiPath: z.string(),
-    apiKey: z.string(),
+    appKey: z.string(),
     secretKey: z.string(),
     companyId: z.string(),
+    siteId: z.number().optional(),
 });
 
 export const JourneyInputSchema = z.object({

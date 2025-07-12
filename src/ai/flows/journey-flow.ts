@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview Manages journey-related operations using the iCabbi API.
@@ -9,16 +8,14 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { JourneyInputSchema, JourneyOutputSchema, ServerConfigSchema } from '@/types';
-import { createBooking } from '@/services/icabbi';
-import type { Booking, JourneyOutput } from '@/types';
-
+import { createBooking, createJourney } from '@/services/icabbi';
+import type { Booking, JourneyOutput, Stop } from '@/types';
 
 // Extend the input schema to include server config
 const SaveJourneyInputSchema = JourneyInputSchema.extend({
   server: ServerConfigSchema,
 });
 type SaveJourneyInput = z.infer<typeof SaveJourneyInputSchema>;
-
 
 export async function saveJourney(input: SaveJourneyInput): Promise<JourneyOutput> {
   return await saveJourneyFlow(input);
@@ -31,40 +28,94 @@ const saveJourneyFlow = ai.defineFlow(
     outputSchema: JourneyOutputSchema,
   },
   async ({ bookings, server }) => {
-    console.log(`Saving journey with ${bookings.length} booking(s) to server: ${server.name}`);
+    console.log(`Starting journey creation with ${bookings.length} booking(s) on server: ${server.name}`);
 
-    // In a real application, you would have more robust logic for handling multiple bookings.
-    // This could involve parallel API calls or a single batch endpoint if available.
-    // For this example, we'll process them sequentially.
-    
-    let successfulBookings = 0;
-    const bookingIds: string[] = [];
-    
+    if (bookings.length === 0) {
+      throw new Error('No bookings provided to create a journey.');
+    }
+
+    // Step 1: Create each booking individually to get their IDs and segment IDs
+    const createdBookings = [];
     for (const booking of bookings as Booking[]) {
-        try {
-            // The `createBooking` function now makes the actual API call.
-            const result = await createBooking(server, booking);
-            console.log('Booking successful:', result);
-            // Assuming the API returns an object with an `id` for the created booking
-            if (result && result.id) {
-                bookingIds.push(result.id);
-            }
-            successfulBookings++;
-        } catch (error) {
-            console.error('Failed to create a booking:', error);
-            // Decide on error handling strategy: stop all, or continue?
-            // For now, we'll log and continue.
+      try {
+        const result = await createBooking(server, booking);
+        if (result && result.id && result.bookingsegments) {
+          createdBookings.push(result);
+          console.log(`Successfully created booking with ID: ${result.id}`);
+        } else {
+          throw new Error('Invalid response from createBooking');
+        }
+      } catch (error) {
+        console.error(`Failed to create booking for passenger: ${booking.stops[0]?.name}`, error);
+        throw new Error(`Failed to create a booking. Halting journey creation. Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    }
+
+    // Artificial delay if needed, similar to script
+    // await new Promise(resolve => setTimeout(resolve, 3000));
+
+    // Step 2: Construct the journey payload from the created bookings
+    const journeyBookingsPayload = [];
+    const now = Math.floor(new Date().getTime() / 1000);
+    let plannedDate = now;
+
+    for (const createdBooking of createdBookings) {
+        // Add the pickup segment
+        const pickupSegment = createdBooking.bookingsegments[0];
+        if (pickupSegment) {
+            journeyBookingsPayload.push({
+                bookingsegment_id: pickupSegment.id,
+                planned_date: plannedDate,
+                distance: 0, // Group with next stop
+            });
+        }
+        
+        // Add the dropoff segment (as destination)
+        // Note: The script logic for journeys is complex. This is a direct interpretation.
+        journeyBookingsPayload.push({
+            request_id: createdBooking.id,
+            is_destination: "true",
+            planned_date: plannedDate + 600, // Example offset
+            distance: 1000, // Example distance
+        });
+
+        plannedDate += 1200; // Increment time for the next booking's pickup
+    }
+    
+    // Ensure the very last stop has distance 0 if it's a dropoff
+    if (journeyBookingsPayload.length > 0) {
+        const lastElement = journeyBookingsPayload[journeyBookingsPayload.length - 1];
+        if (lastElement.is_destination) {
+            lastElement.distance = 0;
         }
     }
-    
-    if (successfulBookings === 0) {
-        throw new Error('All booking attempts failed.');
-    }
 
-    return {
-      journeyId: `journey_${new Date().toISOString()}`, // A composite ID for the UI journey
-      status: 'SUCCESS',
-      message: `${successfulBookings} of ${bookings.length} bookings were successfully scheduled.`,
+    const journeyPayload = {
+        logs: "false",
+        delete_outstanding_journeys: "false",
+        keyless_response: true,
+        journeys: [{
+            id: null, // Creating a new journey
+            bookings: journeyBookingsPayload,
+        }],
     };
+
+    // Step 3: Create the journey
+    try {
+        const journeyResult = await createJourney(server, journeyPayload);
+        console.log('Journey creation successful:', journeyResult);
+
+        // Assuming the journey creation gives back a journey ID or some confirmation
+        const journeyId = journeyResult?.journeys?.[0]?.id || `journey_${new Date().toISOString()}`;
+
+        return {
+            journeyId: journeyId,
+            status: 'SUCCESS',
+            message: `Journey with ${createdBookings.length} booking(s) was successfully scheduled.`,
+        };
+    } catch (error) {
+        console.error('Failed to create journey:', error);
+        throw new Error(`Failed to link bookings into a journey. Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 );

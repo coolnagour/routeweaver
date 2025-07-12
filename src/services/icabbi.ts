@@ -3,7 +3,6 @@
 
 import type { ServerConfig } from "@/config/servers";
 import type { Booking } from "@/types";
-import { createHmac } from 'crypto';
 
 interface IcabbiApiCallOptions {
     server: ServerConfig;
@@ -12,43 +11,46 @@ interface IcabbiApiCallOptions {
     body?: any;
 }
 
-// A simple example for a booking payload for iCabbi API
-// This has been updated based on common API patterns and the available context.
 const formatBookingForIcabbi = (booking: Booking, server: ServerConfig) => {
-    const customer = booking.stops.find(s => s.stopType === 'pickup');
+    const pickupStop = booking.stops.find(s => s.stopType === 'pickup');
+    // In this new model, we assume a simple 1 pickup, 1 dropoff booking.
+    const dropoffStop = booking.stops.find(s => s.stopType === 'dropoff');
+
+    if (!pickupStop || !dropoffStop) {
+        throw new Error("Booking must have at least one pickup and one dropoff stop.");
+    }
     
     return {
-        company_id: parseInt(server.companyId, 10),
-        customer_name: customer?.name || 'N/A',
-        customer_phone_number: customer?.phone || 'N/A',
-        asap: !booking.stops.some(s => s.dateTime), // If any stop has a dateTime, it's not ASAP
-        prebook_time: booking.stops.find(s => s.stopType === 'pickup')?.dateTime?.toISOString(),
-        stops: booking.stops.map(stop => ({
-            name: stop.location.address,
-            latitude: stop.location.lat,
-            longitude: stop.location.lng,
-            type: stop.stopType === 'pickup' ? 'P' : 'D',
-            passenger_name: stop.name,
-            passenger_phone: stop.phone,
-            notes: stop.instructions,
-        })),
-    }
-}
-
+        date: pickupStop.dateTime?.toISOString() || new Date().toISOString(),
+        source: "DISPATCH",
+        name: pickupStop.name || 'N/A',
+        phone: pickupStop.phone || 'N/A',
+        customer_id: "123", // Example customer_id
+        address: {
+            lat: pickupStop.location.lat.toString(),
+            lng: pickupStop.location.lng.toString(),
+            formatted: pickupStop.location.address,
+            driver_instructions: pickupStop.instructions || "",
+        },
+        destination: {
+            lat: dropoffStop.location.lat.toString(),
+            lng: dropoffStop.location.lng.toString(),
+            formatted: dropoffStop.location.address,
+            driver_instructions: dropoffStop.instructions || "",
+        },
+        account_id: parseInt(server.companyId, 10),
+        site_id: server.siteId,
+        with_bookingsegments: true,
+    };
+};
 
 export async function callIcabbiApi({ server, method, endpoint, body }: IcabbiApiCallOptions) {
-    const url = `https://${server.host}/${server.apiPath}/${endpoint}`;
+    const url = `https://${server.host}/${server.apiPath}/${endpoint}?app_key=${server.appKey}`;
     const bodyString = body ? JSON.stringify(body) : '';
-
-    // Generate the signature as per typical iCabbi API requirements
-    const signature = createHmac('sha1', server.secretKey)
-        .update(url + bodyString)
-        .digest('hex');
     
     const headers = new Headers({
         'Content-Type': 'application/json',
-        'X-ICABBI-API-KEY': server.apiKey,
-        'X-ICABBI-API-SIGNATURE': signature
+        'Authorization': 'Basic ' + Buffer.from(`${server.appKey}:${server.secretKey}`).toString('base64'),
     });
     
     const options: RequestInit = {
@@ -60,33 +62,29 @@ export async function callIcabbiApi({ server, method, endpoint, body }: IcabbiAp
         options.body = bodyString;
     }
 
-    console.log(`Calling iCabbi API: ${method} ${url}`, {
-        headers: {
-            'X-ICABBI-API-KEY': server.apiKey,
-            'X-ICABBI-API-SIGNATURE': 'REDACTED'
-        },
-        body: options.body
-    });
+    console.log(`Calling iCabbi API: ${method} ${url}`);
     
     try {
         const response = await fetch(url, options);
         
+        const responseText = await response.text();
         if (!response.ok) {
-            const errorBody = await response.text();
-            console.error('iCabbi API Error:', response.status, errorBody);
-            throw new Error(`API call failed with status ${response.status}: ${errorBody || response.statusText}`);
+            console.error('iCabbi API Error:', response.status, responseText);
+            throw new Error(`API call failed with status ${response.status}: ${responseText || response.statusText}`);
         }
         
-        // Handle no content response
-        if (response.status === 204) {
+        if (response.status === 204 || !responseText) {
             return null;
         }
 
-        if (response.headers.get('content-type')?.includes('application/json')) {
-            return await response.json();
+        const jsonResponse = JSON.parse(responseText);
+
+        if (jsonResponse.status && jsonResponse.status.type === 'error') {
+            console.error('iCabbi API Logic Error:', jsonResponse.status.message);
+            throw new Error(`API Error: ${jsonResponse.status.message}`);
         }
-        
-        return await response.text();
+
+        return jsonResponse.body;
 
     } catch (error) {
         console.error('Fetch error:', error);
@@ -96,7 +94,6 @@ export async function callIcabbiApi({ server, method, endpoint, body }: IcabbiAp
 
 /**
  * Creates a booking using the iCabbi API.
- * Note: This is a simplified example. The actual payload will be more complex.
  */
 export async function createBooking(server: ServerConfig, booking: Booking) {
     const payload = formatBookingForIcabbi(booking, server);
@@ -104,8 +101,23 @@ export async function createBooking(server: ServerConfig, booking: Booking) {
     const response = await callIcabbiApi({
         server,
         method: 'POST',
-        endpoint: 'bookings',
+        endpoint: 'bookings/add',
         body: payload,
+    });
+    
+    // The script expects the nested 'booking' object
+    return response.booking;
+}
+
+/**
+ * Creates a journey by linking existing booking segments.
+ */
+export async function createJourney(server: ServerConfig, journeyPayload: any) {
+    const response = await callIcabbiApi({
+        server,
+        method: 'POST',
+        endpoint: 'journey/update',
+        body: journeyPayload,
     });
 
     return response;
