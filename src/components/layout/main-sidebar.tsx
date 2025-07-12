@@ -36,6 +36,13 @@ export default function MainSidebar() {
   const isCollapsed = sidebarState === 'collapsed';
 
   const handleSignOut = async () => {
+    // In dev mode, just clear context and go to login
+    if (process.env.NODE_ENV === 'development' && user?.uid === 'mock-user-id') {
+      setServer(null);
+      // A full page reload might be needed if auth is re-enabled to clear mock state
+      window.location.href = '/login';
+      return;
+    }
     await signOut(auth);
     setServer(null);
     router.push('/login');
