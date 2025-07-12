@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { User } from 'firebase/auth';
@@ -45,9 +46,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // DEV: Bypassing real auth
     setUser(mockUser);
-    if (!server) {
-      setServer(servers[0]); // Default to the first server
-    }
     setLoading(false);
 
     // REAL AUTH - keep this commented out for dev
@@ -56,18 +54,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     //   setLoading(false);
     // });
     // return () => unsubscribe();
-  }, [server, setServer]);
+  }, []);
 
   useEffect(() => {
     if (loading) return;
 
     const isAuthPage = pathname === '/login';
-    const isServerSelectPage = pathname === '/select-server';
+    const isServerSelectPage = pathname === '/';
 
-    // With mock auth, we should always be on an app page.
-    // If we're on a no-layout page, redirect to the home page.
-    if (user && server && (isAuthPage || isServerSelectPage)) {
-      router.push('/');
+    if (user) { // User is "logged in"
+      if (isAuthPage) {
+        router.push('/'); // If on login page, go to server select
+      } else if (!server && !isServerSelectPage) {
+        router.push('/'); // If no server selected and not on server select page, go there
+      }
+    } else { // User is not logged in
+        if (!isAuthPage) {
+            router.push('/login');
+        }
     }
     
   }, [user, server, loading, router, pathname]);

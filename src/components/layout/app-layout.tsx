@@ -1,3 +1,4 @@
+
 'use client';
 
 import { usePathname } from 'next/navigation';
@@ -10,7 +11,7 @@ interface AppLayoutProps {
 
 export default function AppLayout({ children }: AppLayoutProps) {
   const pathname = usePathname();
-  const noLayoutPages = ['/login', '/select-server'];
+  const noLayoutPages = ['/login', '/']; // Home is now server selector
 
   if (noLayoutPages.includes(pathname)) {
     return <main>{children}</main>;

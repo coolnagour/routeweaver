@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -22,7 +23,7 @@ import { useRouter } from 'next/navigation';
 import { useServer } from '@/context/server-context';
 
 const navItems = [
-  { href: '/', label: 'New Journey', icon: Route },
+  { href: '/journeys/new', label: 'New Journey', icon: Route },
   { href: '/journeys', label: 'My Journeys', icon: History },
   { href: '/templates', label: 'Templates', icon: FileText },
 ];
@@ -39,7 +40,6 @@ export default function MainSidebar() {
     // In dev mode, just clear context and go to login
     if (process.env.NODE_ENV === 'development' && user?.uid === 'mock-user-id') {
       setServer(null);
-      // A full page reload might be needed if auth is re-enabled to clear mock state
       window.location.href = '/login';
       return;
     }
@@ -50,7 +50,7 @@ export default function MainSidebar() {
   
   const handleChangeServer = () => {
     setServer(null);
-    router.push('/select-server');
+    router.push('/');
   }
 
   return (

@@ -12,7 +12,7 @@ export default function TemplatesPage() {
     // In a real app, you might pass this data via state management or query params
     // For now, we can store it in localStorage and redirect.
     localStorage.setItem('templateToLoad', JSON.stringify(template));
-    router.push('/');
+    router.push('/journeys/new');
   };
 
   return <TemplateManager onLoadTemplate={handleLoadTemplate} />;
