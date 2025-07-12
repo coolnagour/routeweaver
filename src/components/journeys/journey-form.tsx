@@ -2,7 +2,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm, useFieldArray, useWatch } from 'react-hook-form';
+import { useForm, useFieldArray, useWatch, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import {
@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils';
 import { format, setHours, setMinutes } from 'date-fns';
 import type { Booking, Stop } from '@/types';
 import ViaStop from './via-stop';
+import AddressAutocomplete from './address-autocomplete';
 
 const stopSchema = z.object({
   id: z.string().optional(),
@@ -181,19 +182,20 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
                         </FormItem>
                         )}
                     />
-                    <FormField
+                    <Controller
                         control={form.control}
                         name={`stops.0.address`}
-                        render={({ field }) => (
+                        render={({ field, fieldState }) => (
                             <FormItem>
                                 <FormLabel>Address</FormLabel>
                                 <FormControl>
-                                    <div className="relative">
-                                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                    <Input placeholder='Pickup location' {...field} className="pl-10 bg-background"/>
-                                    </div>
+                                     <AddressAutocomplete 
+                                        value={field.value}
+                                        onChange={field.onChange}
+                                        placeholder="Pickup location"
+                                     />
                                 </FormControl>
-                                <FormMessage />
+                                <FormMessage>{fieldState.error?.message}</FormMessage>
                             </FormItem>
                         )}
                     />

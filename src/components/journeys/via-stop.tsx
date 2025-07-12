@@ -19,6 +19,7 @@ import { MapPin, MinusCircle, User, Phone, MessageSquare, ChevronsUpDown, Calend
 import type { Stop } from '@/types';
 import { cn } from '@/lib/utils';
 import { format, setHours, setMinutes } from 'date-fns';
+import AddressAutocomplete from './address-autocomplete';
 
 interface ViaStopProps {
   control: any;
@@ -59,19 +60,20 @@ export default function ViaStop({ control, index, removeStop, getAvailablePickup
 
         <div className="flex items-start gap-2">
              <div className="flex-1 space-y-2">
-                 <FormField
+                 <Controller
                      control={control}
                      name={`stops.${index}.address`}
-                     render={({ field }) => (
+                     render={({ field, fieldState }) => (
                          <FormItem>
                              <FormLabel>Address</FormLabel>
                              <FormControl>
-                                 <div className="relative">
-                                 <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                 <Input placeholder={isPickup ? 'Pickup location' : 'Drop-off location'} {...field} className="pl-10 bg-background"/>
-                                 </div>
+                                  <AddressAutocomplete 
+                                     value={field.value}
+                                     onChange={field.onChange}
+                                     placeholder={isPickup ? 'Pickup location' : 'Drop-off location'}
+                                  />
                              </FormControl>
-                             <FormMessage />
+                             <FormMessage>{fieldState.error?.message}</FormMessage>
                          </FormItem>
                      )}
                  />
