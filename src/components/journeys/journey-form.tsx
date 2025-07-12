@@ -74,8 +74,8 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
     defaultValues: {
       id: initialData?.id || new Date().toISOString() + Math.random(),
       stops: initialData?.stops?.length ? initialData.stops.map(s => ({ ...s, id: s.id || new Date().toISOString() + Math.random(), dateTime: s.dateTime ? new Date(s.dateTime) : undefined })) : [
-        { id: new Date().toISOString() + Math.random(), address: '', stopType: 'pickup', name: '', phone: '', dateTime: new Date() },
-        { id: new Date().toISOString() + Math.random(), address: '', stopType: 'dropoff' }
+        { id: new Date().toISOString() + Math.random(), address: '', stopType: 'pickup', name: '', phone: '', dateTime: new Date(), instructions: '' },
+        { id: new Date().toISOString() + Math.random(), address: '', stopType: 'dropoff', pickupStopId: undefined, instructions: '' }
       ] 
     },
   });
@@ -103,6 +103,17 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
     onSave(values as Booking);
   }
 
+  const handleStopTypeChange = (index: number, newType: 'pickup' | 'dropoff') => {
+    form.setValue(`stops.${index}.stopType`, newType);
+    if (newType === 'pickup') {
+        form.setValue(`stops.${index}.pickupStopId`, undefined);
+    } else {
+        form.setValue(`stops.${index}.name`, undefined);
+        form.setValue(`stops.${index}.phone`, undefined);
+        form.setValue(`stops.${index}.dateTime`, undefined);
+    }
+  }
+
   return (
       <Card>
         <Form {...form}>
@@ -128,12 +139,13 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
                         const isLastStop = stopIndex === stopFields.length - 1;
                         const isIntermediateStop = !isFirstStop && !isLastStop;
 
-                        const isPickup = form.watch(`stops.${stopIndex}.stopType`) === 'pickup';
+                        const stopType = form.watch(`stops.${stopIndex}.stopType`);
+                        const isPickup = stopType === 'pickup';
                         const pickupsForSelection = availablePickups(stopIndex);
 
                         return (
                         <div key={stop.id} className="p-4 border rounded-lg space-y-3">
-                            {isFirstStop && isPickup && (
+                            {isFirstStop && (
                                 <FormField
                                     control={form.control}
                                     name={`stops.${stopIndex}.dateTime`}
@@ -213,7 +225,13 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
                                             <FormItem>
                                                 <FormLabel>Type</FormLabel>
                                                 <FormControl>
-                                                    <Button type="button" variant="outline" className="w-full" onClick={() => field.onChange(field.value === 'pickup' ? 'dropoff' : 'pickup')} disabled={!isIntermediateStop}>
+                                                    <Button 
+                                                        type="button" 
+                                                        variant="outline" 
+                                                        className="w-full" 
+                                                        onClick={() => handleStopTypeChange(stopIndex, field.value === 'pickup' ? 'dropoff' : 'pickup')} 
+                                                        disabled={!isIntermediateStop}
+                                                    >
                                                         {field.value === 'pickup' ? 'Pickup' : 'Drop-off'}
                                                     </Button>
                                                 </FormControl>
