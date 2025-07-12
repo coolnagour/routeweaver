@@ -10,8 +10,7 @@ import useLocalStorage from '@/hooks/use-local-storage';
 import { saveJourney } from '@/ai/flows/journey-flow';
 import { getSites } from '@/services/icabbi';
 import type { Booking, Journey, JourneyTemplate, Account } from '@/types';
-import { History, Save, Building, Loader2 } from 'lucide-react';
-import Image from 'next/image';
+import { Save, Building, Loader2 } from 'lucide-react';
 import BookingManager from './booking-manager';
 import { useServer } from '@/context/server-context';
 import { useRouter } from 'next/navigation';
@@ -217,8 +216,8 @@ export default function JourneyBuilder({
   const title = getTitle();
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start p-4 sm:p-6 lg:p-8">
-      <div className="lg:col-span-2 space-y-6">
+    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
+      <div>
         <Card>
           <CardHeader>
             <CardTitle className="font-headline text-2xl">{title}</CardTitle>
@@ -280,24 +279,6 @@ export default function JourneyBuilder({
             </CardFooter>
         </Card>
       </div>
-      
-      <div className="space-y-6 lg:col-span-1">
-        <Card>
-            <CardHeader>
-            <CardTitle className="font-headline text-xl flex items-center gap-2">
-                <History /> Journey Map
-            </CardTitle>
-            <CardDescription>A visual representation of your journey stops.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <div className="rounded-lg overflow-hidden border">
-                    <Image src="https://placehold.co/800x600.png" width={800} height={600} alt="Map placeholder" data-ai-hint="map city" className="w-full h-full object-cover" />
-                </div>
-            </CardContent>
-        </Card>
-      </div>
     </div>
   );
 }
-
-    
