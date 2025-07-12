@@ -28,7 +28,7 @@ export default function SelectServerPage() {
                 <CardTitle className="font-headline text-2xl">Select a Server</CardTitle>
                 <CardDescription>Choose a server to connect to for managing journeys.</CardDescription>
             </CardHeader>
-            <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <CardContent className="grid grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-4">
                 {servers.map((server) => (
                     <Card key={server.companyId}>
                         <CardHeader>
