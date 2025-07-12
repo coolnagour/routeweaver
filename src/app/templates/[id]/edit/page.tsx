@@ -12,7 +12,7 @@ export default function EditTemplatePage() {
   const router = useRouter();
   const params = useParams();
   const { server } = useServer();
-  const templateId = params.id;
+  const templateId = params.id ? decodeURIComponent(params.id as string) : undefined;
 
   const [templates] = useLocalStorage<JourneyTemplate[]>('journey-templates', [], server?.companyId);
   const [template, setTemplate] = useState<JourneyTemplate | null>(null);
