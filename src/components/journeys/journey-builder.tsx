@@ -114,9 +114,21 @@ export default function JourneyBuilder({
       });
       return;
     }
+    
+    if (!server) {
+      toast({
+        variant: 'destructive',
+        title: 'No Server Selected',
+        description: 'Please select a server before booking a journey.',
+      });
+      router.push('/');
+      return;
+    }
 
     setIsSubmitting(true);
     if (isEditingJourney && onUpdateJourney && journeyId) {
+      // NOTE: Updating a journey via API is not implemented in this example.
+      // We are just updating it in local storage.
       const updatedJourney: Journey = {
         id: journeyId,
         status: 'Scheduled', // Or keep original status if needed
@@ -125,11 +137,11 @@ export default function JourneyBuilder({
       onUpdateJourney(updatedJourney);
       toast({
         title: 'Journey Updated!',
-        description: `Your journey has been successfully updated.`,
+        description: `Your journey has been successfully updated locally.`,
       });
     } else {
       try {
-        const result = await saveJourney({ bookings });
+        const result = await saveJourney({ bookings, server });
         
         const newJourney: Journey = {
           id: result.journeyId,
@@ -140,7 +152,7 @@ export default function JourneyBuilder({
 
         toast({
           title: 'Journey Booked!',
-          description: `Your journey with ${bookings.length} booking(s) has been scheduled.`,
+          description: result.message,
         });
         
         if (onNewJourneyClick) {
@@ -151,7 +163,7 @@ export default function JourneyBuilder({
         toast({
           variant: "destructive",
           title: "Error",
-          description: "Could not save the journey. Please try again.",
+          description: error instanceof Error ? error.message : "Could not save the journey. Please try again.",
         });
       }
     }

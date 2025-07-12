@@ -1,5 +1,6 @@
 
 import { z } from 'zod';
+import type { ServerConfig } from '@/config/servers';
 
 export type StopType = 'pickup' | 'dropoff';
 
@@ -24,7 +25,6 @@ export interface Stop {
 
 export interface Booking {
   id: string;
-  // date field is removed from here
   stops: Stop[];
 }
 
@@ -68,6 +68,7 @@ const LocationSchema = z.object({
 });
 
 const StopSchema = z.object({
+  id: z.string(),
   location: LocationSchema,
   stopType: z.enum(['pickup', 'dropoff']),
   dateTime: z.date().optional(),
@@ -78,13 +79,24 @@ const StopSchema = z.object({
 });
 
 const BookingSchema = z.object({
+  id: z.string(),
   stops: z.array(StopSchema),
+});
+
+export const ServerConfigSchema = z.object({
+    name: z.string(),
+    host: z.string(),
+    apiPath: z.string(),
+    apiKey: z.string(),
+    secretKey: z.string(),
+    companyId: z.string(),
 });
 
 export const JourneyInputSchema = z.object({
   bookings: z.array(BookingSchema),
 });
 export type JourneyInput = z.infer<typeof JourneyInputSchema>;
+
 
 export const JourneyOutputSchema = z.object({
   journeyId: z.string(),
