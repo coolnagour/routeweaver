@@ -217,68 +217,66 @@ export default function JourneyBuilder({
 
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
-      <div>
-        <Card>
-          <CardHeader>
-            <CardTitle className="font-headline text-2xl">{title}</CardTitle>
-            <CardDescription>A journey is made up of one or more bookings. Add or edit bookings below.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-headline text-2xl">{title}</CardTitle>
+          <CardDescription>A journey is made up of one or more bookings. Add or edit bookings below.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                  <label className="text-sm font-medium mb-2 block">Site</label>
+                  <Select onValueChange={(value) => setSelectedSiteId(Number(value))} disabled={isFetchingSites}>
+                      <SelectTrigger>
+                          {isFetchingSites ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Building className="mr-2 h-4 w-4" />}
+                          <SelectValue placeholder={isFetchingSites ? "Loading sites..." : "Select a site"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                      {sites.length > 0 ? (
+                          sites.map(site => (
+                              <SelectItem key={site.id} value={site.id.toString()}>
+                                  <span className="font-medium mr-2">{site.ref}</span>
+                                  <span className="text-muted-foreground">{site.name}</span>
+                              </SelectItem>
+                          ))
+                      ) : (
+                          <div className="p-2 text-sm text-muted-foreground">No sites available.</div>
+                      )}
+                      </SelectContent>
+                  </Select>
+              </div>
                 <div>
-                    <label className="text-sm font-medium mb-2 block">Site</label>
-                    <Select onValueChange={(value) => setSelectedSiteId(Number(value))} disabled={isFetchingSites}>
-                        <SelectTrigger>
-                            {isFetchingSites ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Building className="mr-2 h-4 w-4" />}
-                            <SelectValue placeholder={isFetchingSites ? "Loading sites..." : "Select a site"} />
-                        </SelectTrigger>
-                        <SelectContent>
-                        {sites.length > 0 ? (
-                            sites.map(site => (
-                                <SelectItem key={site.id} value={site.id.toString()}>
-                                    <span className="font-medium mr-2">{site.ref}</span>
-                                    <span className="text-muted-foreground">{site.name}</span>
-                                </SelectItem>
-                            ))
-                        ) : (
-                            <div className="p-2 text-sm text-muted-foreground">No sites available.</div>
-                        )}
-                        </SelectContent>
-                    </Select>
-                </div>
-                 <div>
-                    <label className="text-sm font-medium mb-2 block">Account</label>
-                    <AccountAutocomplete onAccountSelect={setSelectedAccount} />
-                </div>
-            </div>
-          </CardContent>
-        </Card>
+                  <label className="text-sm font-medium mb-2 block">Account</label>
+                  <AccountAutocomplete onAccountSelect={setSelectedAccount} />
+              </div>
+          </div>
+        </CardContent>
+      </Card>
 
-        <BookingManager bookings={bookings} setBookings={setBookings} />
-        
-        <Card>
-            <CardFooter className="flex justify-between items-center bg-muted/50 p-4 rounded-b-lg flex-wrap gap-4">
-                <div className="flex-1 min-w-[250px]">
-                     <Input
-                        type="text"
-                        placeholder="Enter name to save as template..."
-                        value={templateName}
-                        onChange={(e) => setTemplateName(e.target.value)}
-                        className="border p-2 rounded-md mr-2 bg-background"
-                    />
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={handleSaveTemplate} disabled={bookings.length === 0 || !templateName}>
-                      <Save className="mr-2 h-4 w-4" /> {isEditingTemplate ? 'Update Template' : 'Save as Template'}
-                  </Button>
-                  
-                  <Button onClick={handleBookOrUpdateJourney} disabled={isSubmitting || bookings.length === 0 || !selectedSiteId || !selectedAccount}>
-                      {isSubmitting ? 'Submitting...' : (isEditingJourney ? 'Update Journey' : 'Book Journey')}
-                  </Button>
-                </div>
-            </CardFooter>
-        </Card>
-      </div>
+      <BookingManager bookings={bookings} setBookings={setBookings} />
+      
+      <Card>
+          <CardFooter className="flex justify-between items-center bg-muted/50 p-4 rounded-b-lg flex-wrap gap-4">
+              <div className="flex-1 min-w-[250px]">
+                    <Input
+                      type="text"
+                      placeholder="Enter name to save as template..."
+                      value={templateName}
+                      onChange={(e) => setTemplateName(e.target.value)}
+                      className="border p-2 rounded-md mr-2 bg-background"
+                  />
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={handleSaveTemplate} disabled={bookings.length === 0 || !templateName}>
+                    <Save className="mr-2 h-4 w-4" /> {isEditingTemplate ? 'Update Template' : 'Save as Template'}
+                </Button>
+                
+                <Button onClick={handleBookOrUpdateJourney} disabled={isSubmitting || bookings.length === 0 || !selectedSiteId || !selectedAccount}>
+                    {isSubmitting ? 'Submitting...' : (isEditingJourney ? 'Update Journey' : 'Book Journey')}
+                </Button>
+              </div>
+          </CardFooter>
+      </Card>
     </div>
   );
 }
