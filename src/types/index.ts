@@ -8,6 +8,7 @@ export interface Stop {
   address: string;
   stopType: StopType;
   dateTime?: Date; // Only for pickup stops
+  instructions?: string;
   // Fields for pickup
   name?: string;
   phone?: string;
@@ -30,7 +31,7 @@ export interface Journey {
 export interface JourneyTemplate {
   id: string;
   name: string;
-  bookings: (Omit<Booking, 'id' | 'stops'> & { stops: Omit<Stop, 'id'>[] })[];
+  bookings: (Omit<Booking, 'id' | 'stops'> & { stops: (Omit<Stop, 'id'> & { dateTime?: string })[] })[];
 }
 
 
@@ -42,6 +43,7 @@ const StopSchema = z.object({
   name: z.string().optional(),
   phone: z.string().optional(),
   pickupStopId: z.string().optional(),
+  instructions: z.string().optional(),
 });
 
 const BookingSchema = z.object({

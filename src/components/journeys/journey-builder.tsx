@@ -9,7 +9,7 @@ import useLocalStorage from '@/hooks/use-local-storage';
 import { saveJourney } from '@/ai/flows/journey-flow';
 import type { Booking, Journey, JourneyTemplate, Stop } from '@/types';
 import JourneyForm from './journey-form';
-import { Edit, History, List, MapPin, Package, Save, Trash2, UserPlus, Users, Phone, Clock } from 'lucide-react';
+import { Edit, History, List, MapPin, Package, Save, Trash2, UserPlus, Users, Phone, Clock, MessageSquare } from 'lucide-react';
 import Image from 'next/image';
 import { format } from 'date-fns';
 
@@ -85,7 +85,8 @@ export default function JourneyBuilder({ initialData, onNewJourneyClick }: Journ
             name: s.name,
             phone: s.phone,
             pickupStopId: s.pickupStopId,
-            dateTime: s.dateTime
+            dateTime: s.dateTime?.toISOString(),
+            instructions: s.instructions
         }))
       })),
     };
@@ -192,9 +193,9 @@ export default function JourneyBuilder({ initialData, onNewJourneyClick }: Journ
 
                                     return (
                                         <div key={stop.id} className="text-sm text-muted-foreground space-y-1 pt-1 border-t first:border-t-0">
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex items-start gap-2">
                                                 <MapPin className="h-4 w-4 text-primary mt-1"/>
-                                                <div>
+                                                <div className="flex-1">
                                                     <p><span className="capitalize font-medium">{stop.stopType}:</span> {stop.address}</p>
                                                     {isPickup && stop.name && (
                                                         <div className="flex items-center gap-4 text-xs pl-1 flex-wrap">
@@ -206,6 +207,12 @@ export default function JourneyBuilder({ initialData, onNewJourneyClick }: Journ
                                                     {!isPickup && dropoffPassenger && (
                                                          <div className="flex items-center gap-4 text-xs pl-1">
                                                             <span className="flex items-center gap-1"><Users className="h-3 w-3" /> Dropping off {dropoffPassenger.name}</span>
+                                                        </div>
+                                                    )}
+                                                     {stop.instructions && (
+                                                        <div className="flex items-center gap-2 text-xs pl-1 mt-1 text-gray-500">
+                                                            <MessageSquare className="h-3 w-3" />
+                                                            <span>{stop.instructions}</span>
                                                         </div>
                                                     )}
                                                 </div>

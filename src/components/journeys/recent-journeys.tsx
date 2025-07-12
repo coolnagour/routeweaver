@@ -15,7 +15,7 @@ import type { Journey, Booking, Stop } from '@/types';
 import { format } from 'date-fns';
 import useLocalStorage from '@/hooks/use-local-storage';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Users, MapPin, Clock } from 'lucide-react';
+import { Users, MapPin, Clock, MessageSquare } from 'lucide-react';
 
 const getStatusVariant = (status: Journey['status']) => {
   switch (status) {
@@ -119,16 +119,25 @@ export default function RecentJourneys() {
                                                 <CardContent className="p-3 pt-0 space-y-2 text-sm">
                                                     <div className="space-y-1">
                                                         {booking.stops.map(stop => (
-                                                            <div key={stop.id} className="flex items-center gap-2">
-                                                                <MapPin className="h-4 w-4 text-primary" />
-                                                                <div>
-                                                                    <span className="capitalize font-medium">{stop.stopType}: </span>
-                                                                    {stop.address}
+                                                            <div key={stop.id} className="flex items-start gap-2 pt-2 border-t first:border-t-0">
+                                                                <MapPin className="h-4 w-4 text-primary mt-0.5" />
+                                                                <div className="flex-1">
+                                                                    <p>
+                                                                        <span className="capitalize font-medium">{stop.stopType}: </span>
+                                                                        {stop.address}
+                                                                    </p>
+                                                                    
                                                                     {stop.stopType === 'pickup' && stop.name && (
                                                                         <span className="text-xs text-muted-foreground ml-2">({stop.name})</span>
                                                                     )}
                                                                     {stop.dateTime && (
                                                                         <span className="text-xs text-muted-foreground ml-2 flex items-center gap-1"><Clock className="h-3 w-3" />{format(new Date(stop.dateTime), 'p')}</span>
+                                                                    )}
+                                                                    {stop.instructions && (
+                                                                        <div className="flex items-center gap-2 text-xs pl-1 mt-1 text-gray-500">
+                                                                            <MessageSquare className="h-3 w-3" />
+                                                                            <span>{stop.instructions}</span>
+                                                                        </div>
                                                                     )}
                                                                 </div>
                                                             </div>
