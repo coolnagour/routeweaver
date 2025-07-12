@@ -45,7 +45,7 @@ export default function JourneyBuilder({ initialData, onNewJourneyClick }: Journ
 
   const finalInitialData = loadedTemplate || initialData;
 
-  const initialBookings = finalInitialData?.bookings.map(b => ({
+  const initialBookings = finalInitialData?.bookings?.map(b => ({
     id: new Date().toISOString() + Math.random(),
     stops: b.stops.map(s => ({...s, id: new Date().toISOString() + Math.random(), dateTime: s.dateTime ? new Date(s.dateTime) : undefined }))
   })) || [];
