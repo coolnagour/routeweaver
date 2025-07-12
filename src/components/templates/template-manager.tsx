@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import useLocalStorage from '@/hooks/use-local-storage';
-import type { JourneyTemplate } from '@/types';
+import type { JourneyTemplate, Stop } from '@/types';
 import { FileText, Users, Trash2, Bot, Package } from 'lucide-react';
 import AiTemplateModal from './ai-template-modal';
 import { useToast } from '@/hooks/use-toast';
@@ -38,7 +38,10 @@ export default function TemplateManager({ onLoadTemplate }: TemplateManagerProps
   }
 
   const getTotalPassengers = (template: JourneyTemplate) => {
-    return template.bookings.reduce((total, booking) => total + booking.passengers, 0);
+    return template.bookings.reduce((total, booking) => {
+        const pickupStops = booking.stops.filter((s: Omit<Stop, 'id'>) => s.stopType === 'pickup');
+        return total + pickupStops.length;
+    }, 0);
   }
 
   return (

@@ -18,9 +18,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CalendarIcon, MapPin, PlusCircle, MinusCircle, X, User, Phone } from 'lucide-react';
+import { CalendarIcon, MapPin, PlusCircle, MinusCircle, X, User, Phone, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, setHours, setMinutes, parse } from 'date-fns';
 import type { Booking, Stop } from '@/types';
 import { Separator } from '@/components/ui/separator';
 
@@ -28,6 +28,7 @@ const stopSchema = z.object({
   id: z.string().optional(),
   address: z.string().min(2, { message: 'Address is required.' }),
   stopType: z.enum(['pickup', 'dropoff']),
+  dateTime: z.date().optional(),
   name: z.string().optional(),
   phone: z.string().optional(),
   pickupStopId: z.string().optional(),
@@ -35,15 +36,28 @@ const stopSchema = z.object({
 
 const formSchema = z.object({
   id: z.string().optional(),
-  date: z.date({ required_error: 'A date is required.' }),
   stops: z.array(stopSchema).min(2, 'At least two stops are required.')
 }).refine(data => {
+    // Ensure all dropoffs are linked
     const dropoffs = data.stops.filter(s => s.stopType === 'dropoff');
-    return dropoffs.every(d => d.pickupStopId);
+    const allDropoffsLinked = dropoffs.every(d => d.pickupStopId);
+    if (!allDropoffsLinked) return false;
+
+    // Ensure first pickup has a date/time
+    const firstPickup = data.stops.find(s => s.stopType === 'pickup');
+    if (!firstPickup || !firstPickup.dateTime) return false;
+    
+    // Ensure subsequent pickups are not before the first one
+    const firstPickupTime = firstPickup.dateTime.getTime();
+    const subsequentPickups = data.stops.filter((s, index) => s.stopType === 'pickup' && data.stops.findIndex(p => p.stopType === 'pickup') !== index);
+    
+    return subsequentPickups.every(p => p.dateTime && p.dateTime.getTime() >= firstPickupTime);
+
 }, {
-    message: "Each drop-off must be linked to a pickup.",
+    message: "Each drop-off must be linked. The first pickup must have a date/time. Subsequent pickups must not be before the first pickup.",
     path: ["stops"],
 });
+
 
 type BookingFormData = z.infer<typeof formSchema>;
 
@@ -59,9 +73,8 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
     resolver: zodResolver(formSchema),
     defaultValues: {
       id: initialData?.id || new Date().toISOString() + Math.random(),
-      date: initialData ? new Date(initialData.date) : new Date(),
-      stops: initialData?.stops?.length ? initialData.stops.map(s => ({ ...s, id: s.id || new Date().toISOString() + Math.random() })) : [
-        { id: new Date().toISOString() + Math.random(), address: '', stopType: 'pickup', name: '', phone: '' },
+      stops: initialData?.stops?.length ? initialData.stops.map(s => ({ ...s, id: s.id || new Date().toISOString() + Math.random(), dateTime: s.dateTime ? new Date(s.dateTime) : undefined })) : [
+        { id: new Date().toISOString() + Math.random(), address: '', stopType: 'pickup', name: '', phone: '', dateTime: new Date() },
         { id: new Date().toISOString() + Math.random(), address: '', stopType: 'dropoff' }
       ] 
     },
@@ -82,12 +95,12 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
         .filter((s, i) => i !== currentIndex && s.stopType === 'dropoff' && s.pickupStopId)
         .map(s => s.pickupStopId);
 
-    return pickupStops.filter(p => !assignedPickupIds.includes(p.id));
+    return pickupStops.filter(p => !assignedPickupIds.includes(p.id!));
   };
 
 
   function onSubmit(values: BookingFormData) {
-    onSave(values);
+    onSave(values as Booking);
   }
 
   return (
@@ -108,42 +121,6 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-                <FormField
-                    control={form.control}
-                    name="date"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Date</FormLabel>
-                        <Popover>
-                            <PopoverTrigger asChild>
-                            <FormControl>
-                                <Button
-                                variant={'outline'}
-                                className={cn(
-                                    'w-full pl-3 text-left font-normal',
-                                    !field.value && 'text-muted-foreground'
-                                )}
-                                >
-                                {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                </Button>
-                            </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                                mode="single"
-                                selected={field.value}
-                                onSelect={field.onChange}
-                                disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
-                                initialFocus
-                            />
-                            </PopoverContent>
-                        </Popover>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                <Separator/>
                 <div className="space-y-2">
                     <h4 className="text-sm font-medium">Stops</h4>
                     {stopFields.map((stop, stopIndex) => {
@@ -224,6 +201,57 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
                                                 <Input placeholder="e.g. 555-1234" {...field} className="pl-10" />
                                             </div>
                                         </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name={`stops.${stopIndex}.dateTime`}
+                                    render={({ field }) => (
+                                    <FormItem className="col-span-2">
+                                        <FormLabel>Pickup Date & Time</FormLabel>
+                                        <div className="flex gap-2">
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                            <FormControl>
+                                                <Button
+                                                variant={'outline'}
+                                                className={cn(
+                                                    'w-full justify-start text-left font-normal',
+                                                    !field.value && 'text-muted-foreground'
+                                                )}
+                                                >
+                                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                                {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
+                                                </Button>
+                                            </FormControl>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0" align="start">
+                                            <Calendar
+                                                mode="single"
+                                                selected={field.value}
+                                                onSelect={field.onChange}
+                                                disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
+                                                initialFocus
+                                            />
+                                            </PopoverContent>
+                                        </Popover>
+                                        <div className="relative">
+                                            <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                            <Input
+                                                type="time"
+                                                className="pl-10"
+                                                value={field.value ? format(field.value, 'HH:mm') : ''}
+                                                onChange={(e) => {
+                                                    const time = e.target.value;
+                                                    const [hours, minutes] = time.split(':').map(Number);
+                                                    const newDate = setMinutes(setHours(field.value || new Date(), hours), minutes);
+                                                    field.onChange(newDate);
+                                                }}
+                                            />
+                                        </div>
+                                        </div>
                                         <FormMessage />
                                     </FormItem>
                                     )}

@@ -11,11 +11,11 @@ import {
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import type { Journey, Booking } from '@/types';
+import type { Journey, Booking, Stop } from '@/types';
 import { format } from 'date-fns';
 import useLocalStorage from '@/hooks/use-local-storage';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Users, MapPin } from 'lucide-react';
+import { Users, MapPin, Clock } from 'lucide-react';
 
 const getStatusVariant = (status: Journey['status']) => {
   switch (status) {
@@ -30,12 +30,23 @@ const getStatusVariant = (status: Journey['status']) => {
   }
 };
 
+const getPassengersFromStops = (stops: Stop[]) => {
+    return stops.filter(s => s.stopType === 'pickup');
+}
+
 export default function RecentJourneys() {
   const [journeys, setJourneys] = useLocalStorage<Journey[]>('recent-journeys', []);
 
   const getJourneyDateRange = (bookings: Booking[]) => {
     if (bookings.length === 0) return 'N/A';
-    const dates = bookings.map(b => new Date(b.date));
+    
+    const dates = bookings.map(b => {
+        const firstPickup = b.stops.find(s => s.stopType === 'pickup');
+        return firstPickup?.dateTime ? new Date(firstPickup.dateTime) : null;
+    }).filter((d): d is Date => d !== null);
+
+    if (dates.length === 0) return 'N/A';
+
     const minDate = new Date(Math.min(...dates.map(d => d.getTime())));
     const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
     
@@ -46,7 +57,12 @@ export default function RecentJourneys() {
   }
 
   const getTotalPassengers = (bookings: Booking[]) => {
-    return bookings.reduce((acc, booking) => acc + booking.passengers, 0);
+    return bookings.reduce((acc, booking) => acc + getPassengersFromStops(booking.stops).length, 0);
+  }
+
+  const getBookingDateTime = (booking: Booking) => {
+    const firstPickup = booking.stops.find(s => s.stopType === 'pickup');
+    return firstPickup?.dateTime;
   }
 
   return (
@@ -89,17 +105,18 @@ export default function RecentJourneys() {
                                     <div className="p-4 bg-muted/50">
                                         <h4 className="font-semibold mb-2">Bookings in this Journey:</h4>
                                         <div className="grid gap-4 md:grid-cols-2">
-                                        {journey.bookings.map(booking => (
+                                        {journey.bookings.map(booking => {
+                                            const bookingDateTime = getBookingDateTime(booking);
+                                            const pickups = getPassengersFromStops(booking.stops);
+                                            return (
                                             <Card key={booking.id} className="bg-background">
                                                 <CardHeader className="p-3">
-                                                    <CardTitle className="text-md">{booking.passengerName}</CardTitle>
-                                                    <CardDescription>{format(new Date(booking.date), "PPP")}</CardDescription>
+                                                    <CardTitle className="text-md">
+                                                        {bookingDateTime ? format(new Date(bookingDateTime), "PPP p") : 'Booking'}
+                                                    </CardTitle>
+                                                    <CardDescription>{pickups.length} passenger(s)</CardDescription>
                                                 </CardHeader>
                                                 <CardContent className="p-3 pt-0 space-y-2 text-sm">
-                                                    <div className="flex items-center gap-2 text-muted-foreground">
-                                                        <Users className="h-4 w-4" /> 
-                                                        <span>{booking.passengers} passenger(s)</span>
-                                                    </div>
                                                     <div className="space-y-1">
                                                         {booking.stops.map(stop => (
                                                             <div key={stop.id} className="flex items-center gap-2">
@@ -107,13 +124,19 @@ export default function RecentJourneys() {
                                                                 <div>
                                                                     <span className="capitalize font-medium">{stop.stopType}: </span>
                                                                     {stop.address}
+                                                                    {stop.stopType === 'pickup' && stop.name && (
+                                                                        <span className="text-xs text-muted-foreground ml-2">({stop.name})</span>
+                                                                    )}
+                                                                    {stop.dateTime && (
+                                                                        <span className="text-xs text-muted-foreground ml-2 flex items-center gap-1"><Clock className="h-3 w-3" />{format(new Date(stop.dateTime), 'p')}</span>
+                                                                    )}
                                                                 </div>
                                                             </div>
                                                         ))}
                                                     </div>
                                                 </CardContent>
                                             </Card>
-                                        ))}
+                                        )})}
                                         </div>
                                     </div>
                                 </AccordionContent>

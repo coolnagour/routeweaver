@@ -7,6 +7,7 @@ export interface Stop {
   id: string;
   address: string;
   stopType: StopType;
+  dateTime?: Date; // Only for pickup stops
   // Fields for pickup
   name?: string;
   phone?: string;
@@ -16,8 +17,7 @@ export interface Stop {
 
 export interface Booking {
   id: string;
-  date: Date;
-  // passengerName and passengers are now derived from stops
+  // date field is removed from here
   stops: Stop[];
 }
 
@@ -30,7 +30,7 @@ export interface Journey {
 export interface JourneyTemplate {
   id: string;
   name: string;
-  bookings: (Omit<Booking, 'id' | 'stops' | 'date'> & { date: Date | string, stops: Omit<Stop, 'id'>[] })[];
+  bookings: (Omit<Booking, 'id' | 'stops'> & { stops: Omit<Stop, 'id'>[] })[];
 }
 
 
@@ -38,13 +38,13 @@ export interface JourneyTemplate {
 const StopSchema = z.object({
   address: z.string(),
   stopType: z.enum(['pickup', 'dropoff']),
+  dateTime: z.date().optional(),
   name: z.string().optional(),
   phone: z.string().optional(),
   pickupStopId: z.string().optional(),
 });
 
 const BookingSchema = z.object({
-  date: z.date(),
   stops: z.array(StopSchema),
 });
 

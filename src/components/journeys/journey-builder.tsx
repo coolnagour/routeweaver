@@ -9,7 +9,7 @@ import useLocalStorage from '@/hooks/use-local-storage';
 import { saveJourney } from '@/ai/flows/journey-flow';
 import type { Booking, Journey, JourneyTemplate, Stop } from '@/types';
 import JourneyForm from './journey-form';
-import { Edit, History, List, MapPin, Package, Save, Trash2, UserPlus, Users, Phone } from 'lucide-react';
+import { Edit, History, List, MapPin, Package, Save, Trash2, UserPlus, Users, Phone, Clock } from 'lucide-react';
 import Image from 'next/image';
 import { format } from 'date-fns';
 
@@ -30,8 +30,7 @@ export default function JourneyBuilder({ initialData, onNewJourneyClick }: Journ
 
   const [bookings, setBookings] = useState<Booking[]>(initialData?.bookings.map(b => ({
     id: new Date().toISOString() + Math.random(),
-    date: new Date(b.date),
-    stops: b.stops.map(s => ({...s, id: new Date().toISOString() + Math.random()}))
+    stops: b.stops.map(s => ({...s, id: new Date().toISOString() + Math.random(), dateTime: s.dateTime ? new Date(s.dateTime) : undefined }))
   })) || []);
 
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
@@ -44,9 +43,8 @@ export default function JourneyBuilder({ initialData, onNewJourneyClick }: Journ
   const handleAddNewBooking = () => {
     setEditingBooking({
       id: new Date().toISOString() + Math.random(),
-      date: new Date(),
       stops: [
-        { id: new Date().toISOString() + Math.random(), address: '', stopType: 'pickup', name: '', phone: '' },
+        { id: new Date().toISOString() + Math.random(), address: '', stopType: 'pickup', name: '', phone: '', dateTime: new Date() },
         { id: new Date().toISOString() + Math.random(), address: '', stopType: 'dropoff' }
       ]
     });
@@ -81,13 +79,13 @@ export default function JourneyBuilder({ initialData, onNewJourneyClick }: Journ
       id: new Date().toISOString(),
       name: templateName,
       bookings: bookings.map(b => ({
-        date: b.date,
         stops: b.stops.map(s => ({ 
             address: s.address, 
             stopType: s.stopType,
             name: s.name,
             phone: s.phone,
             pickupStopId: s.pickupStopId,
+            dateTime: s.dateTime
         }))
       })),
     };
@@ -143,6 +141,11 @@ export default function JourneyBuilder({ initialData, onNewJourneyClick }: Journ
       }, 0);
   }
 
+  const getBookingDateTime = (booking: Booking) => {
+    const firstPickup = booking.stops.find(s => s.stopType === 'pickup');
+    return firstPickup?.dateTime;
+  }
+
   return (
     <div className="grid lg:grid-cols-3 gap-8 items-start">
       <div className="lg:col-span-2 space-y-6">
@@ -175,11 +178,12 @@ export default function JourneyBuilder({ initialData, onNewJourneyClick }: Journ
               {bookings.length > 0 ? (
                 bookings.map(booking => {
                     const pickups = getPassengersFromStops(booking.stops);
+                    const bookingDateTime = getBookingDateTime(booking);
                     return (
                         <Card key={booking.id} className="p-3">
                             <div className="flex justify-between items-start">
                             <div className="space-y-2 flex-1">
-                                <p className="font-semibold text-primary">{format(new Date(booking.date), 'PPP')}</p>
+                                {bookingDateTime && <p className="font-semibold text-primary">{format(new Date(bookingDateTime), 'PPP p')}</p>}
                                 <p className="text-sm text-muted-foreground flex items-center gap-2"><Users className="h-4 w-4" />{pickups.length} passenger(s)</p>
                                 
                                 {booking.stops.map(stop => {
@@ -193,9 +197,10 @@ export default function JourneyBuilder({ initialData, onNewJourneyClick }: Journ
                                                 <div>
                                                     <p><span className="capitalize font-medium">{stop.stopType}:</span> {stop.address}</p>
                                                     {isPickup && stop.name && (
-                                                        <div className="flex items-center gap-4 text-xs pl-1">
+                                                        <div className="flex items-center gap-4 text-xs pl-1 flex-wrap">
                                                             <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {stop.name}</span>
                                                             <span className="flex items-center gap-1"><Phone className="h-3 w-3" /> {stop.phone}</span>
+                                                            {stop.dateTime && <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {format(new Date(stop.dateTime), 'p')}</span>}
                                                         </div>
                                                     )}
                                                     {!isPickup && dropoffPassenger && (
