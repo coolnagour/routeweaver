@@ -133,6 +133,59 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
 
                         return (
                         <div key={stop.id} className="p-4 border rounded-lg space-y-3">
+                            {isFirstStop && isPickup && (
+                                <FormField
+                                    control={form.control}
+                                    name={`stops.${stopIndex}.dateTime`}
+                                    render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Pickup Date & Time</FormLabel>
+                                        <div className="flex gap-2">
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                            <FormControl>
+                                                <Button
+                                                variant={'outline'}
+                                                className={cn(
+                                                    'w-[calc(50%-0.25rem)] justify-start text-left font-normal',
+                                                    !field.value && 'text-muted-foreground'
+                                                )}
+                                                >
+                                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                                {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
+                                                </Button>
+                                            </FormControl>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0" align="start">
+                                            <Calendar
+                                                mode="single"
+                                                selected={field.value}
+                                                onSelect={field.onChange}
+                                                disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
+                                                initialFocus
+                                            />
+                                            </PopoverContent>
+                                        </Popover>
+                                        <div className="relative w-[calc(50%-0.25rem)]">
+                                            <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                            <Input
+                                                type="time"
+                                                className="pl-10"
+                                                value={field.value ? format(field.value, 'HH:mm') : ''}
+                                                onChange={(e) => {
+                                                    const time = e.target.value;
+                                                    const [hours, minutes] = time.split(':').map(Number);
+                                                    const newDate = setMinutes(setHours(field.value || new Date(), hours), minutes);
+                                                    field.onChange(newDate);
+                                                }}
+                                            />
+                                        </div>
+                                        </div>
+                                        <FormMessage />
+                                    </FormItem>
+                                    )}
+                                />
+                            )}
                            <div className="flex items-start gap-2">
                                 <div className="flex-1 space-y-2">
                                     <FormField
@@ -247,60 +300,7 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
                                     </Button>
                                 </CollapsibleTrigger>
                                 <CollapsibleContent className="space-y-4 pt-4">
-                                     {isFirstStop && isPickup && (
-                                        <FormField
-                                            control={form.control}
-                                            name={`stops.${stopIndex}.dateTime`}
-                                            render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Pickup Date & Time</FormLabel>
-                                                <div className="flex gap-2">
-                                                <Popover>
-                                                    <PopoverTrigger asChild>
-                                                    <FormControl>
-                                                        <Button
-                                                        variant={'outline'}
-                                                        className={cn(
-                                                            'w-[calc(50%-0.25rem)] justify-start text-left font-normal',
-                                                            !field.value && 'text-muted-foreground'
-                                                        )}
-                                                        >
-                                                        <CalendarIcon className="mr-2 h-4 w-4" />
-                                                        {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
-                                                        </Button>
-                                                    </FormControl>
-                                                    </PopoverTrigger>
-                                                    <PopoverContent className="w-auto p-0" align="start">
-                                                    <Calendar
-                                                        mode="single"
-                                                        selected={field.value}
-                                                        onSelect={field.onChange}
-                                                        disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
-                                                        initialFocus
-                                                    />
-                                                    </PopoverContent>
-                                                </Popover>
-                                                <div className="relative w-[calc(50%-0.25rem)]">
-                                                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                                    <Input
-                                                        type="time"
-                                                        className="pl-10"
-                                                        value={field.value ? format(field.value, 'HH:mm') : ''}
-                                                        onChange={(e) => {
-                                                            const time = e.target.value;
-                                                            const [hours, minutes] = time.split(':').map(Number);
-                                                            const newDate = setMinutes(setHours(field.value || new Date(), hours), minutes);
-                                                            field.onChange(newDate);
-                                                        }}
-                                                    />
-                                                </div>
-                                                </div>
-                                                <FormMessage />
-                                            </FormItem>
-                                            )}
-                                        />
-                                    )}
-                                    <FormField
+                                     <FormField
                                         control={form.control}
                                         name={`stops.${stopIndex}.instructions`}
                                         render={({ field }) => (
@@ -334,5 +334,3 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
       </Card>
   );
 }
-
-    
