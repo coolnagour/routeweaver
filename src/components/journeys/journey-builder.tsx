@@ -7,15 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { useToast } from '@/hooks/use-toast';
 import useLocalStorage from '@/hooks/use-local-storage';
 import { saveJourney } from '@/ai/flows/journey-flow';
-import type { Booking, Journey, JourneyTemplate, Stop } from '@/types';
-import JourneyForm from './journey-form';
-import { Edit, History, List, MapPin, Package, Save, Trash2, UserPlus, Users, Phone, Clock, MessageSquare } from 'lucide-react';
+import type { Booking, Journey, JourneyTemplate } from '@/types';
+import { History, Save } from 'lucide-react';
 import Image from 'next/image';
-import { format } from 'date-fns';
-
-const getPassengersFromStops = (stops: Stop[]) => {
-    return stops.filter(s => s.stopType === 'pickup');
-}
+import BookingManager from './booking-manager';
 
 interface JourneyBuilderProps {
   initialData?: JourneyTemplate | null;
@@ -28,47 +23,13 @@ export default function JourneyBuilder({ initialData, onNewJourneyClick }: Journ
   const [templates, setTemplates] = useLocalStorage<JourneyTemplate[]>('journey-templates', []);
   const [templateName, setTemplateName] = useState('');
 
-  const [bookings, setBookings] = useState<Booking[]>(initialData?.bookings.map(b => ({
+  const initialBookings = initialData?.bookings.map(b => ({
     id: new Date().toISOString() + Math.random(),
     stops: b.stops.map(s => ({...s, id: new Date().toISOString() + Math.random(), dateTime: s.dateTime ? new Date(s.dateTime) : undefined }))
-  })) || []);
+  })) || [];
 
-  const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
+  const [bookings, setBookings] = useState<Booking[]>(initialBookings);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleEditBooking = (booking: Booking) => {
-    setEditingBooking(booking);
-  };
-
-  const handleAddNewBooking = () => {
-    setEditingBooking({
-      id: new Date().toISOString() + Math.random(),
-      stops: [
-        { id: new Date().toISOString() + Math.random(), address: '', stopType: 'pickup', name: '', phone: '', dateTime: new Date() },
-        { id: new Date().toISOString() + Math.random(), address: '', stopType: 'dropoff' }
-      ]
-    });
-  };
-  
-  const handleSaveBooking = (bookingToSave: Booking) => {
-    const existingIndex = bookings.findIndex(b => b.id === bookingToSave.id);
-    if (existingIndex > -1) {
-      const updatedBookings = [...bookings];
-      updatedBookings[existingIndex] = bookingToSave;
-      setBookings(updatedBookings);
-    } else {
-      setBookings([...bookings, bookingToSave]);
-    }
-    setEditingBooking(null);
-  };
-  
-  const handleRemoveBooking = (bookingId: string) => {
-    setBookings(bookings.filter(b => b.id !== bookingId));
-  }
-
-  const handleCancelEdit = () => {
-    setEditingBooking(null);
-  };
   
   const handleSaveTemplate = () => {
     if (!templateName) {
@@ -136,17 +97,6 @@ export default function JourneyBuilder({ initialData, onNewJourneyClick }: Journ
     }
   }
 
-  const getTotalPassengers = (bookings: Booking[]) => {
-      return bookings.reduce((total, booking) => {
-          return total + getPassengersFromStops(booking.stops).length;
-      }, 0);
-  }
-
-  const getBookingDateTime = (booking: Booking) => {
-    const firstPickup = booking.stops.find(s => s.stopType === 'pickup');
-    return firstPickup?.dateTime;
-  }
-
   return (
     <div className="grid lg:grid-cols-3 gap-8 items-start">
       <div className="lg:col-span-2 space-y-6">
@@ -157,88 +107,9 @@ export default function JourneyBuilder({ initialData, onNewJourneyClick }: Journ
           </CardHeader>
         </Card>
 
-        {editingBooking ? (
-          <JourneyForm 
-            key={editingBooking.id}
-            initialData={editingBooking} 
-            onSave={handleSaveBooking}
-            onCancel={handleCancelEdit} 
-          />
-        ) : (
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <CardTitle className="font-headline text-xl flex items-center gap-2"><Package/> Bookings for this Journey</CardTitle>
-                <Button onClick={handleAddNewBooking}><UserPlus className="mr-2 h-4 w-4" /> Add New Booking</Button>
-              </div>
-              <CardDescription>
-                {bookings.length > 0 ? `This journey has ${bookings.length} booking(s) and ${getTotalPassengers(bookings)} passenger(s).` : 'Click "Add New Booking" to get started.'}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {bookings.length > 0 ? (
-                bookings.map(booking => {
-                    const pickups = getPassengersFromStops(booking.stops);
-                    const bookingDateTime = getBookingDateTime(booking);
-                    return (
-                        <Card key={booking.id} className="p-3">
-                            <div className="flex justify-between items-start">
-                            <div className="space-y-2 flex-1">
-                                {bookingDateTime && <p className="font-semibold text-primary">{format(new Date(bookingDateTime), 'PPP p')}</p>}
-                                <p className="text-sm text-muted-foreground flex items-center gap-2"><Users className="h-4 w-4" />{pickups.length} passenger(s)</p>
-                                
-                                {booking.stops.map(stop => {
-                                    const isPickup = stop.stopType === 'pickup';
-                                    const dropoffPassenger = isPickup ? null : pickups.find(p => p.id === stop.pickupStopId);
-
-                                    return (
-                                        <div key={stop.id} className="text-sm text-muted-foreground space-y-1 pt-1 border-t first:border-t-0">
-                                            <div className="flex items-start gap-2">
-                                                <MapPin className="h-4 w-4 text-primary mt-1"/>
-                                                <div className="flex-1">
-                                                    <p><span className="capitalize font-medium">{stop.stopType}:</span> {stop.address}</p>
-                                                    {isPickup && stop.name && (
-                                                        <div className="flex items-center gap-4 text-xs pl-1 flex-wrap">
-                                                            <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {stop.name}</span>
-                                                            <span className="flex items-center gap-1"><Phone className="h-3 w-3" /> {stop.phone}</span>
-                                                            {stop.dateTime && <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {format(new Date(stop.dateTime), 'p')}</span>}
-                                                        </div>
-                                                    )}
-                                                    {!isPickup && dropoffPassenger && (
-                                                         <div className="flex items-center gap-4 text-xs pl-1">
-                                                            <span className="flex items-center gap-1"><Users className="h-3 w-3" /> Dropping off {dropoffPassenger.name}</span>
-                                                        </div>
-                                                    )}
-                                                     {stop.instructions && (
-                                                        <div className="flex items-center gap-2 text-xs pl-1 mt-1 text-gray-500">
-                                                            <MessageSquare className="h-3 w-3" />
-                                                            <span>{stop.instructions}</span>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                            <div className="flex items-center">
-                                <Button variant="ghost" size="icon" onClick={() => handleEditBooking(booking)}>
-                                <Edit className="h-4 w-4" />
-                                </Button>
-                                <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleRemoveBooking(booking.id)}>
-                                <Trash2 className="h-4 w-4" />
-                                </Button>
-                            </div>
-                            </div>
-                        </Card>
-                    )
-                })
-              ) : (
-                <div className="text-center py-10 border-2 border-dashed rounded-lg">
-                  <p className="text-muted-foreground">Your journey's bookings will appear here.</p>
-                </div>
-              )}
-            </CardContent>
+        <BookingManager bookings={bookings} setBookings={setBookings} />
+        
+        <Card>
             <CardFooter className="flex justify-between items-center bg-muted/50 p-4 rounded-b-lg">
                 <div>
                      <input
@@ -256,8 +127,7 @@ export default function JourneyBuilder({ initialData, onNewJourneyClick }: Journ
                     {isSubmitting ? 'Booking...' : 'Book Journey'}
                 </Button>
             </CardFooter>
-          </Card>
-        )}
+        </Card>
       </div>
       
       <div className="space-y-6">
