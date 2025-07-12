@@ -9,6 +9,7 @@ import {
   SidebarMenuButton,
   SidebarFooter,
   SidebarTrigger,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -27,15 +28,17 @@ const navItems = [
 ];
 
 export default function MainSidebar({ activeView, setActiveView }: MainSidebarProps) {
+  const { state: sidebarState } = useSidebar();
+  const isCollapsed = sidebarState === 'collapsed';
+
   return (
     <>
       <SidebarHeader className="p-4">
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" className="md:hidden" asChild>
-            <SidebarTrigger />
-          </Button>
           <Bot className="w-8 h-8 text-primary" />
-          <h1 className="text-xl font-headline font-semibold">Route Weaver</h1>
+          <h1 className={`text-xl font-headline font-semibold ${isCollapsed ? 'hidden' : ''}`}>Route Weaver</h1>
+          <div className="flex-1" />
+          <SidebarTrigger />
         </div>
       </SidebarHeader>
       <Separator />
@@ -46,6 +49,7 @@ export default function MainSidebar({ activeView, setActiveView }: MainSidebarPr
               <SidebarMenuButton
                 onClick={() => setActiveView(item.id as ActiveView)}
                 isActive={activeView === item.id}
+                tooltip={{ children: item.label }}
               >
                 <item.icon className="h-5 w-5" />
                 <span>{item.label}</span>
@@ -60,11 +64,11 @@ export default function MainSidebar({ activeView, setActiveView }: MainSidebarPr
           <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
             <User className="w-6 h-6 text-muted-foreground" />
           </div>
-          <div className="flex flex-col">
+          <div className={`flex flex-col ${isCollapsed ? 'hidden' : ''}`}>
             <span className="font-semibold">User</span>
             <span className="text-xs text-muted-foreground">user@email.com</span>
           </div>
-          <Button variant="ghost" size="icon" className="ml-auto">
+          <Button variant="ghost" size="icon" className={`ml-auto ${isCollapsed ? 'hidden' : ''}`}>
             <LogOut className="w-5 h-5" />
           </Button>
         </div>

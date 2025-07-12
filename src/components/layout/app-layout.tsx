@@ -15,7 +15,7 @@ export default function AppLayout({ children, activeView, setActiveView }: AppLa
   return (
     <SidebarProvider>
       <div className="relative min-h-screen">
-        <Sidebar>
+        <Sidebar collapsible="icon">
           <MainSidebar activeView={activeView} setActiveView={setActiveView} />
         </Sidebar>
         <SidebarInset>{children}</SidebarInset>
