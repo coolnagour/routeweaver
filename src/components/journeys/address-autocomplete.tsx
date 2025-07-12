@@ -7,6 +7,7 @@ import { MapPin } from "lucide-react";
 import { useState } from "react";
 import type { Location } from "@/types";
 import { useServer } from "@/context/server-context";
+import { useIsRTL } from "next-themes";
 
 interface AddressAutocompleteProps {
   value: string;
