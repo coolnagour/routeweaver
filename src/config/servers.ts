@@ -17,7 +17,7 @@ export const servers: ServerConfig[] = [
         appKey: '3b79a230ee7532cbd250704e707f3021d7d271e3',
         secretKey: '15fc2161e049a49044ccfb3fd048359bf0cba68d',
         companyId: '1100',
-        countryCode: 'us'
+        countryCode: 'ie'
     },
     {
         name: 'Cabonline Beta',
