@@ -11,6 +11,7 @@ import type { Booking, Journey, JourneyTemplate } from '@/types';
 import { History, Save } from 'lucide-react';
 import Image from 'next/image';
 import BookingManager from './booking-manager';
+import { useServer } from '@/context/server-context';
 
 interface JourneyBuilderProps {
   initialData?: JourneyTemplate | null;
@@ -19,8 +20,9 @@ interface JourneyBuilderProps {
 
 export default function JourneyBuilder({ initialData, onNewJourneyClick }: JourneyBuilderProps) {
   const { toast } = useToast();
-  const [journeys, setJourneys] = useLocalStorage<Journey[]>('recent-journeys', []);
-  const [templates, setTemplates] = useLocalStorage<JourneyTemplate[]>('journey-templates', []);
+  const { server } = useServer();
+  const [journeys, setJourneys] = useLocalStorage<Journey[]>('recent-journeys', [], server?.companyId);
+  const [templates, setTemplates] = useLocalStorage<JourneyTemplate[]>('journey-templates', [], server?.companyId);
   const [templateName, setTemplateName] = useState('');
   const [loadedTemplate, setLoadedTemplate] = useState<JourneyTemplate | null>(null);
 

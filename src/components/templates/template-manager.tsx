@@ -9,13 +9,15 @@ import type { JourneyTemplate, Stop } from '@/types';
 import { FileText, Users, Trash2, Bot, Package } from 'lucide-react';
 import AiTemplateModal from './ai-template-modal';
 import { useToast } from '@/hooks/use-toast';
+import { useServer } from '@/context/server-context';
 
 interface TemplateManagerProps {
   onLoadTemplate: (template: JourneyTemplate) => void;
 }
 
 export default function TemplateManager({ onLoadTemplate }: TemplateManagerProps) {
-  const [templates, setTemplates] = useLocalStorage<JourneyTemplate[]>('journey-templates', []);
+  const { server } = useServer();
+  const [templates, setTemplates] = useLocalStorage<JourneyTemplate[]>('journey-templates', [], server?.companyId);
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const { toast } = useToast();
 

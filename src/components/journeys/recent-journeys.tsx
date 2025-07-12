@@ -16,6 +16,7 @@ import { format } from 'date-fns';
 import useLocalStorage from '@/hooks/use-local-storage';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Users, MapPin, Clock, MessageSquare } from 'lucide-react';
+import { useServer } from '@/context/server-context';
 
 const getStatusVariant = (status: Journey['status']) => {
   switch (status) {
@@ -35,7 +36,8 @@ const getPassengersFromStops = (stops: Stop[]) => {
 }
 
 export default function RecentJourneys() {
-  const [journeys, setJourneys] = useLocalStorage<Journey[]>('recent-journeys', []);
+  const { server } = useServer();
+  const [journeys, setJourneys] = useLocalStorage<Journey[]>('recent-journeys', [], server?.companyId);
 
   const getJourneyDateRange = (bookings: Booking[]) => {
     if (bookings.length === 0) return 'N/A';

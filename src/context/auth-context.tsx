@@ -6,6 +6,7 @@ import { createContext, useEffect, useState, type ReactNode } from 'react';
 import { auth } from '@/lib/firebase';
 import { usePathname, useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
+import { useServer } from './server-context';
 
 interface AuthContextType {
   user: User | null;
@@ -19,6 +20,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
+  const { server } = useServer(); // This will be null initially
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -32,16 +34,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (loading) return;
 
-    const isLoginPage = pathname === '/login';
+    const isAuthPage = pathname === '/login';
+    const isServerSelectPage = pathname === '/select-server';
 
-    if (!user && !isLoginPage) {
+    if (!user && !isAuthPage) {
       router.push('/login');
+    } else if (user && isAuthPage) {
+      router.push('/select-server');
+    } else if (user && !server && !isServerSelectPage) {
+      router.push('/select-server');
+    } else if (user && server && isServerSelectPage) {
+       router.push('/');
     }
-
-    if (user && isLoginPage) {
-      router.push('/');
-    }
-  }, [user, loading, router, pathname]);
+  }, [user, server, loading, router, pathname]);
 
   if (loading) {
     return (
@@ -50,16 +55,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       </div>
     );
   }
-  
-  // Render children if user is logged in, or if they are on the login page
-  if ((user && pathname !== '/login') || (!user && pathname === '/login')) {
-    return (
-      <AuthContext.Provider value={{ user, loading }}>
-        {children}
-      </AuthContext.Provider>
-    );
-  }
 
-  // Otherwise, return null to prevent rendering children during redirect
-  return null;
+  return (
+    <AuthContext.Provider value={{ user, loading }}>
+      {children}
+    </AuthContext.Provider>
+  );
 }

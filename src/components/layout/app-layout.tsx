@@ -10,9 +10,9 @@ interface AppLayoutProps {
 
 export default function AppLayout({ children }: AppLayoutProps) {
   const pathname = usePathname();
-  const isLoginPage = pathname === '/login';
+  const noLayoutPages = ['/login', '/select-server'];
 
-  if (isLoginPage) {
+  if (noLayoutPages.includes(pathname)) {
     return <main>{children}</main>;
   }
 

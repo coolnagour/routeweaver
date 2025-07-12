@@ -12,13 +12,14 @@ import {
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Route, History, FileText, User, LogOut, Bot } from 'lucide-react';
+import { Route, History, FileText, User, LogOut, Bot, Server } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/use-auth';
 import { auth } from '@/lib/firebase';
 import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
+import { useServer } from '@/context/server-context';
 
 const navItems = [
   { href: '/', label: 'New Journey', icon: Route },
@@ -30,13 +31,20 @@ export default function MainSidebar() {
   const { state: sidebarState } = useSidebar();
   const pathname = usePathname();
   const { user } = useAuth();
+  const { server, setServer } = useServer();
   const router = useRouter();
   const isCollapsed = sidebarState === 'collapsed';
 
   const handleSignOut = async () => {
     await signOut(auth);
+    setServer(null);
     router.push('/login');
   };
+  
+  const handleChangeServer = () => {
+    setServer(null);
+    router.push('/select-server');
+  }
 
   return (
     <>
@@ -48,6 +56,19 @@ export default function MainSidebar() {
           <SidebarTrigger />
         </div>
       </SidebarHeader>
+      
+      {server && !isCollapsed && (
+        <div className="p-4 text-sm space-y-2">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Server className="h-4 w-4" />
+            <span>{server.name}</span>
+          </div>
+          <Button variant="outline" size="sm" className="w-full" onClick={handleChangeServer}>
+            Change Server
+          </Button>
+        </div>
+      )}
+
       <Separator />
       <SidebarContent>
         <SidebarMenu>
