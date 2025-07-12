@@ -137,7 +137,7 @@ export default function RecentJourneys() {
                                                                 <div className="flex-1">
                                                                     <p>
                                                                         <span className="capitalize font-medium">{stop.stopType}: </span>
-                                                                        {stop.address}
+                                                                        {stop.location.address}
                                                                     </p>
                                                                     
                                                                     {stop.stopType === 'pickup' && stop.name && (

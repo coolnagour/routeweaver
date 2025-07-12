@@ -18,6 +18,8 @@ interface BookingManagerProps {
   setBookings: React.Dispatch<React.SetStateAction<Booking[]>>;
 }
 
+const emptyLocation = { address: '', lat: 0, lng: 0 };
+
 export default function BookingManager({ bookings, setBookings }: BookingManagerProps) {
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
 
@@ -29,8 +31,8 @@ export default function BookingManager({ bookings, setBookings }: BookingManager
     setEditingBooking({
       id: new Date().toISOString() + Math.random(),
       stops: [
-        { id: new Date().toISOString() + Math.random(), address: '', stopType: 'pickup', name: '', phone: '', dateTime: new Date() },
-        { id: new Date().toISOString() + Math.random(), address: '', stopType: 'dropoff' }
+        { id: new Date().toISOString() + Math.random(), location: emptyLocation, stopType: 'pickup', name: '', phone: '', dateTime: new Date() },
+        { id: new Date().toISOString() + Math.random(), location: emptyLocation, stopType: 'dropoff' }
       ]
     });
   };
@@ -109,7 +111,7 @@ export default function BookingManager({ bookings, setBookings }: BookingManager
                                       <div className="flex items-start gap-2">
                                           <MapPin className="h-4 w-4 text-primary mt-1"/>
                                           <div className="flex-1">
-                                              <p><span className="capitalize font-medium">{stop.stopType}:</span> {stop.address}</p>
+                                              <p><span className="capitalize font-medium">{stop.stopType}:</span> {stop.location.address}</p>
                                               {isPickup && stop.name && (
                                                   <div className="flex items-center gap-4 text-xs pl-1 flex-wrap">
                                                       <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {stop.name}</span>

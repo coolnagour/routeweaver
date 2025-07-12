@@ -3,9 +3,15 @@ import { z } from 'zod';
 
 export type StopType = 'pickup' | 'dropoff';
 
+export interface Location {
+  address: string;
+  lat: number;
+  lng: number;
+}
+
 export interface Stop {
   id: string;
-  address: string;
+  location: Location;
   stopType: StopType;
   dateTime?: Date; // Only for pickup stops
   instructions?: string;
@@ -39,8 +45,14 @@ export interface JourneyTemplate {
 
 
 // Schemas for Genkit Flow
-const StopSchema = z.object({
+const LocationSchema = z.object({
   address: z.string(),
+  lat: z.number(),
+  lng: z.number(),
+});
+
+const StopSchema = z.object({
+  location: LocationSchema,
   stopType: z.enum(['pickup', 'dropoff']),
   dateTime: z.date().optional(),
   name: z.string().optional(),

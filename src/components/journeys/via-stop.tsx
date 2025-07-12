@@ -62,13 +62,13 @@ export default function ViaStop({ control, index, removeStop, getAvailablePickup
              <div className="flex-1 space-y-2">
                  <Controller
                      control={control}
-                     name={`stops.${index}.address`}
+                     name={`stops.${index}.location`}
                      render={({ field, fieldState }) => (
                          <FormItem>
                              <FormLabel>Address</FormLabel>
                              <FormControl>
                                   <AddressAutocomplete 
-                                     value={field.value}
+                                     value={field.value.address}
                                      onChange={field.onChange}
                                      placeholder={isPickup ? 'Pickup location' : 'Drop-off location'}
                                   />

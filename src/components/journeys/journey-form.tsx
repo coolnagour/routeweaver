@@ -25,9 +25,15 @@ import type { Booking, Stop } from '@/types';
 import ViaStop from './via-stop';
 import AddressAutocomplete from './address-autocomplete';
 
+const locationSchema = z.object({
+    address: z.string().min(2, { message: 'Address is required.' }),
+    lat: z.number(),
+    lng: z.number(),
+});
+
 const stopSchema = z.object({
   id: z.string().optional(),
-  address: z.string().min(2, { message: 'Address is required.' }),
+  location: locationSchema,
   stopType: z.enum(['pickup', 'dropoff']),
   dateTime: z.date().optional(),
   name: z.string().optional(),
@@ -70,6 +76,8 @@ interface JourneyFormProps {
   onCancel: () => void;
 }
 
+const emptyLocation = { address: '', lat: 0, lng: 0 };
+
 export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFormProps) {
 
   const form = useForm<BookingFormData>({
@@ -77,8 +85,8 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
     defaultValues: {
       id: initialData?.id || new Date().toISOString() + Math.random(),
       stops: initialData?.stops?.length ? initialData.stops.map(s => ({ ...s, id: s.id || new Date().toISOString() + Math.random(), dateTime: s.dateTime ? new Date(s.dateTime) : undefined })) : [
-        { id: 'pickup_start_' + Math.random(), address: '', stopType: 'pickup', name: '', phone: '', dateTime: new Date(), instructions: '' },
-        { id: 'dropoff_end_' + Math.random(), address: '', stopType: 'dropoff', pickupStopId: undefined, instructions: '' }
+        { id: 'pickup_start_' + Math.random(), location: emptyLocation, stopType: 'pickup', name: '', phone: '', dateTime: new Date(), instructions: '' },
+        { id: 'dropoff_end_' + Math.random(), location: emptyLocation, stopType: 'dropoff', pickupStopId: undefined, instructions: '' }
       ] 
     },
   });
@@ -184,13 +192,13 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
                     />
                     <Controller
                         control={form.control}
-                        name={`stops.0.address`}
+                        name={`stops.0.location`}
                         render={({ field, fieldState }) => (
                             <FormItem>
                                 <FormLabel>Address</FormLabel>
                                 <FormControl>
                                      <AddressAutocomplete 
-                                        value={field.value}
+                                        value={field.value.address}
                                         onChange={field.onChange}
                                         placeholder="Pickup location"
                                      />
@@ -274,7 +282,7 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
 
                 {/* Add Stop Button */}
                 <div className="flex justify-center my-4">
-                    <Button type="button" variant="link" size="sm" onClick={() => insertStop(stopFields.length - 1, { id: new Date().toISOString() + Math.random(), address: '', stopType: 'pickup'})}>
+                    <Button type="button" variant="link" size="sm" onClick={() => insertStop(stopFields.length - 1, { id: new Date().toISOString() + Math.random(), location: emptyLocation, stopType: 'pickup'})}>
                         <PlusCircle className="mr-2 h-4 w-4"/> Add Stop
                     </Button>
                 </div>

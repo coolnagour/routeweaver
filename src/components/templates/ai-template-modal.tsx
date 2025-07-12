@@ -26,9 +26,10 @@ interface AiTemplateModalProps {
 const generateMockTemplate = (name: string, from: string, to: string, passengerName: string): Omit<JourneyTemplate, 'id'> => ({
   name,
   bookings: [{
+    id: `booking_${Math.random()}`,
     stops: [
-      { stopType: 'pickup', address: from, name: passengerName, phone: '555-1111', dateTime: new Date().toISOString() },
-      { stopType: 'dropoff', address: to }
+      { stopType: 'pickup', location: { address: from, lat: 0, lng: 0 }, name: passengerName, phone: '555-1111', dateTime: new Date().toISOString() },
+      { stopType: 'dropoff', location: { address: to, lat: 0, lng: 0 } }
     ]
   }]
 });
@@ -107,7 +108,7 @@ export default function AiTemplateModal({ isOpen, onOpenChange, onTemplateCreate
                     <div>
                       <p className="font-semibold">{s.name}</p>
                       <p className="text-sm text-muted-foreground">
-                        {s.bookings?.[0]?.stops?.[0]?.address} to {s.bookings?.[0]?.stops?.[1]?.address}
+                        {s.bookings?.[0]?.stops?.[0]?.location.address} to {s.bookings?.[0]?.stops?.[1]?.location.address}
                       </p>
                     </div>
                     <Button variant="outline" size="sm" onClick={() => handleCreate(s)}>Use</Button>

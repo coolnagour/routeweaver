@@ -4,11 +4,12 @@
 import { Autocomplete, useJsApiLoader } from "@react-google-maps/api";
 import { Input } from "@/components/ui/input";
 import { MapPin } from "lucide-react";
-import { useRef, useState } from "react";
+import { useState } from "react";
+import type { Location } from "@/types";
 
 interface AddressAutocompleteProps {
   value: string;
-  onChange: (value: string) => void;
+  onChange: (location: Location) => void;
   placeholder: string;
   className?: string;
 }
@@ -21,6 +22,7 @@ export default function AddressAutocomplete({ value, onChange, placeholder, clas
   });
 
   const [autocomplete, setAutocomplete] = useState<google.maps.places.Autocomplete | null>(null);
+  const [inputValue, setInputValue] = useState(value);
 
   const onLoad = (autocompleteInstance: google.maps.places.Autocomplete) => {
     setAutocomplete(autocompleteInstance);
@@ -29,11 +31,24 @@ export default function AddressAutocomplete({ value, onChange, placeholder, clas
   const onPlaceChanged = () => {
     if (autocomplete !== null) {
       const place = autocomplete.getPlace();
-      onChange(place.formatted_address || '');
+      const address = place.formatted_address || '';
+      const lat = place.geometry?.location?.lat() || 0;
+      const lng = place.geometry?.location?.lng() || 0;
+      setInputValue(address);
+      onChange({ address, lat, lng });
     } else {
       console.log('Autocomplete is not loaded yet!');
     }
   };
+  
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInputValue(e.target.value);
+    // To handle manual edits, we can pass a partial location object
+    if (e.target.value === '') {
+        onChange({ address: '', lat: 0, lng: 0 });
+    }
+  }
+
 
   if (!isLoaded) {
     return (
@@ -62,8 +77,8 @@ export default function AddressAutocomplete({ value, onChange, placeholder, clas
         <Input
           type="text"
           placeholder={placeholder}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
+          value={inputValue}
+          onChange={handleInputChange}
           className={`pl-10 bg-background ${className}`}
         />
       </div>

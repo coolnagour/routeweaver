@@ -72,7 +72,7 @@ export default function JourneyBuilder({
         id: b.id,
         stops: b.stops.map(s => ({ 
             id: s.id,
-            address: s.address, 
+            location: s.location,
             stopType: s.stopType,
             name: s.name,
             phone: s.phone,
