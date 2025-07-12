@@ -13,8 +13,12 @@ import {
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { MapPin, MinusCircle, User, Phone, MessageSquare, ChevronsUpDown } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { MapPin, MinusCircle, User, Phone, MessageSquare, ChevronsUpDown, CalendarIcon, Clock } from 'lucide-react';
 import type { Stop } from '@/types';
+import { cn } from '@/lib/utils';
+import { format, setHours, setMinutes } from 'date-fns';
 
 interface ViaStopProps {
   control: any;
@@ -169,6 +173,63 @@ export default function ViaStop({ control, index, removeStop, getAvailablePickup
                  </Button>
              </CollapsibleTrigger>
              <CollapsibleContent className="space-y-4 pt-4">
+                {isPickup && (
+                   <FormField
+                        control={control}
+                        name={`stops.${index}.dateTime`}
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Pickup Date & Time (Optional)</FormLabel>
+                            <div className="flex gap-2">
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                <FormControl>
+                                    <Button
+                                    variant={'outline'}
+                                    className={cn(
+                                        'w-[calc(50%-0.25rem)] justify-start text-left font-normal bg-background',
+                                        !field.value && 'text-muted-foreground'
+                                    )}
+                                    >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
+                                    </Button>
+                                </FormControl>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                    mode="single"
+                                    selected={field.value}
+                                    onSelect={field.onChange}
+                                    disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
+                                    initialFocus
+                                />
+                                </PopoverContent>
+                            </Popover>
+                            <div className="relative w-[calc(50%-0.25rem)]">
+                                <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                    type="time"
+                                    className="pl-10 bg-background"
+                                    value={field.value ? format(field.value, 'HH:mm') : ''}
+                                    onChange={(e) => {
+                                        const time = e.target.value;
+                                        if (!time) {
+                                          field.onChange(undefined);
+                                          return;
+                                        }
+                                        const [hours, minutes] = time.split(':').map(Number);
+                                        const newDate = setMinutes(setHours(field.value || new Date(), hours), minutes);
+                                        field.onChange(newDate);
+                                    }}
+                                />
+                            </div>
+                            </div>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                )}
                   <FormField
                      control={control}
                      name={`stops.${index}.instructions`}
