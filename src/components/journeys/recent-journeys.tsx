@@ -66,6 +66,7 @@ export default function RecentJourneys() {
   }
 
   return (
+    <div className="p-4 sm:p-6 lg:p-8">
     <Card>
       <CardHeader>
         <CardTitle className="font-headline text-2xl">My Journeys</CardTitle>
@@ -164,5 +165,6 @@ export default function RecentJourneys() {
         )}
       </CardContent>
     </Card>
+    </div>
   );
 }

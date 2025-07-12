@@ -14,21 +14,18 @@ import {
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Route, History, FileText, User, LogOut, Bot } from 'lucide-react';
-import type { ActiveView } from '@/app/page';
-
-interface MainSidebarProps {
-  activeView: ActiveView;
-  setActiveView: (view: ActiveView) => void;
-}
+import { usePathname } from 'next/navigation';
+import Link from 'next/link';
 
 const navItems = [
-  { id: 'new-journey', label: 'New Journey', icon: Route },
-  { id: 'my-journeys', label: 'My Journeys', icon: History },
-  { id: 'templates', label: 'Templates', icon: FileText },
+  { href: '/', label: 'New Journey', icon: Route },
+  { href: '/journeys', label: 'My Journeys', icon: History },
+  { href: '/templates', label: 'Templates', icon: FileText },
 ];
 
-export default function MainSidebar({ activeView, setActiveView }: MainSidebarProps) {
+export default function MainSidebar() {
   const { state: sidebarState } = useSidebar();
+  const pathname = usePathname();
   const isCollapsed = sidebarState === 'collapsed';
 
   return (
@@ -45,15 +42,19 @@ export default function MainSidebar({ activeView, setActiveView }: MainSidebarPr
       <SidebarContent>
         <SidebarMenu>
           {navItems.map((item) => (
-            <SidebarMenuItem key={item.id}>
-              <SidebarMenuButton
-                onClick={() => setActiveView(item.id as ActiveView)}
-                isActive={activeView === item.id}
-                tooltip={{ children: item.label }}
-              >
-                <item.icon className="h-5 w-5" />
-                <span>{item.label}</span>
-              </SidebarMenuButton>
+            <SidebarMenuItem key={item.href}>
+              <Link href={item.href} passHref legacyBehavior>
+                <SidebarMenuButton
+                  asChild
+                  isActive={pathname === item.href}
+                  tooltip={{ children: item.label }}
+                >
+                  <a>
+                    <item.icon className="h-5 w-5" />
+                    <span>{item.label}</span>
+                  </a>
+                </SidebarMenuButton>
+              </Link>
             </SidebarMenuItem>
           ))}
         </SidebarMenu>

@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -22,8 +22,25 @@ export default function JourneyBuilder({ initialData, onNewJourneyClick }: Journ
   const [journeys, setJourneys] = useLocalStorage<Journey[]>('recent-journeys', []);
   const [templates, setTemplates] = useLocalStorage<JourneyTemplate[]>('journey-templates', []);
   const [templateName, setTemplateName] = useState('');
+  const [loadedTemplate, setLoadedTemplate] = useState<JourneyTemplate | null>(null);
 
-  const initialBookings = initialData?.bookings.map(b => ({
+  useEffect(() => {
+    const templateToLoad = localStorage.getItem('templateToLoad');
+    if (templateToLoad) {
+      try {
+        const parsedTemplate = JSON.parse(templateToLoad);
+        setLoadedTemplate(parsedTemplate);
+      } catch (e) {
+        console.error("Failed to parse template from localStorage", e);
+      } finally {
+        localStorage.removeItem('templateToLoad');
+      }
+    }
+  }, []);
+
+  const finalInitialData = loadedTemplate || initialData;
+
+  const initialBookings = finalInitialData?.bookings.map(b => ({
     id: new Date().toISOString() + Math.random(),
     stops: b.stops.map(s => ({...s, id: new Date().toISOString() + Math.random(), dateTime: s.dateTime ? new Date(s.dateTime) : undefined }))
   })) || [];
@@ -85,6 +102,7 @@ export default function JourneyBuilder({ initialData, onNewJourneyClick }: Journ
         description: `Your journey with ${bookings.length} booking(s) has been scheduled.`,
       });
       setBookings([]); // Clear the builder
+      onNewJourneyClick(); // Reload or navigate
     } catch (error) {
       console.error("Failed to save journey:", error);
       toast({
@@ -98,11 +116,11 @@ export default function JourneyBuilder({ initialData, onNewJourneyClick }: Journ
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start p-4 sm:p-6 lg:p-8">
       <div className="lg:col-span-2 space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle className="font-headline text-2xl">Create a New Journey</CardTitle>
+            <CardTitle className="font-headline text-2xl">{finalInitialData ? `Editing: ${finalInitialData.name}` : 'Create a New Journey'}</CardTitle>
             <CardDescription>A journey is made up of one or more bookings. Add or edit bookings below.</CardDescription>
           </CardHeader>
         </Card>

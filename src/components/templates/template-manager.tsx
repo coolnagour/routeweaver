@@ -45,7 +45,7 @@ export default function TemplateManager({ onLoadTemplate }: TemplateManagerProps
   }
 
   return (
-    <>
+    <div className="p-4 sm:p-6 lg:p-8">
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-2xl font-bold tracking-tight font-headline">Journey Templates</h2>
@@ -106,6 +106,6 @@ export default function TemplateManager({ onLoadTemplate }: TemplateManagerProps
         onOpenChange={setIsAiModalOpen}
         onTemplateCreate={handleAiTemplateCreate}
       />
-    </>
+    </div>
   );
 }
