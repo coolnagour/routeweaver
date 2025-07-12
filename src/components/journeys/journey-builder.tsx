@@ -216,7 +216,7 @@ export default function JourneyBuilder({
   const title = getTitle();
 
   return (
-    <div className="space-y-6 py-8">
+    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
       <Card>
         <CardHeader>
           <CardTitle className="font-headline text-2xl">{title}</CardTitle>

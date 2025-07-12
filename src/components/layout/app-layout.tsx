@@ -20,7 +20,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
   return (
     <SidebarProvider>
-      <div className="flex">
+      <div className="flex flex w-full">
         <Sidebar>
           <MainSidebar />
         </Sidebar>
