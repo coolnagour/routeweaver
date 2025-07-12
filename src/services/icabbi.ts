@@ -94,7 +94,7 @@ export async function callIcabbiApi({ server, method, endpoint, body }: IcabbiAp
             throw new Error(`API Error: ${jsonResponse.status.message}`);
         }
 
-        return jsonResponse.body;
+        return jsonResponse;
 
     } catch (error) {
         console.error('Fetch error:', error);
@@ -116,7 +116,7 @@ export async function createBooking(server: ServerConfig, booking: Booking) {
     });
     
     // The script expects the nested 'booking' object
-    return response.booking;
+    return response.body.booking;
 }
 
 /**
@@ -130,23 +130,24 @@ export async function createJourney(server: ServerConfig, journeyPayload: any) {
         body: journeyPayload,
     });
 
-    return response;
+    return response.body;
 }
 
 /**
  * Fetches available sites from the iCabbi API.
  */
-export async function getSites(server: ServerConfig): Promise<{ id: number, name: string }[]> {
+export async function getSites(server: ServerConfig): Promise<{ id: number, name: string, ref: string }[]> {
     const response = await callIcabbiApi({
         server,
         method: 'GET',
         endpoint: 'sites',
     });
     
-    if (response && response.sites) {
-        return response.sites.map((site: any) => ({
+    if (response && response.body && response.body.sites) {
+        return response.body.sites.map((site: any) => ({
             id: site.id,
-            name: site.name,
+            name: site.title,
+            ref: site.ref,
         }));
     }
     return [];

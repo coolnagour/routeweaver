@@ -40,7 +40,7 @@ export default function JourneyBuilder({
   const [journeys, setJourneys] = useLocalStorage<Journey[]>('recent-journeys', [], server?.companyId);
   const [templates, setTemplates] = useLocalStorage<JourneyTemplate[]>('journey-templates', [], server?.companyId);
   const [templateName, setTemplateName] = useState(initialData?.name || '');
-  const [sites, setSites] = useState<{id: number, name: string}[]>([]);
+  const [sites, setSites] = useState<{id: number, name: string, ref: string}[]>([]);
   const [isFetchingSites, setIsFetchingSites] = useState(false);
   const [selectedSiteId, setSelectedSiteId] = useState<number | undefined>(undefined);
   
@@ -229,7 +229,8 @@ export default function JourneyBuilder({
                     {sites.length > 0 ? (
                         sites.map(site => (
                             <SelectItem key={site.id} value={site.id.toString()}>
-                                {site.name}
+                                <span className="font-medium mr-2">{site.ref}</span>
+                                <span className="text-muted-foreground">{site.name}</span>
                             </SelectItem>
                         ))
                     ) : (
