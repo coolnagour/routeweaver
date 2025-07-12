@@ -64,21 +64,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const isAuthPage = pathname === '/login';
     const isServerSelectPage = pathname === '/select-server';
 
-    // DEV MODE: Don't redirect away from pages
-    if (process.env.NODE_ENV === 'development') {
-      return;
+    // With mock auth, we should always be on an app page.
+    // If we're on a no-layout page, redirect to the home page.
+    if (user && server && (isAuthPage || isServerSelectPage)) {
+      router.push('/');
     }
-
-    // REAL AUTH LOGIC
-    if (!user && !isAuthPage) {
-      router.push('/login');
-    } else if (user && isAuthPage) {
-      router.push('/select-server');
-    } else if (user && !server && !isServerSelectPage) {
-      router.push('/select-server');
-    } else if (user && server && isServerSelectPage) {
-       router.push('/');
-    }
+    
   }, [user, server, loading, router, pathname]);
 
   if (loading) {
