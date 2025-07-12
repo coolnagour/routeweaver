@@ -8,7 +8,6 @@ import { createContext, useEffect, useState, type ReactNode } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { useServer } from './server-context';
-import { servers } from '@/config/servers';
 
 interface AuthContextType {
   user: User | null;
