@@ -178,7 +178,6 @@ export async function searchAccountsByName(server: ServerConfig, query: string):
     return response.body.accounts.map((acc: any) => ({
       id: acc.id,
       name: acc.name,
-      number: acc.account_no,
       ref: acc.ref,
     }));
   }

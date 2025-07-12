@@ -137,7 +137,7 @@ export default function AccountAutocomplete({ onAccountSelect }: AccountAutocomp
                 />
                 <div className="flex flex-col">
                   <span>{account.name}</span>
-                  <span className="text-xs text-muted-foreground">{account.ref} - {account.number}</span>
+                  <span className="text-xs text-muted-foreground">{account.ref}</span>
                 </div>
               </CommandItem>
             ))}
