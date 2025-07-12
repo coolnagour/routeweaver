@@ -48,7 +48,7 @@ export default function AccountAutocomplete({ onAccountSelect }: AccountAutocomp
     
     setIsLoading(true);
     try {
-      const accounts = await searchAccountsByName(server, query);
+      const accounts = await searchAccountsByName(server, query, { limit: 25 });
       setResults(accounts);
     } catch (error) {
       console.error("Failed to search accounts:", error);
