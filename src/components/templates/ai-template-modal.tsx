@@ -23,11 +23,22 @@ interface AiTemplateModalProps {
   onTemplateCreate: (template: Omit<JourneyTemplate, 'id' | 'name'>) => void;
 }
 
-const mockSuggestions = [
-  { name: "Morning Commute", from: "123 Home Street", to: "Downtown Office", passengers: 1 },
-  { name: "Airport Run", from: "456 Suburb Avenue", to: "International Airport", passengers: 2 },
-  { name: "Weekly Groceries", from: "789 Residence Lane", to: "Supermarket", passengers: 1 },
+const generateMockTemplate = (name: string, from: string, to: string, passengerName: string): Omit<JourneyTemplate, 'id'> => ({
+  name,
+  bookings: [{
+    stops: [
+      { stopType: 'pickup', address: from, name: passengerName, phone: '555-1111', dateTime: new Date().toISOString() },
+      { stopType: 'dropoff', address: to }
+    ]
+  }]
+});
+
+const mockSuggestions: Omit<JourneyTemplate, 'id'>[] = [
+    generateMockTemplate("Morning Commute", "123 Home Street", "Downtown Office", "Jane Doe"),
+    generateMockTemplate("Airport Run", "456 Suburb Avenue", "International Airport", "John Smith"),
+    generateMock-template("Weekly Groceries", "789 Residence Lane", "Supermarket", "Sam Jones"),
 ];
+
 
 export default function AiTemplateModal({ isOpen, onOpenChange, onTemplateCreate }: AiTemplateModalProps) {
   const [prompt, setPrompt] = useState('');
@@ -95,7 +106,9 @@ export default function AiTemplateModal({ isOpen, onOpenChange, onTemplateCreate
                   <div key={i} className="flex items-center justify-between rounded-lg border p-3">
                     <div>
                       <p className="font-semibold">{s.name}</p>
-                      <p className="text-sm text-muted-foreground">{s.from} to {s.to}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {s.bookings?.[0]?.stops?.[0]?.address} to {s.bookings?.[0]?.stops?.[1]?.address}
+                      </p>
                     </div>
                     <Button variant="outline" size="sm" onClick={() => handleCreate(s)}>Use</Button>
                   </div>

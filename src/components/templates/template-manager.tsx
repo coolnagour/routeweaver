@@ -33,13 +33,14 @@ export default function TemplateManager({ onLoadTemplate }: TemplateManagerProps
   const handleAiTemplateCreate = (templateData: Omit<JourneyTemplate, 'id' | 'name'>) => {
     const newTemplate = {
         id: new Date().toISOString(),
-        name: prompt("Enter a name for this new AI-generated template:") || "AI Template",
+        name: prompt("Enter a name for this new AI-generated template:") || templateData.name || "AI Template",
         ...templateData,
     };
     setTemplates([...templates, newTemplate]);
   }
 
   const getTotalPassengers = (template: JourneyTemplate) => {
+    if (!template.bookings) return 0;
     return template.bookings.reduce((total, booking) => {
         const pickupStops = booking.stops.filter((s: Omit<Stop, 'id'>) => s.stopType === 'pickup');
         return total + pickupStops.length;
@@ -80,7 +81,7 @@ export default function TemplateManager({ onLoadTemplate }: TemplateManagerProps
               <CardContent className="space-y-2 text-sm">
                 <div className="flex items-center gap-2">
                   <Package className="h-4 w-4 text-muted-foreground" />
-                  <span><strong>Bookings:</strong> {template.bookings.length}</span>
+                  <span><strong>Bookings:</strong> {template.bookings?.length || 0}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Users className="h-4 w-4 text-muted-foreground" />
