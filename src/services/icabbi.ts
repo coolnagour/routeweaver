@@ -163,10 +163,10 @@ export async function getSites(server: ServerConfig): Promise<{ id: number, name
 }
 
 /**
- * Fetches a page of accounts.
+ * Searches for accounts by name.
  */
-export async function getAccountsByPage(server: ServerConfig, limit: number, offset: number): Promise<Account[]> {
-  const endpoint = `accounts?limit=${limit}&offset=${offset}`;
+export async function searchAccountsByName(server: ServerConfig, query: string): Promise<Account[]> {
+  const endpoint = `accounts?name=${encodeURIComponent(query)}`;
   
   const response = await callIcabbiApi({
     server,

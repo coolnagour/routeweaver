@@ -1,13 +1,13 @@
 
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Command, CommandInput, CommandItem, CommandList, CommandEmpty } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Check, ChevronsUpDown, Loader2, Building2 } from 'lucide-react';
 import { useServer } from '@/context/server-context';
-import { getAccountsByPage } from '@/services/icabbi';
+import { searchAccountsByName } from '@/services/icabbi';
 import type { Account } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -31,90 +31,46 @@ function debounce<F extends (...args: any[]) => any>(func: F, waitFor: number) {
   return debounced;
 }
 
-
 export default function AccountAutocomplete({ onAccountSelect }: AccountAutocompleteProps) {
   const [open, setOpen] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filteredAccounts, setFilteredAccounts] = useState<Account[]>([]);
+  const [results, setResults] = useState<Account[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { server } = useServer();
   const { toast } = useToast();
   
-  // Use a ref to manage the ongoing search query to prevent race conditions
-  const activeSearchQuery = useRef('');
-
-  const searchAccounts = useCallback(async (query: string) => {
+  const handleSearch = useCallback(async (query: string) => {
     if (!server || !query) {
-        setFilteredAccounts([]);
-        setIsLoading(false);
-        return;
+      setResults([]);
+      return;
     }
-
-    activeSearchQuery.current = query;
+    
     setIsLoading(true);
-    setFilteredAccounts([]);
-
-    let offset = 0;
-    const limit = 100;
-    let hasMore = true;
-    let foundMatch = false;
-    const allFetchedAccounts: Account[] = [];
-
-    while (hasMore && !foundMatch && activeSearchQuery.current === query) {
-        try {
-            const newAccounts = await getAccountsByPage(server, limit, offset);
-
-            if (newAccounts.length === 0) {
-                hasMore = false;
-                break;
-            }
-            
-            allFetchedAccounts.push(...newAccounts);
-            
-            const lowercasedQuery = query.toLowerCase();
-            const matchingAccounts = allFetchedAccounts.filter(account => 
-                account.ref?.toLowerCase().startsWith(lowercasedQuery)
-            );
-
-            // If we have found matches with the current set of fetched accounts,
-            // update the state and stop fetching more.
-            if (matchingAccounts.length > 0) {
-                setFilteredAccounts(matchingAccounts);
-                foundMatch = true; // Stop the loop
-            }
-
-            offset += limit;
-
-        } catch (error) {
-            console.error("Failed to search accounts:", error);
-            toast({
-                variant: 'destructive',
-                title: 'Account Search Failed',
-                description: 'Could not retrieve accounts. Please try again.',
-            });
-            hasMore = false; // Stop on error
-            break;
-        }
+    try {
+      const accounts = await searchAccountsByName(server, query);
+      setResults(accounts);
+    } catch (error) {
+      console.error("Failed to search accounts:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Account Search Failed',
+        description: error instanceof Error ? error.message : 'Could not retrieve accounts.',
+      });
+      setResults([]);
+    } finally {
+      setIsLoading(false);
     }
-
-    // Ensure we only stop loading if this is the most recent query
-    if (activeSearchQuery.current === query) {
-        setIsLoading(false);
-    }
-
   }, [server, toast]);
-  
+
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const debouncedSearch = useCallback(debounce((query: string) => searchAccounts(query), 500), [searchAccounts]);
+  const debouncedSearch = useCallback(debounce((query: string) => handleSearch(query), 500), [handleSearch]);
 
   useEffect(() => {
-    if (searchTerm) {
-        debouncedSearch(searchTerm);
+    if (searchTerm.trim()) {
+      debouncedSearch(searchTerm);
     } else {
-        // Clear results if search term is empty
-        setFilteredAccounts([]);
-        activeSearchQuery.current = '';
+      setResults([]);
     }
   }, [searchTerm, debouncedSearch]);
 
@@ -122,15 +78,15 @@ export default function AccountAutocomplete({ onAccountSelect }: AccountAutocomp
   const handleSelect = (account: Account) => {
     setSelectedAccount(account);
     onAccountSelect(account);
-    setSearchTerm(account.ref ? `${account.ref} - ${account.name}` : account.name);
+    setSearchTerm(account.name || '');
     setOpen(false);
   };
   
   const handleInputChange = (value: string) => {
     setSearchTerm(value);
     if (!value) {
-        onAccountSelect(null);
-        setSelectedAccount(null);
+      onAccountSelect(null);
+      setSelectedAccount(null);
     }
   }
 
@@ -146,7 +102,7 @@ export default function AccountAutocomplete({ onAccountSelect }: AccountAutocomp
         >
           <Building2 className="mr-2 h-4 w-4 shrink-0" />
           {selectedAccount
-            ? `${selectedAccount.ref} - ${selectedAccount.name}`
+            ? `${selectedAccount.name} (${selectedAccount.ref})`
             : "Select account..."}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
@@ -154,7 +110,7 @@ export default function AccountAutocomplete({ onAccountSelect }: AccountAutocomp
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
         <Command shouldFilter={false}>
           <CommandInput
-            placeholder="Search by account ref..."
+            placeholder="Search by account name..."
             value={searchTerm}
             onValueChange={handleInputChange}
           />
@@ -164,13 +120,13 @@ export default function AccountAutocomplete({ onAccountSelect }: AccountAutocomp
                  <Loader2 className="h-4 w-4 animate-spin" />
               </div>
             )}
-            {!isLoading && filteredAccounts.length === 0 && searchTerm.length > 0 && (
+            {!isLoading && results.length === 0 && searchTerm.length > 0 && (
                 <CommandEmpty>No account found.</CommandEmpty>
             )}
-            {filteredAccounts.map((account) => (
+            {results.map((account) => (
               <CommandItem
                 key={account.id}
-                value={`${account.ref}-${account.name}`}
+                value={account.name}
                 onSelect={() => handleSelect(account)}
               >
                 <Check
@@ -180,8 +136,8 @@ export default function AccountAutocomplete({ onAccountSelect }: AccountAutocomp
                   )}
                 />
                 <div className="flex flex-col">
-                  <span><span className="font-bold">{account.ref}</span> - {account.name}</span>
-                  <span className="text-xs text-muted-foreground">{account.number}</span>
+                  <span>{account.name}</span>
+                  <span className="text-xs text-muted-foreground">{account.ref} - {account.number}</span>
                 </div>
               </CommandItem>
             ))}
