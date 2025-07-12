@@ -18,12 +18,16 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { CalendarIcon, MapPin, PlusCircle, X, User, Phone, Clock, MessageSquare, ChevronsUpDown } from 'lucide-react';
+import { CalendarIcon, MapPin, PlusCircle, X, User, Phone, Clock, MessageSquare, ChevronsUpDown, Building } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, setHours, setMinutes } from 'date-fns';
 import type { Booking, Stop } from '@/types';
 import ViaStop from './via-stop';
 import AddressAutocomplete from './address-autocomplete';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { useServer } from '@/context/server-context';
+import { getSites } from '@/services/icabbi';
+import { useEffect, useState } from 'react';
 
 const locationSchema = z.object({
     address: z.string().min(2, { message: 'Address is required.' }),
@@ -44,6 +48,7 @@ const stopSchema = z.object({
 
 const formSchema = z.object({
   id: z.string().optional(),
+  siteId: z.coerce.number({ required_error: "Site is required." }).min(1, "Site is required."),
   stops: z.array(stopSchema).min(2, 'At least two stops are required.')
 }).refine(data => {
     const firstPickup = data.stops[0];
@@ -79,11 +84,29 @@ interface JourneyFormProps {
 const emptyLocation = { address: '', lat: 0, lng: 0 };
 
 export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFormProps) {
+  const { server } = useServer();
+  const [sites, setSites] = useState<{id: number, name: string}[]>([]);
+
+  useEffect(() => {
+    async function fetchSites() {
+        if (server) {
+            try {
+                const fetchedSites = await getSites(server);
+                setSites(fetchedSites);
+            } catch (error) {
+                console.error("Failed to fetch sites:", error);
+                setSites([]);
+            }
+        }
+    }
+    fetchSites();
+  }, [server]);
 
   const form = useForm<BookingFormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       id: initialData?.id || new Date().toISOString() + Math.random(),
+      siteId: initialData?.siteId,
       stops: initialData?.stops?.length ? initialData.stops.map(s => ({ ...s, id: s.id || new Date().toISOString() + Math.random(), dateTime: s.dateTime ? new Date(s.dateTime) : undefined })) : [
         { id: 'pickup_start_' + Math.random(), location: emptyLocation, stopType: 'pickup', name: '', phone: '', dateTime: new Date(), instructions: '' },
         { id: 'dropoff_end_' + Math.random(), location: emptyLocation, stopType: 'dropoff', pickupStopId: undefined, instructions: '' }
@@ -136,6 +159,37 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+                 {/* Site Selector */}
+                <FormField
+                    control={form.control}
+                    name="siteId"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Site</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value?.toString()}>
+                            <FormControl>
+                                <SelectTrigger>
+                                    <Building className="mr-2 h-4 w-4" />
+                                    <SelectValue placeholder="Select a site for this booking" />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                            {sites.length > 0 ? (
+                                sites.map(site => (
+                                    <SelectItem key={site.id} value={site.id.toString()}>
+                                        {site.name}
+                                    </SelectItem>
+                                ))
+                            ) : (
+                                <div className="p-2 text-sm text-muted-foreground">Loading sites or none available...</div>
+                            )}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+
                 {/* Pickup Section */}
                 <div className="p-4 border rounded-lg space-y-3 bg-muted/20">
                     <h3 className="font-semibold text-lg text-primary">Pickup</h3>

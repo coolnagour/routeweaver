@@ -20,6 +20,10 @@ const formatBookingForIcabbi = (booking: Booking, server: ServerConfig) => {
         throw new Error("Booking must have at least one pickup and one dropoff stop.");
     }
     
+    if (!booking.siteId) {
+        throw new Error("Site ID is required for booking.");
+    }
+
     return {
         date: pickupStop.dateTime?.toISOString() || new Date().toISOString(),
         source: "DISPATCH",
@@ -39,7 +43,7 @@ const formatBookingForIcabbi = (booking: Booking, server: ServerConfig) => {
             driver_instructions: dropoffStop.instructions || "",
         },
         account_id: parseInt(server.companyId, 10),
-        site_id: server.siteId,
+        site_id: booking.siteId,
         with_bookingsegments: true,
     };
 };
@@ -121,4 +125,23 @@ export async function createJourney(server: ServerConfig, journeyPayload: any) {
     });
 
     return response;
+}
+
+/**
+ * Fetches available sites from the iCabbi API.
+ */
+export async function getSites(server: ServerConfig): Promise<{ id: number, name: string }[]> {
+    const response = await callIcabbiApi({
+        server,
+        method: 'GET',
+        endpoint: 'sites',
+    });
+    
+    if (response && response.sites) {
+        return response.sites.map((site: any) => ({
+            id: site.id,
+            name: site.name,
+        }));
+    }
+    return [];
 }
