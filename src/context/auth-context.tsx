@@ -30,8 +30,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!loading && !user && pathname !== '/login') {
+    if (loading) return;
+
+    const isLoginPage = pathname === '/login';
+
+    if (!user && !isLoginPage) {
       router.push('/login');
+    }
+
+    if (user && isLoginPage) {
+      router.push('/');
     }
   }, [user, loading, router, pathname]);
 
@@ -43,18 +51,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
   }
   
-  if (!user && pathname !== '/login') {
-    return null; 
+  // Render children if user is logged in, or if they are on the login page
+  if ((user && pathname !== '/login') || (!user && pathname === '/login')) {
+    return (
+      <AuthContext.Provider value={{ user, loading }}>
+        {children}
+      </AuthContext.Provider>
+    );
   }
 
-  if (user && pathname === '/login') {
-    router.push('/');
-    return null;
-  }
-
-  return (
-    <AuthContext.Provider value={{ user, loading }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  // Otherwise, return null to prevent rendering children during redirect
+  return null;
 }
