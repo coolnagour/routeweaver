@@ -33,7 +33,7 @@ export default function MainSidebar({ activeView, setActiveView }: MainSidebarPr
 
   return (
     <>
-      <SidebarHeader className="p-4">
+      <SidebarHeader>
         <div className="flex items-center gap-2">
           <Bot className="w-8 h-8 text-primary" />
           <h1 className={`text-xl font-headline font-semibold ${isCollapsed ? 'hidden' : ''}`}>Route Weaver</h1>
@@ -42,7 +42,7 @@ export default function MainSidebar({ activeView, setActiveView }: MainSidebarPr
         </div>
       </SidebarHeader>
       <Separator />
-      <SidebarContent className="p-4">
+      <SidebarContent>
         <SidebarMenu>
           {navItems.map((item) => (
             <SidebarMenuItem key={item.id}>
@@ -59,7 +59,7 @@ export default function MainSidebar({ activeView, setActiveView }: MainSidebarPr
         </SidebarMenu>
       </SidebarContent>
       <Separator />
-      <SidebarFooter className="p-4">
+      <SidebarFooter>
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
             <User className="w-6 h-6 text-muted-foreground" />
