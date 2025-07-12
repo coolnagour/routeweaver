@@ -2,7 +2,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useServer } from '@/context/server-context';
 import { servers } from '@/config/servers';
@@ -31,17 +31,15 @@ export default function SelectServerPage() {
             <CardContent className="grid grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-4">
                 {servers.map((server) => (
                     <Card key={server.companyId}>
-                        <CardHeader>
-                            <CardTitle className="text-lg">{server.name}</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <p className="text-sm text-muted-foreground">{server.host}</p>
-                        </CardContent>
-                        <CardFooter>
-                            <Button className="w-full" onClick={() => handleSelectServer(server)}>
-                            Connect
+                       <div className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                            <div className="flex-grow">
+                                <h3 className="text-lg font-semibold">{server.name}</h3>
+                                <p className="text-sm text-muted-foreground">{server.host}</p>
+                            </div>
+                            <Button className="w-full sm:w-auto" onClick={() => handleSelectServer(server)}>
+                                Connect
                             </Button>
-                        </CardFooter>
+                        </div>
                     </Card>
                 ))}
             </CardContent>
