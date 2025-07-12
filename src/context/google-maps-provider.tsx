@@ -14,7 +14,6 @@ export function GoogleMapsProvider({ children }: { children: ReactNode }) {
     return <>{children}</>;
   }
 
-  // This component is not strictly necessary with useJsApiLoader, but can be kept for other potential maps usage.
   return (
     <LoadScript
       googleMapsApiKey={apiKey}

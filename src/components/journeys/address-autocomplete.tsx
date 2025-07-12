@@ -1,7 +1,7 @@
 
 'use client';
 
-import { Autocomplete, useJsApiLoader } from "@react-google-maps/api";
+import { Autocomplete, useLoadScript } from "@react-google-maps/api";
 import { Input } from "@/components/ui/input";
 import { MapPin } from "lucide-react";
 import { useState } from "react";
@@ -19,11 +19,9 @@ const libraries: ("places")[] = ["places"];
 
 export default function AddressAutocomplete({ value, onChange, placeholder, className }: AddressAutocompleteProps) {
   const { server } = useServer();
-  const { isLoaded } = useJsApiLoader({
-    id: 'google-map-script',
+  const { isLoaded } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
     libraries: libraries,
-    region: server?.countryCodes?.[0], // Bias towards the first country
   });
 
   const [autocomplete, setAutocomplete] = useState<google.maps.places.Autocomplete | null>(null);
@@ -70,6 +68,7 @@ export default function AddressAutocomplete({ value, onChange, placeholder, clas
 
   return (
     <Autocomplete
+      key={server?.companyId} // Force re-render when server changes
       onLoad={onLoad}
       onPlaceChanged={onPlaceChanged}
       options={{

@@ -8,6 +8,7 @@ import AppLayout from "@/components/layout/app-layout";
 import { AuthProvider } from "@/context/auth-context";
 import { ServerProvider } from "@/context/server-context";
 import { ThemeProvider } from "@/components/theme-provider";
+import { GoogleMapsProvider } from "@/context/google-maps-provider";
 
 const fontPoppins = Poppins({
   subsets: ["latin"],
@@ -53,10 +54,12 @@ export default function RootLayout({
         >
             <ServerProvider>
               <AuthProvider>
-                <AppLayout>
-                  {children}
-                </AppLayout>
-                <Toaster />
+                <GoogleMapsProvider>
+                  <AppLayout>
+                    {children}
+                  </AppLayout>
+                  <Toaster />
+                </GoogleMapsProvider>
               </AuthProvider>
             </ServerProvider>
         </ThemeProvider>
