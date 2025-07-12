@@ -39,7 +39,7 @@ export default function Home() {
 
   return (
       <AppLayout activeView={activeView} setActiveView={setActiveView}>
-        <div className="flex flex-col flex-1 p-4 sm:p-6 lg:p-8">
+        <div className="p-4 sm:p-6 lg:p-8">
           {renderContent()}
         </div>
       </AppLayout>
