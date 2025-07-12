@@ -534,13 +534,12 @@ const SidebarMenuButton = React.forwardRef<
     },
     ref
   ) => {
-    if (asChild) {
-      Comp = Slot
-    }
+    const Component = asChild ? Slot : Comp;
+
     const { isMobile, state } = useSidebar()
 
     const button = (
-      <Comp
+      <Component
         ref={ref}
         data-sidebar="menu-button"
         data-size={size}
@@ -560,7 +559,7 @@ const SidebarMenuButton = React.forwardRef<
           }
           return child;
         })}
-      </Comp>
+      </Component>
     )
 
     if (!tooltip) {
