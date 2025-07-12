@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import AppLayout from "@/components/layout/app-layout";
 import { AuthProvider } from "@/context/auth-context";
 import { ServerProvider } from "@/context/server-context";
+import { ThemeProvider } from "@/components/theme-provider";
 
 const fontPoppins = Poppins({
   subsets: ["latin"],
@@ -44,14 +45,21 @@ export default function RootLayout({
           fontPTSans.variable
         )}
       >
-        <ServerProvider>
-          <AuthProvider>
-            <AppLayout>
-              {children}
-            </AppLayout>
-            <Toaster />
-          </AuthProvider>
-        </ServerProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <ServerProvider>
+            <AuthProvider>
+              <AppLayout>
+                {children}
+              </AppLayout>
+              <Toaster />
+            </AuthProvider>
+          </ServerProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

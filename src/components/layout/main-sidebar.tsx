@@ -21,6 +21,7 @@ import { auth } from '@/lib/firebase';
 import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { useServer } from '@/context/server-context';
+import { ThemeToggleButton } from '../theme-toggle-button';
 
 const navItems = [
   { href: '/journeys/new', label: 'New Journey', icon: Route },
@@ -108,9 +109,12 @@ export default function MainSidebar() {
             <span className="font-semibold">{user?.displayName || 'User'}</span>
             <span className="text-xs text-muted-foreground">{user?.email}</span>
           </div>
-          <Button variant="ghost" size="icon" className={`ml-auto ${isCollapsed ? 'hidden' : ''}`} onClick={handleSignOut} title="Sign Out">
-            <LogOut className="w-5 h-5" />
-          </Button>
+          <div className={`flex items-center ml-auto ${isCollapsed ? 'hidden' : ''}`}>
+             <ThemeToggleButton />
+             <Button variant="ghost" size="icon" onClick={handleSignOut} title="Sign Out">
+                <LogOut className="w-5 h-5" />
+             </Button>
+          </div>
         </div>
       </SidebarFooter>
     </>
