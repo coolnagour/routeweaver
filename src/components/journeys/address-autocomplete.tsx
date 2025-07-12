@@ -71,7 +71,7 @@ export default function AddressAutocomplete({ value, onChange, placeholder, clas
       onPlaceChanged={onPlaceChanged}
       options={{
         types: ['address'],
-        componentRestrictions: server ? { country: server.countryCode } : undefined,
+        componentRestrictions: server && server.countryCodes ? { country: server.countryCodes } : undefined,
       }}
     >
       <div className="relative">

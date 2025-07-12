@@ -19,7 +19,7 @@ export interface Stop {
   // Fields for pickup
   name?: string;
   phone?:string;
-  // Field for dropoff to link back to a pickup
+  // Field for dropoff to link back to a-pickup
   pickupStopId?: string; 
 }
 
@@ -100,7 +100,7 @@ export const ServerConfigSchema = z.object({
     appKey: z.string(),
     secretKey: z.string(),
     companyId: z.string(),
-    countryCode: z.string(),
+    countryCodes: z.array(z.string()),
 });
 
 export const JourneyInputSchema = z.object({
