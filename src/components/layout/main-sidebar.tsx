@@ -55,7 +55,7 @@ export default function MainSidebar() {
 
   return (
     <>
-      <SidebarHeader>
+      <SidebarHeader className="hidden md:flex">
         <div className="flex items-center gap-2">
           <Bot className="w-8 h-8 text-primary" />
           <h1 className={`text-xl font-headline font-semibold ${isCollapsed ? 'hidden' : ''}`}>Route Weaver</h1>

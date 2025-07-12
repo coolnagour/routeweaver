@@ -4,6 +4,7 @@
 import { usePathname } from 'next/navigation';
 import { SidebarProvider, Sidebar, SidebarInset } from '@/components/ui/sidebar';
 import MainSidebar from './main-sidebar';
+import MobileHeader from './mobile-header';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -11,7 +12,7 @@ interface AppLayoutProps {
 
 export default function AppLayout({ children }: AppLayoutProps) {
   const pathname = usePathname();
-  const noLayoutPages = ['/login', '/']; // Home is now server selector
+  const noLayoutPages = ['/login', '/'];
 
   if (noLayoutPages.includes(pathname)) {
     return <main>{children}</main>;
@@ -23,7 +24,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
         <Sidebar>
           <MainSidebar />
         </Sidebar>
-        <SidebarInset>{children}</SidebarInset>
+        <div className="flex flex-1 flex-col">
+          <MobileHeader />
+          <SidebarInset>{children}</SidebarInset>
+        </div>
       </div>
     </SidebarProvider>
   );
