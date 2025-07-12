@@ -15,8 +15,10 @@ import type { Journey, Booking, Stop } from '@/types';
 import { format } from 'date-fns';
 import useLocalStorage from '@/hooks/use-local-storage';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Users, MapPin, Clock, MessageSquare } from 'lucide-react';
+import { Users, MapPin, Clock, MessageSquare, Edit } from 'lucide-react';
 import { useServer } from '@/context/server-context';
+import { Button } from '../ui/button';
+import { useRouter } from 'next/navigation';
 
 const getStatusVariant = (status: Journey['status']) => {
   switch (status) {
@@ -37,7 +39,12 @@ const getPassengersFromStops = (stops: Stop[]) => {
 
 export default function RecentJourneys() {
   const { server } = useServer();
+  const router = useRouter();
   const [journeys, setJourneys] = useLocalStorage<Journey[]>('recent-journeys', [], server?.companyId);
+
+  const handleEditJourney = (id: string) => {
+    router.push(`/journeys/${id}/edit`);
+  };
 
   const getJourneyDateRange = (bookings: Booking[]) => {
     if (bookings.length === 0) return 'N/A';
@@ -83,7 +90,7 @@ export default function RecentJourneys() {
                 <TableHead>Bookings</TableHead>
                 <TableHead className="text-center">Total Passengers</TableHead>
                 <TableHead className="text-right">Status</TableHead>
-                <TableHead className="w-[50px]"></TableHead>
+                <TableHead className="w-[100px] text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -98,7 +105,10 @@ export default function RecentJourneys() {
                             <TableCell className="text-right">
                                 <Badge variant={getStatusVariant(journey.status)}>{journey.status}</Badge>
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="text-right">
+                                <Button variant="ghost" size="icon" onClick={() => handleEditJourney(journey.id)}>
+                                    <Edit className="h-4 w-4" />
+                                </Button>
                                 <AccordionTrigger />
                             </TableCell>
                         </TableRow>

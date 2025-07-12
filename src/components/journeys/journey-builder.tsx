@@ -16,15 +16,21 @@ import { useServer } from '@/context/server-context';
 import { useRouter } from 'next/navigation';
 
 interface JourneyBuilderProps {
-  initialData?: JourneyTemplate | null;
+  initialData?: Partial<JourneyTemplate> | null;
   onNewJourneyClick?: () => void;
   isEditingTemplate?: boolean;
+  isEditingJourney?: boolean;
+  onUpdateJourney?: (journey: Journey) => void;
+  journeyId?: string;
 }
 
 export default function JourneyBuilder({ 
   initialData, 
   onNewJourneyClick, 
-  isEditingTemplate = false 
+  isEditingTemplate = false,
+  isEditingJourney = false,
+  onUpdateJourney,
+  journeyId
 }: JourneyBuilderProps) {
   const { toast } = useToast();
   const router = useRouter();
@@ -33,11 +39,12 @@ export default function JourneyBuilder({
   const [templates, setTemplates] = useLocalStorage<JourneyTemplate[]>('journey-templates', [], server?.companyId);
   const [templateName, setTemplateName] = useState(initialData?.name || '');
   
-  const getInitialBookings = (data: JourneyTemplate | null | undefined): Booking[] => {
+  const getInitialBookings = (data: Partial<JourneyTemplate> | null | undefined): Booking[] => {
     if (!data || !data.bookings) return [];
-    return data.bookings.map(b => ({
+    // Deep copy to prevent mutation of the source
+    return JSON.parse(JSON.stringify(data.bookings)).map((b: any) => ({
       id: b.id || new Date().toISOString() + Math.random(),
-      stops: b.stops.map(s => ({
+      stops: b.stops.map((s: any) => ({
         ...s,
         id: s.id || new Date().toISOString() + Math.random(),
         dateTime: s.dateTime ? new Date(s.dateTime) : undefined
@@ -76,7 +83,7 @@ export default function JourneyBuilder({
       })),
     };
 
-    if (isEditingTemplate && initialData) {
+    if (isEditingTemplate && initialData?.id) {
       const updatedTemplates = templates.map(t => t.id === initialData.id ? { ...t, ...templateData } : t);
       setTemplates(updatedTemplates);
       toast({
@@ -98,50 +105,67 @@ export default function JourneyBuilder({
     }
   };
 
-  async function handleBookJourney() {
+  async function handleBookOrUpdateJourney() {
     if (bookings.length === 0) {
       toast({
         variant: 'destructive',
-        title: 'Cannot book empty journey',
+        title: 'Cannot process empty journey',
         description: 'Please add at least one booking to the journey.',
       });
       return;
     }
 
     setIsSubmitting(true);
-    try {
-      const result = await saveJourney({ bookings });
-      
-      const newJourney: Journey = {
-        id: result.journeyId,
-        status: 'Scheduled',
+    if (isEditingJourney && onUpdateJourney && journeyId) {
+      const updatedJourney: Journey = {
+        id: journeyId,
+        status: 'Scheduled', // Or keep original status if needed
         bookings: bookings
       };
-      setJourneys([newJourney, ...journeys]);
+      onUpdateJourney(updatedJourney);
+      toast({
+        title: 'Journey Updated!',
+        description: `Your journey has been successfully updated.`,
+      });
+    } else {
+      try {
+        const result = await saveJourney({ bookings });
+        
+        const newJourney: Journey = {
+          id: result.journeyId,
+          status: 'Scheduled',
+          bookings: bookings
+        };
+        setJourneys([newJourney, ...journeys]);
 
-      toast({
-        title: 'Journey Booked!',
-        description: `Your journey with ${bookings.length} booking(s) has been scheduled.`,
-      });
-      
-      if (onNewJourneyClick) {
-        onNewJourneyClick();
+        toast({
+          title: 'Journey Booked!',
+          description: `Your journey with ${bookings.length} booking(s) has been scheduled.`,
+        });
+        
+        if (onNewJourneyClick) {
+          onNewJourneyClick();
+        }
+      } catch (error) {
+        console.error("Failed to save journey:", error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Could not save the journey. Please try again.",
+        });
       }
-    } catch (error) {
-      console.error("Failed to save journey:", error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Could not save the journey. Please try again.",
-      });
-    } finally {
-      setIsSubmitting(false);
     }
+    setIsSubmitting(false);
   }
   
-  const title = isEditingTemplate 
-    ? `Editing Template: ${initialData?.name}` 
-    : (initialData ? `New Journey from: ${initialData.name}` : 'Create a New Journey');
+  const getTitle = () => {
+    if (isEditingTemplate) return `Editing Template: ${initialData?.name}`;
+    if (isEditingJourney) return `Editing Journey`;
+    if (initialData?.name) return `New Journey from: ${initialData.name}`;
+    return 'Create a New Journey';
+  };
+  
+  const title = getTitle();
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start p-4 sm:p-6 lg:p-8">
@@ -160,7 +184,7 @@ export default function JourneyBuilder({
                 <div className="flex-1 min-w-[250px]">
                      <Input
                         type="text"
-                        placeholder="Template Name"
+                        placeholder="Enter name to save as template..."
                         value={templateName}
                         onChange={(e) => setTemplateName(e.target.value)}
                         className="border p-2 rounded-md mr-2 bg-background"
@@ -170,11 +194,10 @@ export default function JourneyBuilder({
                   <Button variant="outline" onClick={handleSaveTemplate} disabled={bookings.length === 0 || !templateName}>
                       <Save className="mr-2 h-4 w-4" /> {isEditingTemplate ? 'Update Template' : 'Save as Template'}
                   </Button>
-                  {!isEditingTemplate && (
-                    <Button onClick={handleBookJourney} disabled={isSubmitting || bookings.length === 0}>
-                        {isSubmitting ? 'Booking...' : 'Book Journey'}
-                    </Button>
-                  )}
+                  
+                  <Button onClick={handleBookOrUpdateJourney} disabled={isSubmitting || bookings.length === 0}>
+                      {isSubmitting ? 'Submitting...' : (isEditingJourney ? 'Update Journey' : 'Book Journey')}
+                  </Button>
                 </div>
             </CardFooter>
         </Card>
