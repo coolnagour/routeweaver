@@ -30,7 +30,7 @@ const saveJourneyFlow = ai.defineFlow(
     outputSchema: JourneyOutputSchema,
   },
   async ({ bookings, server, siteId }) => {
-    console.log(`Starting journey creation with ${bookings.length} booking(s) on server: ${server.name} for site ID: ${siteId}`);
+    console.log(`[Journey Flow] Starting journey creation with ${bookings.length} booking(s) for site ID: ${siteId}`);
 
     if (bookings.length === 0) {
       throw new Error('No bookings provided to create a journey.');
@@ -42,15 +42,16 @@ const saveJourneyFlow = ai.defineFlow(
       try {
         // Add the journey-level siteId to each booking before creating it
         const bookingWithSite = { ...booking, siteId };
+        console.log(`[Journey Flow] Creating booking for passenger: ${booking.stops[0]?.name}`);
         const result = await createBooking(server, bookingWithSite);
         if (result && result.id && result.bookingsegments) {
           createdBookings.push(result);
-          console.log(`Successfully created booking with ID: ${result.id}`);
+          console.log(`[Journey Flow] Successfully created booking with ID: ${result.id}`);
         } else {
           throw new Error('Invalid response from createBooking');
         }
       } catch (error) {
-        console.error(`Failed to create booking for passenger: ${booking.stops[0]?.name}`, error);
+        console.error(`[Journey Flow] Failed to create booking for passenger: ${booking.stops[0]?.name}`, error);
         throw new Error(`Failed to create a booking. Halting journey creation. Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     }
@@ -103,11 +104,13 @@ const saveJourneyFlow = ai.defineFlow(
             bookings: journeyBookingsPayload,
         }],
     };
+    
+    console.log(`[Journey Flow] Creating journey with payload:`, JSON.stringify(journeyPayload, null, 2));
 
     // Step 3: Create the journey
     try {
         const journeyResult = await createJourney(server, journeyPayload);
-        console.log('Journey creation successful:', journeyResult);
+        console.log('[Journey Flow] Journey creation successful:', journeyResult);
 
         // Assuming the journey creation gives back a journey ID or some confirmation
         const journeyId = journeyResult?.journeys?.[0]?.id || `journey_${new Date().toISOString()}`;
@@ -118,7 +121,7 @@ const saveJourneyFlow = ai.defineFlow(
             message: `Journey with ${createdBookings.length} booking(s) was successfully scheduled.`,
         };
     } catch (error) {
-        console.error('Failed to create journey:', error);
+        console.error('[Journey Flow] Failed to create journey:', error);
         throw new Error(`Failed to link bookings into a journey. Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }

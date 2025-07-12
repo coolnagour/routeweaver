@@ -66,12 +66,18 @@ export async function callIcabbiApi({ server, method, endpoint, body }: IcabbiAp
         options.body = bodyString;
     }
 
-    console.log(`Calling iCabbi API: ${method} ${url}`);
+    console.log(`[iCabbi API Request] ---> ${method} ${url}`);
+    if (body) {
+        console.log(`[iCabbi API Request Body]:`, JSON.stringify(body, null, 2));
+    }
     
     try {
         const response = await fetch(url, options);
         
         const responseText = await response.text();
+        console.log(`[iCabbi API Response] <--- Status: ${response.status}`);
+        console.log(`[iCabbi API Response Body]:`, responseText);
+
         if (!response.ok) {
             console.error('iCabbi API Error:', response.status, responseText);
             throw new Error(`API call failed with status ${response.status}: ${responseText || response.statusText}`);
