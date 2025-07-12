@@ -1,13 +1,13 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Command, CommandInput, CommandItem, CommandList, CommandEmpty } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Check, ChevronsUpDown, Loader2, Building2 } from 'lucide-react';
 import { useServer } from '@/context/server-context';
-import { searchAccounts } from '@/services/icabbi';
+import { getAccountsByPage } from '@/services/icabbi';
 import type { Account } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -36,35 +36,70 @@ export default function AccountAutocomplete({ onAccountSelect }: AccountAutocomp
   const [open, setOpen] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [filteredAccounts, setFilteredAccounts] = useState<Account[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { server } = useServer();
   const { toast } = useToast();
 
-  const handleSearch = useCallback(async (query: string) => {
-    if (!server || query.length < 2) {
-      setAccounts([]);
-      return;
+  const searchRef = useRef({
+    allFetchedAccounts: [] as Account[],
+    currentOffset: 0,
+    hasMore: true,
+    activeQuery: ''
+  });
+
+  const fetchAndFilterAccounts = useCallback(async (query: string, reset: boolean = false) => {
+    if (!server) return;
+
+    if (reset) {
+        searchRef.current.allFetchedAccounts = [];
+        searchRef.current.currentOffset = 0;
+        searchRef.current.hasMore = true;
+        setFilteredAccounts([]);
     }
+    
+    searchRef.current.activeQuery = query;
     setIsLoading(true);
-    try {
-      const results = await searchAccounts(server, query);
-      setAccounts(results);
-    } catch (error) {
-      console.error("Failed to search accounts:", error);
-      toast({
-        variant: 'destructive',
-        title: 'Account Search Failed',
-        description: 'Could not retrieve accounts. Please try again.',
-      });
-      setAccounts([]);
-    } finally {
+
+    while (searchRef.current.hasMore && searchRef.current.activeQuery === query) {
+        try {
+            const newAccounts = await getAccountsByPage(server, 100, searchRef.current.currentOffset);
+
+            if (newAccounts.length === 0) {
+                searchRef.current.hasMore = false;
+                break; 
+            }
+
+            searchRef.current.allFetchedAccounts.push(...newAccounts);
+            searchRef.current.currentOffset += 100;
+            
+            const lowercasedQuery = query.toLowerCase();
+            const filtered = searchRef.current.allFetchedAccounts.filter(account => 
+                account.ref?.toLowerCase().startsWith(lowercasedQuery)
+            );
+            
+            if(searchRef.current.activeQuery === query) {
+               setFilteredAccounts(filtered);
+            }
+
+        } catch (error) {
+            console.error("Failed to search accounts:", error);
+            toast({
+                variant: 'destructive',
+                title: 'Account Search Failed',
+                description: 'Could not retrieve accounts. Please try again.',
+            });
+            searchRef.current.hasMore = false; 
+            break;
+        }
+    }
+    if (searchRef.current.activeQuery === query) {
       setIsLoading(false);
     }
   }, [server, toast]);
-  
+
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const debouncedSearch = useCallback(debounce(handleSearch, 300), [handleSearch]);
+  const debouncedSearch = useCallback(debounce((query: string) => fetchAndFilterAccounts(query, true), 300), [fetchAndFilterAccounts]);
 
   useEffect(() => {
     debouncedSearch(searchTerm);
@@ -73,8 +108,17 @@ export default function AccountAutocomplete({ onAccountSelect }: AccountAutocomp
   const handleSelect = (account: Account) => {
     setSelectedAccount(account);
     onAccountSelect(account);
+    setSearchTerm(account.ref ? `${account.ref} - ${account.name}` : account.name);
     setOpen(false);
   };
+  
+  const handleInputChange = (value: string) => {
+    setSearchTerm(value);
+    if (!value) {
+        onAccountSelect(null);
+        setSelectedAccount(null);
+    }
+  }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -84,10 +128,11 @@ export default function AccountAutocomplete({ onAccountSelect }: AccountAutocomp
           role="combobox"
           aria-expanded={open}
           className="w-full justify-between"
+          onClick={() => setOpen(!open)}
         >
           <Building2 className="mr-2 h-4 w-4 shrink-0" />
           {selectedAccount
-            ? `${selectedAccount.name} (${selectedAccount.number})`
+            ? `${selectedAccount.ref} - ${selectedAccount.name}`
             : "Select account..."}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
@@ -95,23 +140,23 @@ export default function AccountAutocomplete({ onAccountSelect }: AccountAutocomp
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
         <Command shouldFilter={false}>
           <CommandInput
-            placeholder="Search account by name..."
+            placeholder="Search by account ref..."
             value={searchTerm}
-            onValueChange={setSearchTerm}
+            onValueChange={handleInputChange}
           />
           <CommandList>
-            {isLoading && (
+            {isLoading && filteredAccounts.length === 0 && (
               <div className="p-2 flex items-center justify-center">
                  <Loader2 className="h-4 w-4 animate-spin" />
               </div>
             )}
-            {!isLoading && accounts.length === 0 && searchTerm.length > 1 && (
+            {!isLoading && filteredAccounts.length === 0 && searchTerm.length > 0 && (
                 <CommandEmpty>No account found.</CommandEmpty>
             )}
-            {accounts.map((account) => (
+            {filteredAccounts.map((account) => (
               <CommandItem
                 key={account.id}
-                value={account.name}
+                value={`${account.ref}-${account.name}`}
                 onSelect={() => handleSelect(account)}
               >
                 <Check
@@ -121,7 +166,7 @@ export default function AccountAutocomplete({ onAccountSelect }: AccountAutocomp
                   )}
                 />
                 <div className="flex flex-col">
-                  <span>{account.name}</span>
+                  <span><span className="font-bold">{account.ref}</span> - {account.name}</span>
                   <span className="text-xs text-muted-foreground">{account.number}</span>
                 </div>
               </CommandItem>

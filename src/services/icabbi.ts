@@ -80,7 +80,11 @@ export async function callIcabbiApi({ server, method, endpoint, body }: IcabbiAp
         
         const responseText = await response.text();
         console.log(`[iCabbi API Response] <--- Status: ${response.status}`);
-        console.log(`[iCabbi API Response Body]:`, responseText);
+        // Only log body for non-204 responses
+        if (responseText) {
+            console.log(`[iCabbi API Response Body]:`, responseText);
+        }
+
 
         if (!response.ok) {
             console.error('iCabbi API Error:', response.status, responseText);
@@ -93,9 +97,10 @@ export async function callIcabbiApi({ server, method, endpoint, body }: IcabbiAp
 
         const jsonResponse = JSON.parse(responseText);
 
-        if (jsonResponse.status && jsonResponse.status.type === 'error') {
-            console.error('iCabbi API Logic Error:', jsonResponse.status.message);
-            throw new Error(`API Error: ${jsonResponse.status.message}`);
+        if (jsonResponse.status && jsonResponse.status.type === 'error' || jsonResponse.error) {
+            const errorMessage = jsonResponse.message || (jsonResponse.status && jsonResponse.status.message) || 'Unknown API error';
+            console.error('iCabbi API Logic Error:', errorMessage);
+            throw new Error(`API Error: ${errorMessage}`);
         }
 
         return jsonResponse;
@@ -158,48 +163,26 @@ export async function getSites(server: ServerConfig): Promise<{ id: number, name
 }
 
 /**
- * Searches for accounts by name.
+ * Fetches a page of accounts.
  */
-export async function searchAccounts(server: ServerConfig, searchTerm: string): Promise<Account[]> {
-  const url = `https://${server.host}/${server.apiPath}/accounts?app_key=${server.appKey}&search=${encodeURIComponent(searchTerm)}`;
+export async function getAccountsByPage(server: ServerConfig, limit: number, offset: number): Promise<Account[]> {
+  const endpoint = `accounts?limit=${limit}&offset=${offset}`;
   
-  const headers = new Headers({
-    'Content-Type': 'application/json',
-    'Authorization': 'Basic ' + Buffer.from(`${server.appKey}:${server.secretKey}`).toString('base64'),
+  const response = await callIcabbiApi({
+    server,
+    method: 'GET',
+    endpoint,
   });
 
-  const options: RequestInit = {
-    method: 'GET',
-    headers,
-  };
-
-  console.log(`[iCabbi API Request] ---> GET ${url}`);
-
-  try {
-    const response = await fetch(url, options);
-    const responseText = await response.text();
-    console.log(`[iCabbi API Response] <--- Status: ${response.status}`);
-    console.log(`[iCabbi API Response Body]:`, responseText);
-
-    if (!response.ok) {
-        throw new Error(`API call failed with status ${response.status}: ${responseText || response.statusText}`);
-    }
-
-    const jsonResponse = JSON.parse(responseText);
-
-    if (jsonResponse.error) {
-      throw new Error(`API Error: ${jsonResponse.message}`);
-    }
-
-    return jsonResponse.body.accounts.map((acc: any) => ({
+  if (response && response.body && response.body.accounts) {
+    return response.body.accounts.map((acc: any) => ({
       id: acc.id,
       name: acc.name,
-      number: acc.account_no,
+      number: acc.account_no, // The API doc suggests account_no is not available here. Let's use `ref` as a fallback.
+      ref: acc.ref,
     }));
-  } catch (error) {
-    console.error('Fetch error in searchAccounts:', error);
-    throw error;
   }
-}
 
+  return [];
+}
     
