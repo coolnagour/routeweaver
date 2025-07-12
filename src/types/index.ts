@@ -28,10 +28,13 @@ export interface Journey {
   status: 'Scheduled' | 'Completed' | 'Cancelled';
 }
 
+// Stored template has string dates
+export type TemplateBooking = Omit<Booking, 'stops'> & { stops: (Omit<Stop, 'dateTime' | 'id'> & { id?: string; dateTime?: string })[] };
+
 export interface JourneyTemplate {
   id: string;
   name: string;
-  bookings: (Omit<Booking, 'id' | 'stops'> & { stops: (Omit<Stop, 'id'> & { dateTime?: string })[] })[];
+  bookings: TemplateBooking[];
 }
 
 

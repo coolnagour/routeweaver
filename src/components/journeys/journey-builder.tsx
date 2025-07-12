@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import useLocalStorage from '@/hooks/use-local-storage';
 import { saveJourney } from '@/ai/flows/journey-flow';
@@ -12,57 +13,58 @@ import { History, Save } from 'lucide-react';
 import Image from 'next/image';
 import BookingManager from './booking-manager';
 import { useServer } from '@/context/server-context';
+import { useRouter } from 'next/navigation';
 
 interface JourneyBuilderProps {
   initialData?: JourneyTemplate | null;
-  onNewJourneyClick: () => void;
+  onNewJourneyClick?: () => void;
+  isEditingTemplate?: boolean;
 }
 
-export default function JourneyBuilder({ initialData, onNewJourneyClick }: JourneyBuilderProps) {
+export default function JourneyBuilder({ 
+  initialData, 
+  onNewJourneyClick, 
+  isEditingTemplate = false 
+}: JourneyBuilderProps) {
   const { toast } = useToast();
+  const router = useRouter();
   const { server } = useServer();
   const [journeys, setJourneys] = useLocalStorage<Journey[]>('recent-journeys', [], server?.companyId);
   const [templates, setTemplates] = useLocalStorage<JourneyTemplate[]>('journey-templates', [], server?.companyId);
-  const [templateName, setTemplateName] = useState('');
-  const [loadedTemplate, setLoadedTemplate] = useState<JourneyTemplate | null>(null);
+  const [templateName, setTemplateName] = useState(initialData?.name || '');
+  
+  const getInitialBookings = (data: JourneyTemplate | null | undefined): Booking[] => {
+    if (!data || !data.bookings) return [];
+    return data.bookings.map(b => ({
+      id: b.id || new Date().toISOString() + Math.random(),
+      stops: b.stops.map(s => ({
+        ...s,
+        id: s.id || new Date().toISOString() + Math.random(),
+        dateTime: s.dateTime ? new Date(s.dateTime) : undefined
+      }))
+    }));
+  };
 
-  useEffect(() => {
-    // Ensure this runs only on the client
-    if (typeof window !== 'undefined') {
-      const templateToLoad = localStorage.getItem('templateToLoad');
-      if (templateToLoad) {
-        try {
-          const parsedTemplate = JSON.parse(templateToLoad);
-          setLoadedTemplate(parsedTemplate);
-        } catch (e) {
-          console.error("Failed to parse template from localStorage", e);
-        } finally {
-          localStorage.removeItem('templateToLoad');
-        }
-      }
-    }
-  }, []);
-
-  const finalInitialData = loadedTemplate || initialData;
-
-  const initialBookings = finalInitialData?.bookings?.map(b => ({
-    id: new Date().toISOString() + Math.random(),
-    stops: b.stops.map(s => ({...s, id: new Date().toISOString() + Math.random(), dateTime: s.dateTime ? new Date(s.dateTime) : undefined }))
-  })) || [];
-
-  const [bookings, setBookings] = useState<Booking[]>(initialBookings);
+  const [bookings, setBookings] = useState<Booking[]>(() => getInitialBookings(initialData));
   const [isSubmitting, setIsSubmitting] = useState(false);
   
+  useEffect(() => {
+    setBookings(getInitialBookings(initialData));
+    setTemplateName(initialData?.name || '');
+  }, [initialData]);
+
   const handleSaveTemplate = () => {
     if (!templateName) {
         toast({ title: 'Template name required', variant: 'destructive' });
         return;
     }
-    const newTemplate: JourneyTemplate = {
-      id: new Date().toISOString(),
+
+    const templateData = {
       name: templateName,
       bookings: bookings.map(b => ({
+        id: b.id,
         stops: b.stops.map(s => ({ 
+            id: s.id,
             address: s.address, 
             stopType: s.stopType,
             name: s.name,
@@ -73,12 +75,27 @@ export default function JourneyBuilder({ initialData, onNewJourneyClick }: Journ
         }))
       })),
     };
-    setTemplates([...templates, newTemplate]);
-    toast({
-      title: "Template Saved!",
-      description: `Template "${templateName}" has been saved.`,
-    });
-    setTemplateName('');
+
+    if (isEditingTemplate && initialData) {
+      const updatedTemplates = templates.map(t => t.id === initialData.id ? { ...t, ...templateData } : t);
+      setTemplates(updatedTemplates);
+      toast({
+        title: "Template Updated!",
+        description: `Template "${templateName}" has been saved.`,
+      });
+      router.push('/templates');
+    } else {
+      const newTemplate: JourneyTemplate = {
+        id: new Date().toISOString(),
+        ...templateData,
+      };
+      setTemplates([...templates, newTemplate]);
+      toast({
+        title: "Template Saved!",
+        description: `Template "${templateName}" has been saved.`,
+      });
+      setTemplateName('');
+    }
   };
 
   async function handleBookJourney() {
@@ -106,8 +123,10 @@ export default function JourneyBuilder({ initialData, onNewJourneyClick }: Journ
         title: 'Journey Booked!',
         description: `Your journey with ${bookings.length} booking(s) has been scheduled.`,
       });
-      setBookings([]); // Clear the builder
-      onNewJourneyClick(); // Reload or navigate
+      
+      if (onNewJourneyClick) {
+        onNewJourneyClick();
+      }
     } catch (error) {
       console.error("Failed to save journey:", error);
       toast({
@@ -119,13 +138,17 @@ export default function JourneyBuilder({ initialData, onNewJourneyClick }: Journ
       setIsSubmitting(false);
     }
   }
+  
+  const title = isEditingTemplate 
+    ? `Editing Template: ${initialData?.name}` 
+    : (initialData ? `New Journey from: ${initialData.name}` : 'Create a New Journey');
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start p-4 sm:p-6 lg:p-8">
       <div className="lg:col-span-2 space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle className="font-headline text-2xl">{finalInitialData ? `Editing: ${finalInitialData.name}` : 'Create a New Journey'}</CardTitle>
+            <CardTitle className="font-headline text-2xl">{title}</CardTitle>
             <CardDescription>A journey is made up of one or more bookings. Add or edit bookings below.</CardDescription>
           </CardHeader>
         </Card>
@@ -133,22 +156,26 @@ export default function JourneyBuilder({ initialData, onNewJourneyClick }: Journ
         <BookingManager bookings={bookings} setBookings={setBookings} />
         
         <Card>
-            <CardFooter className="flex justify-between items-center bg-muted/50 p-4 rounded-b-lg">
-                <div>
-                     <input
+            <CardFooter className="flex justify-between items-center bg-muted/50 p-4 rounded-b-lg flex-wrap gap-4">
+                <div className="flex-1 min-w-[250px]">
+                     <Input
                         type="text"
                         placeholder="Template Name"
                         value={templateName}
                         onChange={(e) => setTemplateName(e.target.value)}
-                        className="border p-2 rounded-md mr-2"
+                        className="border p-2 rounded-md mr-2 bg-background"
                     />
-                    <Button variant="outline" onClick={handleSaveTemplate} disabled={bookings.length === 0 || !templateName}>
-                        <Save className="mr-2 h-4 w-4" /> Save as Template
-                    </Button>
                 </div>
-                <Button onClick={handleBookJourney} disabled={isSubmitting || bookings.length === 0}>
-                    {isSubmitting ? 'Booking...' : 'Book Journey'}
-                </Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={handleSaveTemplate} disabled={bookings.length === 0 || !templateName}>
+                      <Save className="mr-2 h-4 w-4" /> {isEditingTemplate ? 'Update Template' : 'Save as Template'}
+                  </Button>
+                  {!isEditingTemplate && (
+                    <Button onClick={handleBookJourney} disabled={isSubmitting || bookings.length === 0}>
+                        {isSubmitting ? 'Booking...' : 'Book Journey'}
+                    </Button>
+                  )}
+                </div>
             </CardFooter>
         </Card>
       </div>

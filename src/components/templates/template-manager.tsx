@@ -6,10 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from '@/components/ui/button';
 import useLocalStorage from '@/hooks/use-local-storage';
 import type { JourneyTemplate, Stop } from '@/types';
-import { FileText, Users, Trash2, Bot, Package } from 'lucide-react';
+import { FileText, Users, Trash2, Bot, Package, Edit } from 'lucide-react';
 import AiTemplateModal from './ai-template-modal';
 import { useToast } from '@/hooks/use-toast';
 import { useServer } from '@/context/server-context';
+import { useRouter } from 'next/navigation';
 
 interface TemplateManagerProps {
   onLoadTemplate: (template: JourneyTemplate) => void;
@@ -17,6 +18,7 @@ interface TemplateManagerProps {
 
 export default function TemplateManager({ onLoadTemplate }: TemplateManagerProps) {
   const { server } = useServer();
+  const router = useRouter();
   const [templates, setTemplates] = useLocalStorage<JourneyTemplate[]>('journey-templates', [], server?.companyId);
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const { toast } = useToast();
@@ -30,12 +32,18 @@ export default function TemplateManager({ onLoadTemplate }: TemplateManagerProps
     });
   };
 
-  const handleAiTemplateCreate = (templateData: Omit<JourneyTemplate, 'id' | 'name'>) => {
+  const handleEditTemplate = (id: string) => {
+    router.push(`/templates/${id}/edit`);
+  };
+
+  const handleAiTemplateCreate = (templateData: Omit<JourneyTemplate, 'id' | 'name'> & { name: string }) => {
     const newTemplate = {
         id: new Date().toISOString(),
-        name: prompt("Enter a name for this new AI-generated template:") || templateData.name || "AI Template",
         ...templateData,
     };
+    if (!newTemplate.name) {
+        newTemplate.name = "AI Generated Template";
+    }
     setTemplates([...templates, newTemplate]);
   }
 
@@ -67,15 +75,20 @@ export default function TemplateManager({ onLoadTemplate }: TemplateManagerProps
             <Card key={template.id}>
               <CardHeader>
                 <div className="flex items-start justify-between">
-                    <div>
+                    <div className="flex-1 pr-2">
                         <CardTitle className="font-headline flex items-center gap-2">
                             <FileText className="h-5 w-5 text-primary" /> {template.name}
                         </CardTitle>
                         <CardDescription>A saved journey configuration.</CardDescription>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={() => deleteTemplate(template.id)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
+                    <div className="flex">
+                      <Button variant="ghost" size="icon" onClick={() => handleEditTemplate(template.id)}>
+                          <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => deleteTemplate(template.id)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
