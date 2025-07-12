@@ -8,46 +8,43 @@ function useLocalStorage<T>(
   initialValue: T,
   scope?: string | null
 ): [T, Dispatch<SetStateAction<T>>] {
-  // Prefix the key with the scope if it exists
+  const isClient = typeof window !== 'undefined';
+  
+  // Create a stable prefixedKey that doesn't change on the server
   const prefixedKey = scope ? `${scope}_${key}` : key;
 
   const [storedValue, setStoredValue] = useState<T>(() => {
-    if (typeof window === 'undefined') {
+    if (!isClient) {
       return initialValue;
     }
     try {
       const item = window.localStorage.getItem(prefixedKey);
       return item ? JSON.parse(item) : initialValue;
-    } catch (error)
-      {
+    } catch (error) {
       console.error(error);
       return initialValue;
     }
   });
 
   useEffect(() => {
-    // This effect runs when the prefixedKey changes (i.e., when the scope changes)
-    // It re-reads the value from localStorage for the new key.
-    if (typeof window !== 'undefined') {
+    if (isClient) {
       try {
         const item = window.localStorage.getItem(prefixedKey);
-        // We only update the state if the new item is different, to avoid unnecessary re-renders.
-        // We also handle the case where the new item is null (no value for the new scope).
         const newValue = item ? JSON.parse(item) : initialValue;
+        
+        // This check prevents an infinite loop if initialValue is an object/array
         if (JSON.stringify(newValue) !== JSON.stringify(storedValue)) {
-          setStoredValue(newValue);
+           setStoredValue(newValue);
         }
       } catch (error) {
         console.error(error);
         setStoredValue(initialValue);
       }
     }
-    // We add storedValue to dependency array to handle external changes to localStorage.
-  }, [prefixedKey, initialValue, storedValue]);
-
+  }, [prefixedKey, initialValue, isClient, storedValue]);
 
   const setValue: Dispatch<SetStateAction<T>> = (value) => {
-    if (typeof window !== 'undefined') {
+    if (isClient) {
       try {
         const valueToStore = value instanceof Function ? value(storedValue) : value;
         setStoredValue(valueToStore);
@@ -57,7 +54,6 @@ function useLocalStorage<T>(
       }
     }
   }
-
 
   return [storedValue, setValue];
 }

@@ -27,15 +27,18 @@ export default function JourneyBuilder({ initialData, onNewJourneyClick }: Journ
   const [loadedTemplate, setLoadedTemplate] = useState<JourneyTemplate | null>(null);
 
   useEffect(() => {
-    const templateToLoad = localStorage.getItem('templateToLoad');
-    if (templateToLoad) {
-      try {
-        const parsedTemplate = JSON.parse(templateToLoad);
-        setLoadedTemplate(parsedTemplate);
-      } catch (e) {
-        console.error("Failed to parse template from localStorage", e);
-      } finally {
-        localStorage.removeItem('templateToLoad');
+    // Ensure this runs only on the client
+    if (typeof window !== 'undefined') {
+      const templateToLoad = localStorage.getItem('templateToLoad');
+      if (templateToLoad) {
+        try {
+          const parsedTemplate = JSON.parse(templateToLoad);
+          setLoadedTemplate(parsedTemplate);
+        } catch (e) {
+          console.error("Failed to parse template from localStorage", e);
+        } finally {
+          localStorage.removeItem('templateToLoad');
+        }
       }
     }
   }, []);
