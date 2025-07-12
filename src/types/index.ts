@@ -100,6 +100,7 @@ export const ServerConfigSchema = z.object({
     appKey: z.string(),
     secretKey: z.string(),
     companyId: z.string(),
+    countryCode: z.string(),
 });
 
 export const JourneyInputSchema = z.object({
@@ -125,4 +126,3 @@ export const SuggestionOutputSchema = z.object({
   suggestion: z.string(),
 });
 export type SuggestionOutput = z.infer<typeof SuggestionOutputSchema>;
-    

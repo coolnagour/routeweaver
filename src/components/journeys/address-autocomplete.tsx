@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { MapPin } from "lucide-react";
 import { useState } from "react";
 import type { Location } from "@/types";
+import { useServer } from "@/context/server-context";
 
 interface AddressAutocompleteProps {
   value: string;
@@ -15,6 +16,7 @@ interface AddressAutocompleteProps {
 }
 
 export default function AddressAutocomplete({ value, onChange, placeholder, className }: AddressAutocompleteProps) {
+  const { server } = useServer();
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
@@ -69,7 +71,7 @@ export default function AddressAutocomplete({ value, onChange, placeholder, clas
       onPlaceChanged={onPlaceChanged}
       options={{
         types: ['address'],
-        componentRestrictions: { country: 'us' }, // Example restriction, can be changed
+        componentRestrictions: server ? { country: server.countryCode } : undefined,
       }}
     >
       <div className="relative">
