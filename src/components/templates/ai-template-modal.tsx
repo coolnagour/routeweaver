@@ -36,7 +36,7 @@ const generateMockTemplate = (name: string, from: string, to: string, passengerN
 const mockSuggestions: Omit<JourneyTemplate, 'id'>[] = [
     generateMockTemplate("Morning Commute", "123 Home Street", "Downtown Office", "Jane Doe"),
     generateMockTemplate("Airport Run", "456 Suburb Avenue", "International Airport", "John Smith"),
-    generateMock-template("Weekly Groceries", "789 Residence Lane", "Supermarket", "Sam Jones"),
+    generateMockTemplate("Weekly Groceries", "789 Residence Lane", "Supermarket", "Sam Jones"),
 ];
 
 
