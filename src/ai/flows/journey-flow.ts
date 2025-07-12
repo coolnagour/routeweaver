@@ -12,10 +12,11 @@ import { JourneyInputSchema, JourneyOutputSchema, ServerConfigSchema } from '@/t
 import { createBooking, createJourney } from '@/services/icabbi';
 import type { Booking, JourneyOutput } from '@/types';
 
-// Extend the input schema to include server config and siteId
+// Extend the input schema to include server config, siteId, and accountId
 const SaveJourneyInputSchema = JourneyInputSchema.extend({
   server: ServerConfigSchema,
   siteId: z.number(),
+  accountId: z.number(),
 });
 type SaveJourneyInput = z.infer<typeof SaveJourneyInputSchema>;
 
@@ -29,8 +30,8 @@ const saveJourneyFlow = ai.defineFlow(
     inputSchema: SaveJourneyInputSchema,
     outputSchema: JourneyOutputSchema,
   },
-  async ({ bookings, server, siteId }) => {
-    console.log(`[Journey Flow] Starting journey creation with ${bookings.length} booking(s) for site ID: ${siteId}`);
+  async ({ bookings, server, siteId, accountId }) => {
+    console.log(`[Journey Flow] Starting journey creation with ${bookings.length} booking(s) for site ID: ${siteId} and account ID: ${accountId}`);
 
     if (bookings.length === 0) {
       throw new Error('No bookings provided to create a journey.');
@@ -40,10 +41,10 @@ const saveJourneyFlow = ai.defineFlow(
     const createdBookings = [];
     for (const booking of bookings as Booking[]) {
       try {
-        // Add the journey-level siteId to each booking before creating it
-        const bookingWithSite = { ...booking, siteId };
+        // Add the journey-level siteId and accountId to each booking before creating it
+        const bookingWithContext = { ...booking, siteId, accountId };
         console.log(`[Journey Flow] Creating booking for passenger: ${booking.stops[0]?.name}`);
-        const result = await createBooking(server, bookingWithSite);
+        const result = await createBooking(server, bookingWithContext);
         if (result && result.id && result.bookingsegments) {
           createdBookings.push(result);
           console.log(`[Journey Flow] Successfully created booking with ID: ${result.id}`);
@@ -126,3 +127,5 @@ const saveJourneyFlow = ai.defineFlow(
     }
   }
 );
+
+    

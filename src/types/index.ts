@@ -26,7 +26,14 @@ export interface Stop {
 export interface Booking {
   id: string;
   stops: Stop[];
-  siteId?: number; // siteId is associated with a Journey, but needed for API call
+  siteId?: number;
+  accountId?: number;
+}
+
+export interface Account {
+  id: number;
+  name: string;
+  number: string;
 }
 
 export interface Journey {
@@ -36,7 +43,7 @@ export interface Journey {
 }
 
 // Stored template has string dates
-export type TemplateBooking = Omit<Booking, 'stops'> & { stops: (Omit<Stop, 'dateTime'> & { dateTime?: string })[] };
+export type TemplateBooking = Omit<Booking, 'stops' | 'siteId' | 'accountId'> & { stops: (Omit<Stop, 'dateTime'> & { dateTime?: string })[] };
 
 export interface JourneyTemplate {
   id: string;
@@ -46,7 +53,7 @@ export interface JourneyTemplate {
 
 // Type for AI-generated template suggestions before they are fully structured
 export type AITemplateSuggestion = {
-  name: string;
+  name:string;
   bookings: {
     stops: {
       location: { address: string };
@@ -82,7 +89,8 @@ const StopSchema = z.object({
 const BookingSchema = z.object({
   id: z.string(),
   stops: z.array(StopSchema),
-  siteId: z.number().optional(), // It's optional here because we add it at the journey level
+  siteId: z.number().optional(),
+  accountId: z.number().optional(),
 });
 
 export const ServerConfigSchema = z.object({
@@ -106,3 +114,5 @@ export const JourneyOutputSchema = z.object({
   message: z.string(),
 });
 export type JourneyOutput = z.infer<typeof JourneyOutputSchema>;
+
+    

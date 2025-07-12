@@ -2,7 +2,7 @@
 'use server';
 
 import type { ServerConfig } from "@/config/servers";
-import type { Booking } from "@/types";
+import type { Booking, Account } from "@/types";
 
 interface IcabbiApiCallOptions {
     server: ServerConfig;
@@ -23,6 +23,10 @@ const formatBookingForIcabbi = (booking: Booking, server: ServerConfig) => {
     if (!booking.siteId) {
         throw new Error("Site ID is required for booking.");
     }
+    
+    if (!booking.accountId) {
+        throw new Error("Account ID is required for booking.");
+    }
 
     return {
         date: pickupStop.dateTime?.toISOString() || new Date().toISOString(),
@@ -42,7 +46,7 @@ const formatBookingForIcabbi = (booking: Booking, server: ServerConfig) => {
             formatted: dropoffStop.location.address,
             driver_instructions: dropoffStop.instructions || "",
         },
-        account_id: parseInt(server.companyId, 10),
+        account_id: booking.accountId,
         site_id: booking.siteId,
         with_bookingsegments: true,
     };
@@ -152,3 +156,50 @@ export async function getSites(server: ServerConfig): Promise<{ id: number, name
     }
     return [];
 }
+
+/**
+ * Searches for accounts by name.
+ */
+export async function searchAccounts(server: ServerConfig, searchTerm: string): Promise<Account[]> {
+  const url = `https://${server.host}/${server.apiPath}/accounts?app_key=${server.appKey}&search=${encodeURIComponent(searchTerm)}`;
+  
+  const headers = new Headers({
+    'Content-Type': 'application/json',
+    'Authorization': 'Basic ' + Buffer.from(`${server.appKey}:${server.secretKey}`).toString('base64'),
+  });
+
+  const options: RequestInit = {
+    method: 'GET',
+    headers,
+  };
+
+  console.log(`[iCabbi API Request] ---> GET ${url}`);
+
+  try {
+    const response = await fetch(url, options);
+    const responseText = await response.text();
+    console.log(`[iCabbi API Response] <--- Status: ${response.status}`);
+    console.log(`[iCabbi API Response Body]:`, responseText);
+
+    if (!response.ok) {
+        throw new Error(`API call failed with status ${response.status}: ${responseText || response.statusText}`);
+    }
+
+    const jsonResponse = JSON.parse(responseText);
+
+    if (jsonResponse.error) {
+      throw new Error(`API Error: ${jsonResponse.message}`);
+    }
+
+    return jsonResponse.body.accounts.map((acc: any) => ({
+      id: acc.id,
+      name: acc.name,
+      number: acc.account_no,
+    }));
+  } catch (error) {
+    console.error('Fetch error in searchAccounts:', error);
+    throw error;
+  }
+}
+
+    
