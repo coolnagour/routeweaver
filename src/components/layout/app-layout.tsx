@@ -1,6 +1,6 @@
-
 'use client';
 
+import { usePathname } from 'next/navigation';
 import { SidebarProvider, Sidebar, SidebarInset } from '@/components/ui/sidebar';
 import MainSidebar from './main-sidebar';
 
@@ -9,6 +9,13 @@ interface AppLayoutProps {
 }
 
 export default function AppLayout({ children }: AppLayoutProps) {
+  const pathname = usePathname();
+  const isLoginPage = pathname === '/login';
+
+  if (isLoginPage) {
+    return <main>{children}</main>;
+  }
+
   return (
     <SidebarProvider>
       <div className="flex">

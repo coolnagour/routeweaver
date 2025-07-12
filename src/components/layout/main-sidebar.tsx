@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -16,6 +15,10 @@ import { Separator } from '@/components/ui/separator';
 import { Route, History, FileText, User, LogOut, Bot } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
+import { useAuth } from '@/hooks/use-auth';
+import { auth } from '@/lib/firebase';
+import { signOut } from 'firebase/auth';
+import { useRouter } from 'next/navigation';
 
 const navItems = [
   { href: '/', label: 'New Journey', icon: Route },
@@ -26,7 +29,14 @@ const navItems = [
 export default function MainSidebar() {
   const { state: sidebarState } = useSidebar();
   const pathname = usePathname();
+  const { user } = useAuth();
+  const router = useRouter();
   const isCollapsed = sidebarState === 'collapsed';
+
+  const handleSignOut = async () => {
+    await signOut(auth);
+    router.push('/login');
+  };
 
   return (
     <>
@@ -60,13 +70,17 @@ export default function MainSidebar() {
       <SidebarFooter>
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-            <User className="w-6 h-6 text-muted-foreground" />
+            {user?.photoURL ? (
+              <img src={user.photoURL} alt="User avatar" className="rounded-full" />
+            ) : (
+              <User className="w-6 h-6 text-muted-foreground" />
+            )}
           </div>
           <div className={`flex flex-col ${isCollapsed ? 'hidden' : ''}`}>
-            <span className="font-semibold">User</span>
-            <span className="text-xs text-muted-foreground">user@email.com</span>
+            <span className="font-semibold">{user?.displayName || 'User'}</span>
+            <span className="text-xs text-muted-foreground">{user?.email}</span>
           </div>
-          <Button variant="ghost" size="icon" className={`ml-auto ${isCollapsed ? 'hidden' : ''}`}>
+          <Button variant="ghost" size="icon" className={`ml-auto ${isCollapsed ? 'hidden' : ''}`} onClick={handleSignOut} title="Sign Out">
             <LogOut className="w-5 h-5" />
           </Button>
         </div>
