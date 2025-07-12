@@ -21,6 +21,7 @@ export default function AddressAutocomplete({ value, onChange, placeholder, clas
     id: 'google-map-script',
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
     libraries: ["places"],
+    region: server?.countryCodes?.[0],
   });
 
   const [autocomplete, setAutocomplete] = useState<google.maps.places.Autocomplete | null>(null);
