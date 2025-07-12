@@ -13,7 +13,7 @@ interface IcabbiApiCallOptions {
 
 // A simple example for a booking payload for iCabbi API
 // This will likely need to be much more detailed for a real integration.
-const formatBookingForIcabbi = (booking: Booking) => {
+const formatBookingForIcabbi = (booking: Booking, server: ServerConfig) => {
     const customer = booking.stops.find(s => s.stopType === 'pickup');
     
     return {
@@ -35,7 +35,7 @@ const formatBookingForIcabbi = (booking: Booking) => {
 
 
 export async function callIcabbiApi({ server, method, endpoint, body }: IcabbiApiCallOptions) {
-    const url = `https://${server.host}/v1/${endpoint}`;
+    const url = `https://${server.host}/${server.apiPath}/${endpoint}`;
     
     const headers = new Headers({
         'Content-Type': 'application/json',
@@ -82,7 +82,7 @@ export async function callIcabbiApi({ server, method, endpoint, body }: IcabbiAp
  * Note: This is a simplified example. The actual payload will be more complex.
  */
 export async function createBooking(server: ServerConfig, booking: Booking) {
-    const payload = formatBookingForIcabbi(booking);
+    const payload = formatBookingForIcabbi(booking, server);
 
     // The iCabbi documentation might have a different endpoint for creating a single booking
     // or multiple bookings at once. This is an example.
