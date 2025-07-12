@@ -4,23 +4,11 @@
  * @fileOverview An AI flow to generate plausible data suggestions.
  *
  * - generateSuggestion - A function that generates a suggestion for a given field type.
- * - SuggestionInput - The input type for the generateSuggestion function.
- * - SuggestionOutput - The return type for the generateSuggestion function.
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'zod';
-
-export const SuggestionInputSchema = z.object({
-  type: z.enum(['name', 'phone', 'instructions']),
-});
-export type SuggestionInput = z.infer<typeof SuggestionInputSchema>;
-
-export const SuggestionOutputSchema = z.object({
-  suggestion: z.string(),
-});
-export type SuggestionOutput = z.infer<typeof SuggestionOutputSchema>;
-
+import { SuggestionInputSchema, SuggestionOutputSchema } from '@/types';
+import type { SuggestionInput, SuggestionOutput } from '@/types';
 
 export async function generateSuggestion(input: SuggestionInput): Promise<SuggestionOutput> {
   return generateSuggestionFlow(input);

@@ -21,11 +21,10 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { CalendarIcon, MapPin, PlusCircle, X, User, Phone, Clock, MessageSquare, ChevronsUpDown, Sparkles, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, setHours, setMinutes } from 'date-fns';
-import type { Booking, Stop } from '@/types';
+import type { Booking, Stop, SuggestionInput } from '@/types';
 import ViaStop from './via-stop';
 import AddressAutocomplete from './address-autocomplete';
 import { generateSuggestion } from '@/ai/flows/suggestion-flow';
-import type { SuggestionInput } from '@/ai/flows/suggestion-flow';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 

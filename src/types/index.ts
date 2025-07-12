@@ -115,4 +115,14 @@ export const JourneyOutputSchema = z.object({
 });
 export type JourneyOutput = z.infer<typeof JourneyOutputSchema>;
 
+// Schemas for Suggestion Flow
+export const SuggestionInputSchema = z.object({
+  type: z.enum(['name', 'phone', 'instructions']),
+});
+export type SuggestionInput = z.infer<typeof SuggestionInputSchema>;
+
+export const SuggestionOutputSchema = z.object({
+  suggestion: z.string(),
+});
+export type SuggestionOutput = z.infer<typeof SuggestionOutputSchema>;
     

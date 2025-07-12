@@ -16,11 +16,10 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { MapPin, MinusCircle, User, Phone, MessageSquare, ChevronsUpDown, CalendarIcon, Clock, Sparkles, Loader2 } from 'lucide-react';
-import type { Stop } from '@/types';
+import type { Stop, SuggestionInput } from '@/types';
 import { cn } from '@/lib/utils';
 import { format, setHours, setMinutes } from 'date-fns';
 import AddressAutocomplete from './address-autocomplete';
-import type { SuggestionInput } from '@/ai/flows/suggestion-flow';
 
 interface ViaStopProps {
   control: any;
