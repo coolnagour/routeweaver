@@ -278,15 +278,12 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
                 </div>
 
                 {/* Destination Section */}
-                <div className="p-4 border rounded-lg space-y-3 bg-muted/20">
-                    <h3 className="font-semibold text-lg text-primary">Destination</h3>
-                    <ViaStop
-                        control={form.control}
-                        index={stopFields.length - 1}
-                        isDestination
-                        getAvailablePickups={getAvailablePickups}
-                    />
-                </div>
+                <ViaStop
+                    control={form.control}
+                    index={stopFields.length - 1}
+                    isDestination
+                    getAvailablePickups={getAvailablePickups}
+                />
 
                  <div className="flex justify-end gap-2 mt-4">
                     <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
@@ -298,5 +295,3 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
       </Card>
   );
 }
-
-    
