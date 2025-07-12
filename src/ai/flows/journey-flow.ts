@@ -8,12 +8,13 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { JourneyInputSchema, JourneyOutputSchema, ServerConfigSchema } from '@/types';
-import { createBooking, createJourney } from '@/services/icabbi';
+import { createBooking, createJourney, getSites } from '@/services/icabbi';
 import type { Booking, JourneyOutput, Stop } from '@/types';
 
-// Extend the input schema to include server config
+// Extend the input schema to include server config and siteId
 const SaveJourneyInputSchema = JourneyInputSchema.extend({
   server: ServerConfigSchema,
+  siteId: z.number(),
 });
 type SaveJourneyInput = z.infer<typeof SaveJourneyInputSchema>;
 
@@ -21,14 +22,19 @@ export async function saveJourney(input: SaveJourneyInput): Promise<JourneyOutpu
   return await saveJourneyFlow(input);
 }
 
+export async function fetchSitesForServer(server: z.infer<typeof ServerConfigSchema>): Promise<{ id: number; name: string }[]> {
+    return getSites(server);
+}
+
+
 const saveJourneyFlow = ai.defineFlow(
   {
     name: 'saveJourneyFlow',
     inputSchema: SaveJourneyInputSchema,
     outputSchema: JourneyOutputSchema,
   },
-  async ({ bookings, server }) => {
-    console.log(`Starting journey creation with ${bookings.length} booking(s) on server: ${server.name}`);
+  async ({ bookings, server, siteId }) => {
+    console.log(`Starting journey creation with ${bookings.length} booking(s) on server: ${server.name} for site ID: ${siteId}`);
 
     if (bookings.length === 0) {
       throw new Error('No bookings provided to create a journey.');
@@ -38,7 +44,9 @@ const saveJourneyFlow = ai.defineFlow(
     const createdBookings = [];
     for (const booking of bookings as Booking[]) {
       try {
-        const result = await createBooking(server, booking);
+        // Add the journey-level siteId to each booking before creating it
+        const bookingWithSite = { ...booking, siteId };
+        const result = await createBooking(server, bookingWithSite);
         if (result && result.id && result.bookingsegments) {
           createdBookings.push(result);
           console.log(`Successfully created booking with ID: ${result.id}`);

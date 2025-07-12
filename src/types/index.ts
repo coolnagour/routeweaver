@@ -26,7 +26,7 @@ export interface Stop {
 export interface Booking {
   id: string;
   stops: Stop[];
-  siteId?: number;
+  siteId?: number; // siteId is associated with a Journey, but needed for API call
 }
 
 export interface Journey {
@@ -82,7 +82,7 @@ const StopSchema = z.object({
 const BookingSchema = z.object({
   id: z.string(),
   stops: z.array(StopSchema),
-  siteId: z.number().optional(),
+  siteId: z.number().optional(), // It's optional here because we add it at the journey level
 });
 
 export const ServerConfigSchema = z.object({

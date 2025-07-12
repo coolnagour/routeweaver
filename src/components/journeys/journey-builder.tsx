@@ -7,13 +7,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import useLocalStorage from '@/hooks/use-local-storage';
-import { saveJourney } from '@/ai/flows/journey-flow';
+import { saveJourney, fetchSitesForServer } from '@/ai/flows/journey-flow';
 import type { Booking, Journey, JourneyTemplate } from '@/types';
-import { History, Save } from 'lucide-react';
+import { History, Save, Building, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import BookingManager from './booking-manager';
 import { useServer } from '@/context/server-context';
 import { useRouter } from 'next/navigation';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 interface JourneyBuilderProps {
   initialData?: Partial<JourneyTemplate> | null;
@@ -38,6 +39,9 @@ export default function JourneyBuilder({
   const [journeys, setJourneys] = useLocalStorage<Journey[]>('recent-journeys', [], server?.companyId);
   const [templates, setTemplates] = useLocalStorage<JourneyTemplate[]>('journey-templates', [], server?.companyId);
   const [templateName, setTemplateName] = useState(initialData?.name || '');
+  const [sites, setSites] = useState<{id: number, name: string}[]>([]);
+  const [isFetchingSites, setIsFetchingSites] = useState(false);
+  const [selectedSiteId, setSelectedSiteId] = useState<number | undefined>(undefined);
   
   const getInitialBookings = (data: Partial<JourneyTemplate> | null | undefined): Booking[] => {
     if (!data || !data.bookings) return [];
@@ -59,6 +63,26 @@ export default function JourneyBuilder({
     setBookings(getInitialBookings(initialData));
     setTemplateName(initialData?.name || '');
   }, [initialData]);
+
+  useEffect(() => {
+    async function fetchSites() {
+        if (server) {
+            setIsFetchingSites(true);
+            try {
+                const fetchedSites = await fetchSitesForServer(server);
+                setSites(fetchedSites);
+            } catch (error) {
+                console.error("Failed to fetch sites:", error);
+                toast({ variant: 'destructive', title: 'Error fetching sites', description: 'Could not retrieve sites for the selected server.'});
+                setSites([]);
+            } finally {
+                setIsFetchingSites(false);
+            }
+        }
+    }
+    fetchSites();
+  }, [server, toast]);
+
 
   const handleSaveTemplate = () => {
     if (!templateName) {
@@ -114,6 +138,11 @@ export default function JourneyBuilder({
       });
       return;
     }
+
+    if (!selectedSiteId) {
+        toast({ variant: 'destructive', title: 'Site required', description: 'Please select a site for this journey.' });
+        return;
+    }
     
     if (!server) {
       toast({
@@ -141,7 +170,7 @@ export default function JourneyBuilder({
       });
     } else {
       try {
-        const result = await saveJourney({ bookings, server });
+        const result = await saveJourney({ bookings, server, siteId: selectedSiteId });
         
         const newJourney: Journey = {
           id: result.journeyId,
@@ -187,6 +216,28 @@ export default function JourneyBuilder({
             <CardTitle className="font-headline text-2xl">{title}</CardTitle>
             <CardDescription>A journey is made up of one or more bookings. Add or edit bookings below.</CardDescription>
           </CardHeader>
+          <CardContent>
+            <div className="max-w-xs">
+                <label className="text-sm font-medium mb-2 block">Site</label>
+                <Select onValueChange={(value) => setSelectedSiteId(Number(value))} disabled={isFetchingSites}>
+                    <SelectTrigger>
+                        {isFetchingSites ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Building className="mr-2 h-4 w-4" />}
+                        <SelectValue placeholder={isFetchingSites ? "Loading sites..." : "Select a site for this journey"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                    {sites.length > 0 ? (
+                        sites.map(site => (
+                            <SelectItem key={site.id} value={site.id.toString()}>
+                                {site.name}
+                            </SelectItem>
+                        ))
+                    ) : (
+                        <div className="p-2 text-sm text-muted-foreground">No sites available.</div>
+                    )}
+                    </SelectContent>
+                </Select>
+            </div>
+          </CardContent>
         </Card>
 
         <BookingManager bookings={bookings} setBookings={setBookings} />
@@ -207,7 +258,7 @@ export default function JourneyBuilder({
                       <Save className="mr-2 h-4 w-4" /> {isEditingTemplate ? 'Update Template' : 'Save as Template'}
                   </Button>
                   
-                  <Button onClick={handleBookOrUpdateJourney} disabled={isSubmitting || bookings.length === 0}>
+                  <Button onClick={handleBookOrUpdateJourney} disabled={isSubmitting || bookings.length === 0 || !selectedSiteId}>
                       {isSubmitting ? 'Submitting...' : (isEditingJourney ? 'Update Journey' : 'Book Journey')}
                   </Button>
                 </div>
