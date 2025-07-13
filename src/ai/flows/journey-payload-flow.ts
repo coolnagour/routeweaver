@@ -37,7 +37,6 @@ type JourneyPayloadInput = z.infer<typeof JourneyPayloadInputSchema>;
 
 // Using z.any() for the journeyPayload as the structure is complex and for preview only.
 const JourneyPayloadOutputSchema = z.object({
-    originalBookings: z.array(BookingSchema),
     journeyPayload: z.any(),
     orderedStops: z.array(StopSchema),
 });
@@ -67,16 +66,13 @@ const generateJourneyPayloadFlow = ai.defineFlow(
     const allStopsWithParent = sanitizedBookings.flatMap((booking, bookingIndex) => 
         booking.stops.map(stop => ({...stop, parentBooking: booking, originalBookingIndex: bookingIndex }))
     );
-
-    const stopMap = new Map<string, Stop>();
-    allStopsWithParent.forEach(stop => stopMap.set(stop.id, stop));
     
     let unvisitedStops = [...allStopsWithParent];
     const orderedStops: (Stop & { parentBooking: Booking; originalBookingIndex: number })[] = [];
     const passengersInVehicle = new Set<string>();
 
     if (unvisitedStops.length === 0) {
-        return { originalBookings: bookings, journeyPayload: { error: 'No stops to process.' }, orderedStops: [] };
+        return { journeyPayload: { error: 'No stops to process.' }, orderedStops: [] };
     }
 
     // Find the starting stop (earliest pickup time, then by user booking order)
@@ -232,7 +228,6 @@ const generateJourneyPayloadFlow = ai.defineFlow(
     });
 
     return {
-        originalBookings: bookings,
         journeyPayload,
         orderedStops: finalOrderedStops
     }

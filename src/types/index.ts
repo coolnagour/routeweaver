@@ -1,3 +1,4 @@
+
 import { z } from 'zod';
 import type { ServerConfig } from '@/config/servers';
 
@@ -75,7 +76,6 @@ export type AITemplateSuggestion = {
 
 // Type for journey payload output from the flow
 export type JourneyPayloadOutput = {
-  originalBookings: Booking[];
   journeyPayload: any;
   orderedStops: Stop[];
 }

@@ -66,7 +66,7 @@ export default function JourneyBuilder({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentJourney, setCurrentJourney] = useState<Journey | null>(null);
 
-  const [debugApiPayload, setDebugApiPayload] = useState<JourneyPayloadOutput | null | {error: string}>(null);
+  const [debugApiPayload, setDebugApiPayload] = useState<JourneyPayloadOutput | {error: string} | null>(null);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
 
   // Debounce function
@@ -102,7 +102,17 @@ export default function JourneyBuilder({
   const debouncedFetchPreview = useCallback(debounce(fetchPreview, 500), [fetchPreview]);
 
   useEffect(() => {
-    debouncedFetchPreview(bookings, currentJourney);
+    // A simplified booking object is created for the debug view, as server IDs are not yet available.
+    // This provides a structural preview but won't have the final IDs.
+    const tempBookingsForPreview = bookings.map(b => ({
+      ...b,
+      requestId: b.requestId || Date.now(), // Use a temp ID for preview
+      stops: b.stops.map(s => ({
+        ...s,
+        bookingSegmentId: s.bookingSegmentId || Date.now()
+      }))
+    }));
+    debouncedFetchPreview(tempBookingsForPreview, currentJourney);
   }, [bookings, currentJourney, debouncedFetchPreview]);
   
   useEffect(() => {
@@ -391,7 +401,7 @@ export default function JourneyBuilder({
             <CardHeader className="cursor-pointer flex-row items-center justify-between">
               <div className="flex items-center gap-2">
                 <Code className="h-5 w-5" />
-                <CardTitle className="font-headline text-lg">API Payload (Debug View)</CardTitle>
+                <CardTitle className="font-headline text-lg">API Payload (Preview)</CardTitle>
               </div>
               <Button variant="ghost" size="icon" className="h-8 w-8">
                   <ChevronsUpDown className="h-4 w-4" />

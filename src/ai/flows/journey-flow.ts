@@ -8,7 +8,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import { JourneyInputSchema, JourneyOutputSchema, ServerConfigSchema, StopSchema } from '@/types';
+import { JourneyInputSchema, JourneyOutputSchema, ServerConfigSchema } from '@/types';
 import { createBooking, createJourney } from '@/services/icabbi';
 import type { Booking, JourneyOutput } from '@/types';
 import { generateJourneyPayload } from './journey-payload-flow';
@@ -18,7 +18,6 @@ const SaveJourneyInputSchema = JourneyInputSchema.extend({
   server: ServerConfigSchema,
   siteId: z.number(),
   accountId: z.number(),
-  journeyServerId: z.number().optional(), // Add optional journeyServerId for updates
 });
 type SaveJourneyInput = z.infer<typeof SaveJourneyInputSchema>;
 
@@ -83,7 +82,9 @@ const saveJourneyFlow = ai.defineFlow(
             // Assign this ID to the first and last stop of our local booking
             if (bookingWithServerIds.stops.length > 0) {
               bookingWithServerIds.stops[0].bookingSegmentId = mainSegmentId;
-              bookingWithServerIds.stops[bookingWithServerIds.stops.length - 1].bookingSegmentId = mainSegmentId;
+              if (bookingWithServerIds.stops.length > 1) {
+                  bookingWithServerIds.stops[bookingWithServerIds.stops.length - 1].bookingSegmentId = mainSegmentId;
+              }
             }
 
             // The rest of the segments correspond to the via stops in order
