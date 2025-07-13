@@ -97,30 +97,30 @@ export async function generateJourneyPayload(input: JourneyPayloadInput): Promis
         break; 
       }
       
-      // Sort candidates: 1st by distance (ascending), 2nd by type (pickups first)
-      candidateStops.sort((a, b) => {
-        const distA = getDistanceFromLatLonInMeters(
-            currentStop.location.lat, currentStop.location.lng,
-            a.location.lat, a.location.lng
-        );
-        const distB = getDistanceFromLatLonInMeters(
-            currentStop.location.lat, currentStop.location.lng,
-            b.location.lat, b.location.lng
-        );
-        
-        if (distA !== distB) {
-            return distA - distB;
-        }
+      // Find the closest valid stop.
+      let nextStop = candidateStops[0];
+      let minDistance = getDistanceFromLatLonInMeters(
+          currentStop.location.lat, currentStop.location.lng,
+          nextStop.location.lat, nextStop.location.lng
+      );
 
-        // If distances are the same, prefer pickup over dropoff
-        if (a.stopType !== b.stopType) {
-            return a.stopType === 'pickup' ? -1 : 1;
-        }
+      for (let i = 1; i < candidateStops.length; i++) {
+          const candidate = candidateStops[i];
+          const distance = getDistanceFromLatLonInMeters(
+              currentStop.location.lat, currentStop.location.lng,
+              candidate.location.lat, candidate.location.lng
+          );
 
-        return 0; // Same distance, same type
-      });
-
-      const nextStop = candidateStops[0];
+          if (distance < minDistance) {
+              minDistance = distance;
+              nextStop = candidate;
+          } else if (distance === minDistance) {
+              // Tie-breaker: prefer pickups over dropoffs
+              if (candidate.stopType === 'pickup' && nextStop.stopType === 'dropoff') {
+                  nextStop = candidate;
+              }
+          }
+      }
       
       orderedStops.push(nextStop);
       currentStop = nextStop;

@@ -1,3 +1,4 @@
+
 /**
  * @fileoverview Test for the journey payload generation flow.
  * To run this test, use the command: `npm run test`
@@ -24,28 +25,24 @@ async function runTest() {
     console.log("--- Running Journey Payload Logic Test ---");
 
     // SCENARIO: P1 -> P2 -> D1 -> D2
-    // P1 (s1): "Terminal Rd S", lat: 53.3479056, lng: -6.1954911
-    // P2 (s3): "Sutton Cross", lat: 53.3899572, lng: -6.109947
-    // D1 & D2 (s2, s4): "Howth Rd", lat: 53.3762177, lng: -6.188735299999999
-    
     const p1 = createStop('s1', 'pickup', 'Terminal Rd S, North Wall, Dublin, Ireland', 53.3479056, -6.1954911, undefined, 'Robert Smith');
-    const d1 = createStop('s2', 'dropoff', 'Howth Rd, Dublin, Ireland', 53.3762177, -6.188735299999999, 's1');
-
     const p2 = createStop('s3', 'pickup', 'Sutton Cross, Burrow, Dublin, Ireland', 53.3899572, -6.109947, undefined, 'John Smith');
+
+    const d1_d2 = createStop('s2', 'dropoff', 'Howth Rd, Dublin, Ireland', 53.3762177, -6.188735299999999, 's1');
     const d2 = createStop('s4', 'dropoff', 'Howth Rd, Dublin, Ireland', 53.3762177, -6.188735299999999, 's3');
     
     const booking1: Booking = {
         id: 'b1',
-        stops: [p1, d1],
+        stops: [p1, d1_d2],
         bookingServerId: 101,
-        requestId: 201, // Final stop of this booking uses this ID
+        requestId: 201, 
     };
 
     const booking2: Booking = {
         id: 'b2',
         stops: [p2, d2],
         bookingServerId: 102,
-        requestId: 202, // Final stop of this booking uses this ID
+        requestId: 202, 
     };
 
     const input = {
@@ -84,9 +81,8 @@ async function runTest() {
         const result = await generateJourneyPayload(inputForFlow);
         const orderedStopIds = result.orderedStops.map(s => s.id);
 
-        // Expected order: P1 -> P2 -> D1 -> D2. D1 and D2 are at the same location.
-        // The algorithm should pick one of them after P2, then the other one with 0 distance.
-        // The exact order of D1 vs D2 might not matter if they are co-located, but this is a stable expectation.
+        // Expected order: P1 -> P2 -> D1 -> D2. 
+        // D1 and D2 are at the same location. The routing logic should handle this gracefully.
         const expectedOrder = ['s1', 's3', 's2', 's4']; 
         console.log("\nActual ordered stop IDs:", orderedStopIds);
         console.log("Expected ordered stop IDs:", expectedOrder);
