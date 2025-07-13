@@ -1,15 +1,15 @@
 
 'use server';
 /**
- * @fileOverview A flow to generate a preview of the journey API payload for debugging.
+ * @fileOverview A flow to generate the journey API payload.
  *
- * - generateJourneyPayloadPreview: A function that generates the journey payload.
+ * - generateJourneyPayload: A function that generates the journey payload.
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { BookingSchema, StopSchema } from '@/types';
-import type { Booking, Stop, JourneyPayloadPreview } from '@/types';
+import type { Booking, Stop, JourneyPayloadOutput } from '@/types';
 
 // Helper function to calculate distance between two geo-coordinates
 function getDistanceFromLatLonInMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
@@ -29,30 +29,30 @@ function deg2rad(deg: number) {
   return deg * (Math.PI / 180);
 }
 
-const JourneyPayloadPreviewInputSchema = z.object({
+const JourneyPayloadInputSchema = z.object({
   bookings: z.array(BookingSchema),
   journeyServerId: z.number().optional(),
 });
-type JourneyPayloadPreviewInput = z.infer<typeof JourneyPayloadPreviewInputSchema>;
+type JourneyPayloadInput = z.infer<typeof JourneyPayloadInputSchema>;
 
-// Using z.any() for the output schema as the structure is complex and for preview only.
-const JourneyPayloadPreviewOutputSchema = z.object({
+// Using z.any() for the journeyPayload as the structure is complex and for preview only.
+const JourneyPayloadOutputSchema = z.object({
     originalBookings: z.array(BookingSchema),
     journeyPayload: z.any(),
     orderedStops: z.array(StopSchema),
 });
 
 
-export async function generateJourneyPayloadPreview(input: JourneyPayloadPreviewInput): Promise<JourneyPayloadPreview & { orderedStops: Stop[] }> {
-  return generateJourneyPayloadPreviewFlow(input);
+export async function generateJourneyPayload(input: JourneyPayloadInput): Promise<JourneyPayloadOutput & { orderedStops: Stop[] }> {
+  return generateJourneyPayloadFlow(input);
 }
 
 
-const generateJourneyPayloadPreviewFlow = ai.defineFlow(
+const generateJourneyPayloadFlow = ai.defineFlow(
   {
-    name: 'generateJourneyPayloadPreviewFlow',
-    inputSchema: JourneyPayloadPreviewInputSchema,
-    outputSchema: JourneyPayloadPreviewOutputSchema,
+    name: 'generateJourneyPayloadFlow',
+    inputSchema: JourneyPayloadInputSchema,
+    outputSchema: JourneyPayloadOutputSchema,
   },
   async ({ bookings, journeyServerId }) => {
     

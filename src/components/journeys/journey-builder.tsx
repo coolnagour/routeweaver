@@ -8,9 +8,9 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import useLocalStorage from '@/hooks/use-local-storage';
 import { saveJourney } from '@/ai/flows/journey-flow';
-import { generateJourneyPayloadPreview } from '@/ai/flows/journey-payload-preview-flow';
+import { generateJourneyPayload } from '@/ai/flows/journey-payload-flow';
 import { getSites } from '@/services/icabbi';
-import type { Booking, Journey, JourneyTemplate, Account, JourneyPayloadPreview, Stop } from '@/types';
+import type { Booking, Journey, JourneyTemplate, Account, JourneyPayloadOutput, Stop } from '@/types';
 import { Save, Building, Loader2, Send, ChevronsUpDown, Code } from 'lucide-react';
 import BookingManager from './booking-manager';
 import { useServer } from '@/context/server-context';
@@ -66,7 +66,7 @@ export default function JourneyBuilder({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentJourney, setCurrentJourney] = useState<Journey | null>(null);
 
-  const [debugApiPayload, setDebugApiPayload] = useState<JourneyPayloadPreview | null | {error: string}>(null);
+  const [debugApiPayload, setDebugApiPayload] = useState<JourneyPayloadOutput | null | {error: string}>(null);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
 
   // Debounce function
@@ -86,7 +86,7 @@ export default function JourneyBuilder({
     
     setIsPreviewLoading(true);
     try {
-        const payload = await generateJourneyPayloadPreview({ 
+        const payload = await generateJourneyPayload({ 
             bookings: currentBookings, 
             journeyServerId: journey?.journeyServerId 
         });

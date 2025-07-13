@@ -11,7 +11,7 @@ import { z } from 'zod';
 import { JourneyInputSchema, JourneyOutputSchema, ServerConfigSchema, StopSchema } from '@/types';
 import { createBooking, createJourney } from '@/services/icabbi';
 import type { Booking, JourneyOutput } from '@/types';
-import { generateJourneyPayloadPreview } from './journey-payload-preview-flow';
+import { generateJourneyPayload } from './journey-payload-flow';
 
 // Extend the input schema to include server config, siteId, and accountId
 const SaveJourneyInputSchema = JourneyInputSchema.extend({
@@ -109,7 +109,7 @@ const saveJourneyFlow = ai.defineFlow(
     }
     
     // Step 2: Use the centralized logic to generate the payload and ordered stops
-    const { journeyPayload, orderedStops } = await generateJourneyPayloadPreview({
+    const { journeyPayload, orderedStops } = await generateJourneyPayload({
       bookings: processedBookings, 
       journeyServerId,
     });
