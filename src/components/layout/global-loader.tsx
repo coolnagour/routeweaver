@@ -10,28 +10,25 @@ export default function GlobalLoader() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    // When the component mounts, we're not navigating, so set loading to false.
+    // On route change complete, hide the loader.
+    // This hook is triggered when the `pathname` or `searchParams` change,
+    // which signifies the end of a navigation.
     setLoading(false);
   }, [pathname, searchParams]);
 
   useEffect(() => {
     const handleStart = (url: string) => {
-      const currentUrl = `${pathname}${searchParams.toString()}`;
-      if (url !== currentUrl) {
-        // Defer the state update to the next tick to avoid the React error.
+      // Create a URL object to easily compare paths, ignoring the domain.
+      const currentPath = window.location.pathname + window.location.search;
+      const targetPath = new URL(url, window.location.origin).pathname + new URL(url, window.location.origin).search;
+
+      if (targetPath !== currentPath) {
+        // Defer state update to next tick to avoid React warning.
         setTimeout(() => setLoading(true), 0);
       }
     };
 
-    const handleComplete = (url: string) => {
-       const currentUrl = `${pathname}${searchParams.toString()}`;
-       if (url === currentUrl) {
-         setLoading(false);
-       }
-    };
-
-    // We can't use the router events from next/navigation because they are not yet supported in the App Router.
-    // As a workaround, we patch the History API.
+    // Patch the History API to capture navigation start events.
     const originalPushState = history.pushState;
     history.pushState = function (...args) {
       handleStart(args[2] as string);
@@ -45,31 +42,19 @@ export default function GlobalLoader() {
     };
 
     const handlePopState = () => {
-        handleStart(window.location.href);
-    }
-    
-    // Listen to popstate for browser back/forward buttons
+      // For browser back/forward buttons
+      handleStart(window.location.href);
+    };
+
     window.addEventListener('popstate', handlePopState);
-
-    // This is a bit of a hack to detect when loading is finished.
-    // Since we can't reliably listen for "routeChangeComplete",
-    // we use a MutationObserver to watch for changes in the document body,
-    // which indicates that the new page content has been rendered.
-    const observer = new MutationObserver(() => {
-        handleComplete(window.location.href);
-    });
-
-    observer.observe(document.body, { childList: true, subtree: true });
-
 
     return () => {
       // Restore original methods on cleanup
       history.pushState = originalPushState;
       history.replaceState = originalReplaceState;
       window.removeEventListener('popstate', handlePopState);
-      observer.disconnect();
     };
-  }, [pathname, searchParams]);
+  }, []); // Empty dependency array ensures this runs only once on mount.
 
   if (!loading) return null;
 
