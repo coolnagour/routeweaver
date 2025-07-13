@@ -10,7 +10,7 @@ import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { BookingSchema, JourneyInputSchema, JourneyOutputSchema, ServerConfigSchema } from '@/types';
 import { createBooking, createJourney } from '@/services/icabbi';
-import type { Booking, JourneyOutput } from '@/types';
+import type { Booking, JourneyOutput, Stop } from '@/types';
 
 // Extend the input schema to include server config, siteId, and accountId
 const SaveJourneyInputSchema = JourneyInputSchema.extend({
@@ -23,6 +23,25 @@ type SaveJourneyInput = z.infer<typeof SaveJourneyInputSchema>;
 export async function saveJourney(input: SaveJourneyInput): Promise<JourneyOutput> {
   return await saveJourneyFlow(input);
 }
+
+// Helper function to calculate distance between two geo-coordinates
+function getDistanceFromLatLonInMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371e3; // Radius of the earth in meters
+  const dLat = deg2rad(lat2 - lat1);
+  const dLon = deg2rad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const d = R * c; // Distance in meters
+  return d;
+}
+
+function deg2rad(deg: number) {
+  return deg * (Math.PI / 180);
+}
+
 
 const saveJourneyFlow = ai.defineFlow(
   {
@@ -46,11 +65,10 @@ const saveJourneyFlow = ai.defineFlow(
         const result = await createBooking(server, bookingWithContext);
         
         if (result && result.id && result.request_id) {
-          // The API returns the full booking object. Let's keep our local IDs and add the API IDs.
           const bookingWithServerIds: Booking = {
-            ...booking, // Keep original booking structure with local IDs
-            bookingServerId: result.id, // Add the new API booking ID
-            requestId: result.request_id, // Add the new request ID
+            ...booking,
+            bookingServerId: result.id,
+            requestId: result.request_id,
           };
           createdBookings.push(bookingWithServerIds);
           console.log(`[Journey Flow] Successfully created booking with local ID ${booking.id}, API ID: ${result.id}, and Request ID: ${result.request_id}`);
@@ -63,29 +81,59 @@ const saveJourneyFlow = ai.defineFlow(
       }
     }
 
-    // Step 2: Prepare the payload for creating the journey, using the new request_ids
+    // Step 2: Group stops by location and order them to build the journey payload
+    const allStops = createdBookings.flatMap(b => {
+      // Find the requestId for the booking this stop belongs to
+      const bookingRequestId = b.requestId;
+      if (!bookingRequestId) {
+        throw new Error(`Booking with local ID ${b.id} is missing a request ID after creation.`);
+      }
+      return b.stops.map(s => ({ ...s, requestId: bookingRequestId }));
+    });
+    
+    const stopsByLocation = new Map<string, (Stop & { requestId: number })[]>();
+    allStops.forEach(stop => {
+      const address = stop.location.address;
+      if (!stopsByLocation.has(address)) {
+        stopsByLocation.set(address, []);
+      }
+      stopsByLocation.get(address)!.push(stop);
+    });
+
+    const orderedLocations = Array.from(stopsByLocation.entries()).sort(([_, stopsA], [__, stopsB]) => {
+      const firstPickupTimeA = Math.min(...stopsA.filter(s => s.stopType === 'pickup' && s.dateTime).map(s => new Date(s.dateTime!).getTime()));
+      const firstPickupTimeB = Math.min(...stopsB.filter(s => s.stopType === 'pickup' && s.dateTime).map(s => new Date(s.dateTime!).getTime()));
+      return firstPickupTimeA - firstPickupTimeB;
+    });
+
+    // Step 3: Build the journey payload with calculated distances
     const journeyBookingsPayload = [];
-    let plannedDate = Math.floor(new Date().getTime() / 1000);
+    let plannedDate = Math.floor(new Date().getTime() / 1000); // Initial planned date
+    let lastLocation: { lat: number; lng: number } | null = null;
 
-    for (const createdBooking of createdBookings) {
-        if (!createdBooking.requestId) {
-            // This should not happen if the previous step succeeded
-            throw new Error(`Booking with local ID ${createdBooking.id} is missing a request ID.`);
-        }
-        // This part of the logic might need refinement based on real-world multi-stop scenarios.
-        journeyBookingsPayload.push({
-            request_id: createdBooking.requestId,
-            planned_date: plannedDate,
-            distance: 1000,
-        });
-        journeyBookingsPayload.push({
-            request_id: createdBooking.requestId,
-            is_destination: "true",
-            planned_date: plannedDate + 600, // Example offset
-            distance: 0,
-        });
+    for (const [_, stops] of orderedLocations) {
+      let distance = 0;
+      const currentLocation = stops[0].location;
 
-        plannedDate += 1200; // Increment time for the next booking
+      if (lastLocation) {
+        distance = getDistanceFromLatLonInMeters(lastLocation.lat, lastLocation.lng, currentLocation.lat, currentLocation.lng);
+      }
+      
+      for (const stop of stops) {
+        journeyBookingsPayload.push({
+          request_id: stop.requestId,
+          is_destination: stop.stopType === 'dropoff' ? "true" : "false",
+          planned_date: plannedDate,
+          distance: journeyBookingsPayload.length === 0 ? 0 : distance, // First leg has 0 distance
+        });
+        
+        // After the first stop at a new location, subsequent stops at the same location have 0 distance.
+        distance = 0;
+        plannedDate += 60; // Increment time slightly for each stop at the same location
+      }
+
+      lastLocation = currentLocation;
+      plannedDate += 600; // Increment time for travel to next location
     }
     
     const journeyPayload = {
@@ -93,14 +141,14 @@ const saveJourneyFlow = ai.defineFlow(
         delete_outstanding_journeys: "false",
         keyless_response: true,
         journeys: [{
-            id: null, // Creating a new journey
+            id: null,
             bookings: journeyBookingsPayload,
         }],
     };
     
     console.log(`[Journey Flow] Creating journey with payload:`, JSON.stringify(journeyPayload, null, 2));
 
-    // Step 3: Create the journey
+    // Step 4: Create the journey
     try {
         const journeyResult = await createJourney(server, journeyPayload);
         console.log('[Journey Flow] Journey creation successful:', journeyResult);
@@ -112,7 +160,7 @@ const saveJourneyFlow = ai.defineFlow(
 
         return {
             journeyServerId: journeyServerId,
-            bookings: createdBookings, // Return the bookings with local IDs and new server IDs
+            bookings: createdBookings,
             status: 'Scheduled',
             message: `Journey with ${createdBookings.length} booking(s) was successfully scheduled.`,
         };
