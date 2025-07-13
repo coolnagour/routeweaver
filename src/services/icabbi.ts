@@ -12,7 +12,7 @@ interface IcabbiApiCallOptions {
     body?: any;
 }
 
-const formatBookingForIcabbi = (booking: Booking, server: ServerConfig, forUpdate = false) => {
+const formatBookingForIcabbi = (booking: Booking, server: ServerConfig) => {
     if (booking.stops.length < 2) {
         throw new Error("Booking must have at least a pickup and a dropoff stop.");
     }
@@ -77,10 +77,6 @@ const formatBookingForIcabbi = (booking: Booking, server: ServerConfig, forUpdat
         } catch (e) {
              console.warn(`Could not get calling code for country: ${defaultCountry}. Omitting phone field.`);
         }
-    }
-
-    if (forUpdate && booking.bookingServerId) {
-        payload.id = booking.bookingServerId;
     }
 
     return payload;
@@ -148,7 +144,7 @@ export async function callIcabbiApi({ server, method, endpoint, body }: IcabbiAp
 }
 
 export async function createBooking(server: ServerConfig, booking: Booking) {
-    const payload = formatBookingForIcabbi(booking, server, false);
+    const payload = formatBookingForIcabbi(booking, server);
 
     const response = await callIcabbiApi({
         server,
@@ -164,12 +160,12 @@ export async function updateBooking(server: ServerConfig, booking: Booking) {
     if (!booking.bookingServerId) {
         throw new Error("Cannot update booking without a bookingServerId.");
     }
-    const payload = formatBookingForIcabbi(booking, server, true);
+    const payload = formatBookingForIcabbi(booking, server);
 
     const response = await callIcabbiApi({
         server,
         method: 'PUT',
-        endpoint: 'bookings/update',
+        endpoint: `bookings/update/${booking.bookingServerId}`,
         body: payload,
     });
     
