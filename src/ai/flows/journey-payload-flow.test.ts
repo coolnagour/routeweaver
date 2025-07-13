@@ -23,16 +23,16 @@ function createStop(id: string, type: 'pickup' | 'dropoff', address: string, lat
 async function runTest() {
     console.log("--- Running Journey Payload Logic Test ---");
 
-    // SCENARIO: P1 -> P2 -> D1 & D2 (Same Location)
-    // P1 (s1): Downtown (Start)
-    // P2 (s3): Uptown (closest next stop to P1)
-    // D1 (s2) & D2 (s4) are at the same location: Office Complex
-    const p1 = createStop('s1', 'pickup', 'Downtown', 40.7128, -74.0060, undefined, 'Alice');
-    const d1 = createStop('s2', 'dropoff', 'Office Complex', 40.8528, -74.0560, 's1');
+    // SCENARIO: P1 -> P2 -> D1 -> D2 (Same Location)
+    // P1 (s1): "Terminal Rd S", lat: 53.3479056, lng: -6.1954911
+    // P2 (s3): "Sutton Cross", lat: 53.3899572, lng: -6.109947
+    // D1 & D2 (s2, s4): "Howth Rd", lat: 53.3762177, lng: -6.188735299999999
+    
+    const p1 = createStop('s1', 'pickup', 'Terminal Rd S, North Wall, Dublin, Ireland', 53.3479056, -6.1954911, undefined, 'Robert Smith');
+    const d1 = createStop('s2', 'dropoff', 'Howth Rd, Dublin, Ireland', 53.3762177, -6.188735299999999, 's1');
 
-    const p2 = createStop('s3', 'pickup', 'Uptown', 40.8128, -74.0060, undefined, 'Bob');
-    // s4 is the same dropoff location as s2
-    const d2 = createStop('s4', 'dropoff', 'Office Complex', 40.8528, -74.0560, 's3');
+    const p2 = createStop('s3', 'pickup', 'Sutton Cross, Burrow, Dublin, Ireland', 53.3899572, -6.109947, undefined, 'John Smith');
+    const d2 = createStop('s4', 'dropoff', 'Howth Rd, Dublin, Ireland', 53.3762177, -6.188735299999999, 's3');
     
     const booking1: Booking = {
         id: 'b1',
@@ -54,8 +54,8 @@ async function runTest() {
     };
 
     console.log("Input Bookings:");
-    console.log("Booking 1 (Alice):", booking1.stops.map(s => `${s.stopType} at ${s.location.address}`));
-    console.log("Booking 2 (Bob):", booking2.stops.map(s => `${s.stopType} at ${s.location.address}`));
+    console.log("Booking 1 (Robert):", booking1.stops.map(s => `${s.stopType} at ${s.location.address}`));
+    console.log("Booking 2 (John):", booking2.stops.map(s => `${s.stopType} at ${s.location.address}`));
     
     // The flow expects dateTime properties to be Date objects.
     const sanitizedInput = {
