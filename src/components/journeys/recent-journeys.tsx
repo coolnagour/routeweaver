@@ -15,7 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import type { Journey, Booking, Stop } from '@/types';
 import { format } from 'date-fns';
 import useLocalStorage from '@/hooks/use-local-storage';
-import { Users, MapPin, Clock, MessageSquare, Edit, Send, Loader2, Info, ChevronDown, Trash2 } from 'lucide-react';
+import { Users, MapPin, Clock, MessageSquare, Edit, Send, Loader2, Info, ChevronDown, Trash2, Milestone } from 'lucide-react';
 import { useServer } from '@/context/server-context';
 import { Button } from '../ui/button';
 import { useRouter } from 'next/navigation';
@@ -87,13 +87,20 @@ export default function RecentJourneys() {
 
     setPublishingId(journey.id);
     try {
-        const result = await saveJourney({ bookings: journey.bookings, server, siteId: journey.siteId, accountId: journey.account.id });
+        const result = await saveJourney({ 
+            bookings: journey.bookings, 
+            server, 
+            siteId: journey.siteId, 
+            accountId: journey.account.id, 
+            journeyServerId: journey.journeyServerId 
+        });
         
         const publishedJourney: Journey = {
             ...journey,
             journeyServerId: result.journeyServerId,
             status: 'Scheduled',
             bookings: result.bookings,
+            orderedStops: result.orderedStops,
         };
         
         const updatedJourneys = journeys.map(j => j.id === journey.id ? publishedJourney : j);
@@ -143,6 +150,16 @@ export default function RecentJourneys() {
     const firstPickup = booking.stops.find(s => s.stopType === 'pickup');
     return firstPickup?.dateTime;
   }
+
+  const findPickupForDropoff = (journey: Journey, dropoffStop: Stop): Stop | undefined => {
+    if (dropoffStop.stopType !== 'dropoff' || !dropoffStop.pickupStopId) return undefined;
+    
+    for (const booking of journey.bookings) {
+        const pickup = booking.stops.find(s => s.id === dropoffStop.pickupStopId);
+        if (pickup) return pickup;
+    }
+    return undefined;
+  };
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -202,68 +219,101 @@ export default function RecentJourneys() {
                   {expandedJourneyId === journey.id && (
                     <TableRow>
                       <TableCell colSpan={5} className="p-0">
-                          <div className="p-4 bg-muted/50">
-                              <div className="flex justify-between items-center mb-2">
+                          <div className="p-4 bg-muted/50 space-y-4">
+                              <div className="space-y-4">
                                   <h4 className="font-semibold">Bookings in this Journey:</h4>
-                              </div>
-                              <div className="grid gap-4 md:grid-cols-2">
-                              {journey.bookings.map(booking => {
-                                  const bookingDateTime = getBookingDateTime(booking);
-                                  const pickups = getPassengersFromStops(booking.stops);
-                                  return (
-                                  <Card key={booking.id} className="bg-background">
-                                      <CardHeader className="p-3">
-                                          <div className="flex justify-between items-start gap-2">
-                                              <div>
-                                                  <CardTitle className="text-md">
-                                                      {bookingDateTime ? format(new Date(bookingDateTime), "PPP p") : 'ASAP Booking'}
-                                                  </CardTitle>
-                                                  <CardDescription>{pickups.length} passenger(s)</CardDescription>
-                                              </div>
-                                              {(booking.bookingServerId || booking.requestId) && (
-                                                  <div className="text-right text-[10px] font-mono text-muted-foreground space-y-0.5">
-                                                      {booking.bookingServerId && <div>Booking ID: {booking.bookingServerId}</div>}
-                                                      {booking.requestId && <div>Request ID: {booking.requestId}</div>}
+                                  <div className="grid gap-4 md:grid-cols-2">
+                                  {journey.bookings.map(booking => {
+                                      const bookingDateTime = getBookingDateTime(booking);
+                                      const pickups = getPassengersFromStops(booking.stops);
+                                      return (
+                                      <Card key={booking.id} className="bg-background">
+                                          <CardHeader className="p-3">
+                                              <div className="flex justify-between items-start gap-2">
+                                                  <div>
+                                                      <CardTitle className="text-md">
+                                                          {bookingDateTime ? format(new Date(bookingDateTime), "PPP p") : 'ASAP Booking'}
+                                                      </CardTitle>
+                                                      <CardDescription>{pickups.length} passenger(s)</CardDescription>
                                                   </div>
-                                              )}
-                                          </div>
-                                      </CardHeader>
-                                      <CardContent className="p-3 pt-0 space-y-2 text-sm">
-                                          <div className="space-y-1">
-                                              {booking.stops.map(stop => (
-                                                  <div key={stop.id} className="flex items-start gap-2 pt-2 border-t first:border-t-0">
-                                                      <MapPin className="h-4 w-4 text-primary mt-0.5" />
-                                                      <div className="flex-1">
-                                                          <p>
-                                                              <span className="capitalize font-medium">{stop.stopType}: </span>
-                                                              {stop.location.address}
-                                                          </p>
-                                                          
-                                                          {stop.stopType === 'pickup' && stop.name && (
-                                                              <span className="text-xs text-muted-foreground ml-2">({stop.name})</span>
-                                                          )}
-                                                          {stop.dateTime && (
-                                                              <span className="text-xs text-muted-foreground ml-2 flex items-center gap-1"><Clock className="h-3 w-3" />{format(new Date(stop.dateTime), 'p')}</span>
-                                                          )}
-                                                          {stop.instructions && (
-                                                              <div className="flex items-center gap-2 text-xs pl-1 mt-1 text-gray-500">
-                                                                  <MessageSquare className="h-3 w-3" />
-                                                                  <span>{stop.instructions}</span>
+                                                  {(booking.bookingServerId || booking.requestId) && (
+                                                      <div className="text-right text-[10px] font-mono text-muted-foreground space-y-0.5">
+                                                          {booking.bookingServerId && <div>Booking ID: {booking.bookingServerId}</div>}
+                                                          {booking.requestId && <div>Request ID: {booking.requestId}</div>}
+                                                      </div>
+                                                  )}
+                                              </div>
+                                          </CardHeader>
+                                          <CardContent className="p-3 pt-0 space-y-2 text-sm">
+                                              <div className="space-y-1">
+                                                  {booking.stops.map(stop => (
+                                                      <div key={stop.id} className="flex items-start gap-2 pt-2 border-t first:border-t-0">
+                                                          <MapPin className="h-4 w-4 text-primary mt-0.5" />
+                                                          <div className="flex-1">
+                                                              <p>
+                                                                  <span className="capitalize font-medium">{stop.stopType}: </span>
+                                                                  {stop.location.address}
+                                                              </p>
+                                                              
+                                                              {stop.stopType === 'pickup' && stop.name && (
+                                                                  <span className="text-xs text-muted-foreground ml-2">({stop.name})</span>
+                                                              )}
+                                                              {stop.dateTime && (
+                                                                  <span className="text-xs text-muted-foreground ml-2 flex items-center gap-1"><Clock className="h-3 w-3" />{format(new Date(stop.dateTime), 'p')}</span>
+                                                              )}
+                                                              {stop.instructions && (
+                                                                  <div className="flex items-center gap-2 text-xs pl-1 mt-1 text-gray-500">
+                                                                      <MessageSquare className="h-3 w-3" />
+                                                                      <span>{stop.instructions}</span>
+                                                                  </div>
+                                                              )}
+                                                          </div>
+                                                          {stop.bookingSegmentId && (
+                                                              <div className="text-[10px] font-mono text-muted-foreground">
+                                                                  SegID: {stop.bookingSegmentId}
                                                               </div>
                                                           )}
                                                       </div>
-                                                      {stop.bookingSegmentId && (
-                                                          <div className="text-[10px] font-mono text-muted-foreground">
-                                                              SegID: {stop.bookingSegmentId}
-                                                          </div>
-                                                      )}
-                                                  </div>
-                                              ))}
-                                          </div>
-                                      </CardContent>
-                                  </Card>
-                              )})}
+                                                  ))}
+                                              </div>
+                                          </CardContent>
+                                      </Card>
+                                  )})}
+                                  </div>
                               </div>
+                              {journey.orderedStops && (
+                                <div className="space-y-2">
+                                    <h4 className="font-semibold">API Stop Order (Debug View):</h4>
+                                    <div className="bg-background rounded-lg border p-4 space-y-4">
+                                        {journey.orderedStops.map((stop, index) => {
+                                            const passenger = stop.stopType === 'pickup' ? stop : findPickupForDropoff(journey, stop);
+                                            return (
+                                                <div key={`${stop.id}-${index}`} className="flex items-start gap-3">
+                                                    <div className="flex flex-col items-center">
+                                                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">
+                                                            {index + 1}
+                                                        </div>
+                                                        {index < journey.orderedStops!.length - 1 && (
+                                                          <div className="w-px h-6 bg-border mt-1"></div>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex-1 pt-0.5">
+                                                        <p className="font-medium">
+                                                           {stop.location.address}
+                                                        </p>
+                                                        <p className="text-sm text-muted-foreground">
+                                                            <span className={cn("font-semibold", stop.stopType === 'pickup' ? 'text-green-600' : 'text-red-600')}>
+                                                                {stop.stopType.toUpperCase()}
+                                                            </span>
+                                                            {passenger?.name && ` - ${passenger.name}`}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+                              )}
                           </div>
                       </TableCell>
                     </TableRow>

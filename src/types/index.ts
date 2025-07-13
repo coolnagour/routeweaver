@@ -45,6 +45,7 @@ export interface Journey {
   status: 'Draft' | 'Scheduled' | 'Completed' | 'Cancelled';
   siteId?: number;
   account?: Account | null;
+  orderedStops?: Stop[]; // The final ordered stops from the server
 }
 
 // Stored template has string dates
@@ -80,12 +81,12 @@ const LocationSchema = z.object({
   lng: z.number(),
 });
 
-const StopSchema = z.object({
+export const StopSchema = z.object({
   id: z.string(),
   location: LocationSchema,
   stopType: z.enum(['pickup', 'dropoff']),
   bookingSegmentId: z.number().optional(),
-  dateTime: z.string().optional(), // Using string for ISO date strings
+  dateTime: z.union([z.date(), z.string()]).optional().transform(val => val instanceof Date ? val.toISOString() : val),
   name: z.string().optional(),
   phone: z.string().optional(),
   pickupStopId: z.string().optional(),
@@ -120,9 +121,10 @@ export type JourneyInput = z.infer<typeof JourneyInputSchema>;
 
 export const JourneyOutputSchema = z.object({
   journeyServerId: z.number(),
-  bookings: z.array(BookingSchema), // Return bookings with original local ID and new bookingApiId
+  bookings: z.array(BookingSchema),
   status: z.string(),
   message: z.string(),
+  orderedStops: z.array(StopSchema),
 });
 export type JourneyOutput = z.infer<typeof JourneyOutputSchema>;
 

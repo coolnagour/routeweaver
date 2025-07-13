@@ -8,7 +8,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import { JourneyInputSchema, JourneyOutputSchema, ServerConfigSchema } from '@/types';
+import { JourneyInputSchema, JourneyOutputSchema, ServerConfigSchema, StopSchema } from '@/types';
 import { createBooking, createJourney } from '@/services/icabbi';
 import type { Booking, JourneyOutput, Stop } from '@/types';
 
@@ -308,12 +308,19 @@ const saveJourneyFlow = ai.defineFlow(
             })
           };
         });
+        
+        // Clean the ordered stops for the response
+        const finalOrderedStops = orderedStops.map(s => {
+            const { parentBooking, originalBookingIndex, ...stopRest } = s;
+            return stopRest;
+        });
 
         return {
             journeyServerId: finalJourneyServerId,
             bookings: finalBookings,
             status: 'Scheduled',
             message: `Journey with ${finalBookings.length} booking(s) was successfully ${journeyServerId ? 'updated' : 'scheduled'}.`,
+            orderedStops: finalOrderedStops,
         };
     } catch (error) {
         console.error('[Journey Flow] Failed to create/update journey:', error);

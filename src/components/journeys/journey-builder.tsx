@@ -116,6 +116,7 @@ export default function JourneyBuilder({
         status: currentJourney.status, // Keep existing status on local save
         siteId: selectedSiteId,
         account: selectedAccount,
+        orderedStops: currentJourney.orderedStops, // Preserve ordered stops on local save
       };
       onUpdateJourney(updatedJourneyData);
       toast({
@@ -230,6 +231,7 @@ export default function JourneyBuilder({
             bookings: result.bookings, 
             siteId: selectedSiteId,
             account: selectedAccount,
+            orderedStops: result.orderedStops,
         };
         
         const updatedJourneys = journeys.map(j => j.id === journeyToPublish.id ? publishedJourney : j);
