@@ -156,7 +156,7 @@ const saveJourneyFlow = ai.defineFlow(
 
     // Initialize the route
     orderedStops.push(currentStop);
-    unvisitedStops = unvisitedStops.filter(s => s.id !== currentStop!.id);
+    unvisitedStops = unvisitedStops.filter(s => s.id !== currentStop.id);
     if (currentStop.stopType === 'pickup') {
       passengersInVehicle.add(currentStop.id);
     }
