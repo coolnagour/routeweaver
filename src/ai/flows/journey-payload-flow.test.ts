@@ -28,12 +28,12 @@ async function runTest() {
     const p1 = createStop('s1', 'pickup', 'Terminal Rd S, North Wall, Dublin, Ireland', 53.3479056, -6.1954911, undefined, 'Robert Smith');
     const p2 = createStop('s3', 'pickup', 'Sutton Cross, Burrow, Dublin, Ireland', 53.3899572, -6.109947, undefined, 'John Smith');
 
-    const d1_d2 = createStop('s2', 'dropoff', 'Howth Rd, Dublin, Ireland', 53.3762177, -6.188735299999999, 's1');
+    const d1 = createStop('s2', 'dropoff', 'Howth Rd, Dublin, Ireland', 53.3762177, -6.188735299999999, 's1');
     const d2 = createStop('s4', 'dropoff', 'Howth Rd, Dublin, Ireland', 53.3762177, -6.188735299999999, 's3');
     
     const booking1: Booking = {
         id: 'b1',
-        stops: [p1, d1_d2],
+        stops: [p1, d1],
         bookingServerId: 101,
         requestId: 201, 
     };

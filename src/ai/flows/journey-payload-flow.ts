@@ -97,7 +97,7 @@ export async function generateJourneyPayload(input: JourneyPayloadInput): Promis
         break; 
       }
       
-      // Find the closest valid stop.
+      // Find the closest valid stop by manually iterating.
       let nextStop = candidateStops[0];
       let minDistance = getDistanceFromLatLonInMeters(
           currentStop.location.lat, currentStop.location.lng,
@@ -110,15 +110,10 @@ export async function generateJourneyPayload(input: JourneyPayloadInput): Promis
               currentStop.location.lat, currentStop.location.lng,
               candidate.location.lat, candidate.location.lng
           );
-
+          
           if (distance < minDistance) {
               minDistance = distance;
               nextStop = candidate;
-          } else if (distance === minDistance) {
-              // Tie-breaker: prefer pickups over dropoffs
-              if (candidate.stopType === 'pickup' && nextStop.stopType === 'dropoff') {
-                  nextStop = candidate;
-              }
           }
       }
       
