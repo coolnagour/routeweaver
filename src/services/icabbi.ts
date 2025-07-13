@@ -33,22 +33,10 @@ const formatBookingForIcabbi = (booking: Booking, server: ServerConfig) => {
     const lastStop = booking.stops[booking.stops.length - 1];
     const viaStops = booking.stops.slice(1, -1);
 
-    let formattedPhone = 'N/A';
-    if (pickupStop.phone) {
-        const defaultCountry = server.countryCodes?.[0]?.toUpperCase() as any;
-        const phoneNumber = parsePhoneNumberFromString(pickupStop.phone, defaultCountry);
-        
-        if (phoneNumber && phoneNumber.isValid()) {
-            formattedPhone = phoneNumber.number;
-        }
-    }
-
-
-    return {
+    const payload: any = {
         date: pickupStop.dateTime?.toISOString() || new Date().toISOString(),
         source: "DISPATCH",
         name: pickupStop.name || 'N/A',
-        phone: formattedPhone,
         address: {
             lat: firstStop.location.lat.toString(),
             lng: firstStop.location.lng.toString(),
@@ -71,6 +59,17 @@ const formatBookingForIcabbi = (booking: Booking, server: ServerConfig) => {
         site_id: booking.siteId,
         with_bookingsegments: true,
     };
+
+    if (pickupStop.phone) {
+        const defaultCountry = server.countryCodes?.[0]?.toUpperCase() as any;
+        const phoneNumber = parsePhoneNumberFromString(pickupStop.phone, defaultCountry);
+        
+        if (phoneNumber && phoneNumber.isValid()) {
+            payload.phone = phoneNumber.number;
+        }
+    }
+    
+    return payload;
 };
 
 export async function callIcabbiApi({ server, method, endpoint, body }: IcabbiApiCallOptions) {
