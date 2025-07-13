@@ -48,7 +48,6 @@ const formatBookingForIcabbi = (booking: Booking, server: ServerConfig) => {
         source: "DISPATCH",
         name: pickupStop.name || 'N/A',
         phone: formattedPhone || 'N/A',
-        customer_id: "123", 
         address: {
             lat: firstStop.location.lat.toString(),
             lng: firstStop.location.lng.toString(),
