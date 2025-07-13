@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -9,14 +9,15 @@ import { useToast } from '@/hooks/use-toast';
 import useLocalStorage from '@/hooks/use-local-storage';
 import { saveJourney } from '@/ai/flows/journey-flow';
 import { getSites } from '@/services/icabbi';
-import type { Booking, Journey, JourneyTemplate, Account } from '@/types';
-import { Save, Building, Loader2, Send } from 'lucide-react';
+import type { Booking, Journey, JourneyTemplate, Account, Stop } from '@/types';
+import { Save, Building, Loader2, Send, ChevronsUpDown, Code } from 'lucide-react';
 import BookingManager from './booking-manager';
 import { useServer } from '@/context/server-context';
 import { useRouter } from 'next/navigation';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import AccountAutocomplete from './account-autocomplete';
 import { v4 as uuidv4 } from 'uuid';
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '../ui/collapsible';
 
 interface JourneyBuilderProps {
   initialData?: Partial<JourneyTemplate> | null;
@@ -26,6 +27,25 @@ interface JourneyBuilderProps {
   onUpdateJourney?: (journey: Journey) => void;
   journeyId?: string;
 }
+
+// Helper function to calculate distance between two geo-coordinates
+function getDistanceFromLatLonInMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371e3; // Radius of the earth in meters
+  const dLat = deg2rad(lat2 - lat1);
+  const dLon = deg2rad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const d = R * c; // Distance in meters
+  return d;
+}
+
+function deg2rad(deg: number) {
+  return deg * (Math.PI / 180);
+}
+
 
 export default function JourneyBuilder({ 
   initialData, 
@@ -63,6 +83,152 @@ export default function JourneyBuilder({
   const [bookings, setBookings] = useState<Booking[]>(() => getInitialBookings(initialData));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentJourney, setCurrentJourney] = useState<Journey | null>(null);
+
+  const debugApiPayload = useMemo(() => {
+    if (bookings.length === 0) return null;
+
+     // Step 1: Intelligent stop ordering using a "nearest neighbor" approach
+    const allStopsWithParent = bookings.flatMap((b, bookingIndex) => b.stops.map(s => ({...s, parentBooking: b, originalBookingIndex: bookingIndex })));
+    
+    let unvisitedStops = [...allStopsWithParent];
+    const orderedStops: (Stop & { parentBooking: Booking; originalBookingIndex: number })[] = [];
+    const passengersInVehicle = new Set<string>();
+
+    if (unvisitedStops.length === 0) return null;
+
+    // Find the starting stop (earliest pickup time, then by user booking order)
+    const pickupStops = unvisitedStops.filter(s => s.stopType === 'pickup');
+
+    if (pickupStops.length === 0) {
+      return { error: "Cannot create a journey with no pickup stops." };
+    }
+
+    pickupStops.sort((a, b) => {
+        const timeA = a.dateTime ? new Date(a.dateTime).getTime() : Infinity;
+        const timeB = b.dateTime ? new Date(b.dateTime).getTime() : Infinity;
+        
+        if (timeA !== timeB) {
+            return timeA - timeB;
+        }
+
+        return a.originalBookingIndex - b.originalBookingIndex;
+    });
+    
+    let currentStop = pickupStops[0];
+
+    // Initialize the route
+    orderedStops.push(currentStop);
+    unvisitedStops = unvisitedStops.filter(s => s.id !== currentStop.id);
+    if (currentStop.stopType === 'pickup') {
+      passengersInVehicle.add(currentStop.id);
+    }
+    
+    while (unvisitedStops.length > 0) {
+      const candidateStops = unvisitedStops.filter(s => {
+        if (s.stopType === 'pickup') return true;
+        if (s.stopType === 'dropoff' && s.pickupStopId) {
+          return passengersInVehicle.has(s.pickupStopId);
+        }
+        return false;
+      });
+
+      if (candidateStops.length === 0) {
+        const remainingDropoffs = unvisitedStops.filter(s => s.stopType === 'dropoff');
+        remainingDropoffs.sort((a, b) =>
+            getDistanceFromLatLonInMeters(currentStop!.location.lat, currentStop!.location.lng, a.location.lat, a.location.lng) -
+            getDistanceFromLatLonInMeters(currentStop!.location.lat, currentStop!.location.lng, b.location.lat, b.location.lng)
+        );
+        orderedStops.push(...remainingDropoffs);
+        unvisitedStops = unvisitedStops.filter(s => !remainingDropoffs.some(d => d.id === s.id));
+        continue;
+      }
+      
+      let nextStop = candidateStops[0];
+      let minDistance = getDistanceFromLatLonInMeters(
+          currentStop.location.lat, currentStop.location.lng,
+          nextStop.location.lat, nextStop.location.lng
+      );
+      
+      for (let i = 1; i < candidateStops.length; i++) {
+        const distance = getDistanceFromLatLonInMeters(
+            currentStop.location.lat, currentStop.location.lng,
+            candidateStops[i].location.lat, candidateStops[i].location.lng
+        );
+        if (distance < minDistance) {
+          minDistance = distance;
+          nextStop = candidateStops[i];
+        }
+      }
+      
+      orderedStops.push(nextStop);
+      currentStop = nextStop;
+      unvisitedStops = unvisitedStops.filter(s => s.id !== currentStop.id);
+
+      if (currentStop.stopType === 'pickup') {
+        passengersInVehicle.add(currentStop.id);
+      } else if (currentStop.stopType === 'dropoff' && currentStop.pickupStopId) {
+        passengersInVehicle.delete(currentStop.pickupStopId);
+      }
+    }
+    
+    // Step 2: Build the journey payload
+    const journeyBookingsPayload = [];
+    const pickupMap = new Map<string, Stop>();
+    orderedStops.filter(s => s.stopType === 'pickup').forEach(s => pickupMap.set(s.id, s));
+
+    for (let i = 0; i < orderedStops.length; i++) {
+        const stop = orderedStops[i];
+        
+        let distance = 0;
+        if (i < orderedStops.length - 1) {
+            const nextStop = orderedStops[i + 1];
+            distance = getDistanceFromLatLonInMeters(
+                stop.location.lat, stop.location.lng,
+                nextStop.location.lat, nextStop.location.lng
+            );
+        }
+
+        const isFinalStopOfBooking = stop.id === stop.parentBooking.stops[stop.parentBooking.stops.length - 1].id;
+        
+        // Use placeholders since real IDs are generated on the server
+        const idToUse = isFinalStopOfBooking ? stop.parentBooking.requestId || `(placeholder_request_id_for_${stop.parentBooking.id.substring(0,4)})` : stop.bookingSegmentId || `(placeholder_segment_id_for_${stop.id.substring(0,4)})`;
+        const idType = isFinalStopOfBooking ? 'request_id' : 'bookingsegment_id';
+        
+        let plannedDate: string | undefined;
+        if (stop.stopType === 'pickup' && stop.dateTime) {
+          plannedDate = new Date(stop.dateTime).toISOString();
+        } else if (stop.stopType === 'dropoff' && stop.pickupStopId) {
+          const correspondingPickup = pickupMap.get(stop.pickupStopId);
+          if (correspondingPickup?.dateTime) {
+            plannedDate = new Date(correspondingPickup.dateTime).toISOString();
+          }
+        }
+        
+        if (!plannedDate) {
+          const firstPickup = stop.parentBooking.stops.find(s => s.stopType === 'pickup' && s.dateTime);
+          plannedDate = firstPickup?.dateTime ? new Date(firstPickup.dateTime).toISOString() : new Date().toISOString();
+        }
+
+        journeyBookingsPayload.push({
+          [idType]: idToUse,
+          is_destination: isFinalStopOfBooking ? "true" : "false",
+          planned_date: plannedDate,
+          distance: distance,
+        });
+    }
+    
+    const journeyPayload = {
+        logs: "false",
+        delete_outstanding_journeys: "false",
+        keyless_response: true,
+        journeys: [{
+            id: currentJourney?.journeyServerId || null,
+            bookings: journeyBookingsPayload,
+        }],
+    };
+
+    return journeyPayload;
+  }, [bookings, currentJourney]);
   
   useEffect(() => {
     if (journeyId) {
@@ -343,6 +509,31 @@ export default function JourneyBuilder({
               </div>
           </CardFooter>
       </Card>
+
+      <Collapsible>
+        <Card>
+          <CollapsibleTrigger asChild>
+            <CardHeader className="cursor-pointer flex-row items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Code className="h-5 w-5" />
+                <CardTitle className="font-headline text-lg">API Payload (Debug View)</CardTitle>
+              </div>
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <ChevronsUpDown className="h-4 w-4" />
+              </Button>
+            </CardHeader>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent>
+              <pre className="p-4 bg-muted rounded-lg text-xs overflow-x-auto">
+                {JSON.stringify(debugApiPayload, null, 2)}
+              </pre>
+            </CardContent>
+          </CollapsibleContent>
+        </Card>
+      </Collapsible>
     </div>
   );
 }
+
+    
