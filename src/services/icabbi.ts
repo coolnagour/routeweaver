@@ -32,12 +32,14 @@ const formatBookingForIcabbi = (booking: Booking, server: ServerConfig) => {
     const lastStop = booking.stops[booking.stops.length - 1];
     const viaStops = booking.stops.slice(1, -1);
 
+    // Sanitize phone number to remove non-digit characters
+    const cleanedPhone = (pickupStop.phone || '').replace(/\D/g, '');
 
     return {
         date: pickupStop.dateTime?.toISOString() || new Date().toISOString(),
         source: "DISPATCH",
         name: pickupStop.name || 'N/A',
-        phone: pickupStop.phone || 'N/A',
+        phone: cleanedPhone || 'N/A',
         customer_id: "123", // Example customer_id
         address: {
             lat: firstStop.location.lat.toString(),
