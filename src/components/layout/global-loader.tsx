@@ -3,60 +3,50 @@
 import { useState, useEffect } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
+import { Suspense } from 'react';
 
-export default function GlobalLoader() {
+function Loader() {
   const [loading, setLoading] = useState(false);
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    // On route change complete, hide the loader.
-    // This hook is triggered when the `pathname` or `searchParams` change,
-    // which signifies the end of a navigation.
+    // This effect now correctly handles hiding the loader when navigation completes.
+    // The key is that `pathname` and `searchParams` are updated *after* the new page is ready.
     setLoading(false);
-  }, [pathname, searchParams]);
 
-  useEffect(() => {
-    const handleStart = (url: string) => {
-      // Create a URL object to easily compare paths, ignoring the domain.
-      const currentPath = window.location.pathname + window.location.search;
-      // The `url` from pushState might be a relative path, so resolve it against the current origin.
-      const targetUrl = new URL(url, window.location.origin);
-      const targetPath = targetUrl.pathname + targetUrl.search;
-      
-      if (targetPath !== currentPath) {
-        // Defer state update to next tick to avoid React warning.
-        setTimeout(() => setLoading(true), 0);
-      }
+    // We still need to capture the start of navigation.
+    // We listen for clicks on `<a>` tags that are internal links.
+    const handleLinkClick = (event: MouseEvent) => {
+        const target = event.target as HTMLElement;
+        const anchor = target.closest('a');
+
+        if (anchor) {
+            const href = anchor.getAttribute('href');
+            if (href && href.startsWith('/')) {
+                const currentPath = window.location.pathname + window.location.search;
+                if (href !== currentPath) {
+                    setLoading(true);
+                }
+            }
+        }
     };
-
-    // Patch the History API to capture navigation start events.
-    const originalPushState = history.pushState;
-    history.pushState = function (...args) {
-      handleStart(args[2] as string);
-      return originalPushState.apply(history, args);
-    };
-
-    const originalReplaceState = history.replaceState;
-    history.replaceState = function (...args) {
-      handleStart(args[2] as string);
-      return originalReplaceState.apply(history, args);
-    };
-
+    
+    // Listen for popstate for browser back/forward buttons
     const handlePopState = () => {
-      // For browser back/forward buttons
-      handleStart(window.location.href);
+        setLoading(true);
     };
 
+    document.addEventListener('click', handleLinkClick);
     window.addEventListener('popstate', handlePopState);
 
     return () => {
-      // Restore original methods on cleanup
-      history.pushState = originalPushState;
-      history.replaceState = originalReplaceState;
-      window.removeEventListener('popstate', handlePopState);
+        document.removeEventListener('click', handleLinkClick);
+        window.removeEventListener('popstate', handlePopState);
     };
-  }, []); // Empty dependency array ensures this runs only once on mount.
+
+  }, [pathname, searchParams]);
+
 
   if (!loading) return null;
 
@@ -65,4 +55,15 @@ export default function GlobalLoader() {
       <Loader2 className="h-10 w-10 animate-spin text-primary" />
     </div>
   );
+}
+
+
+// Wrap the loader in a Suspense boundary as recommended by Next.js
+// when using navigation hooks like usePathname and useSearchParams.
+export default function GlobalLoader() {
+    return (
+        <Suspense fallback={null}>
+            <Loader />
+        </Suspense>
+    );
 }
