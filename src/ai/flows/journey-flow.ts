@@ -9,7 +9,7 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { JourneyInputSchema, JourneyOutputSchema, ServerConfigSchema } from '@/types';
-import { createBooking } from '@/services/icabbi';
+import { createBooking, createJourney } from '@/services/icabbi';
 import type { Booking, JourneyOutput, Stop } from '@/types';
 
 // Extend the input schema to include server config, siteId, and accountId
