@@ -15,7 +15,8 @@ function createStop(id: string, type: 'pickup' | 'dropoff', address: string, lat
         phone: '555-1234',
         instructions: '',
         pickupStopId: pickupId,
-        bookingSegmentId: parseInt(id.replace('s', ''), 10) + 1000,
+        // Assign arbitrary but unique segment IDs for testing purposes
+        bookingSegmentId: parseInt(id.replace('s', ''), 10) + 1000, 
     };
 }
 
@@ -23,10 +24,10 @@ async function runTest() {
     console.log("--- Running Journey Payload Logic Test ---");
 
     // SCENARIO: P1 -> P2 -> D1 -> D2
-    // P1: Downtown
-    // P2: Uptown (closer to P1 than D1 is)
-    // D1: Suburb (far from P1)
-    // D2: Airport (far from all)
+    // P1 (s1): Downtown (Start)
+    // P2 (s3): Uptown (closest next stop to P1)
+    // D1 (s2): Suburb (Alice's dropoff, farther than P2)
+    // D2 (s4): Airport (Bob's dropoff, last stop)
     const p1 = createStop('s1', 'pickup', 'Downtown', 40.7128, -74.0060, undefined, 'Alice');
     const d1 = createStop('s2', 'dropoff', 'Suburb', 40.9128, -74.1060, 's1');
 
@@ -37,14 +38,14 @@ async function runTest() {
         id: 'b1',
         stops: [p1, d1],
         bookingServerId: 101,
-        requestId: 201,
+        requestId: 201, // Final stop of this booking uses this ID
     };
 
     const booking2: Booking = {
         id: 'b2',
         stops: [p2, d2],
         bookingServerId: 102,
-        requestId: 202,
+        requestId: 202, // Final stop of this booking uses this ID
     };
 
     const input = {
@@ -53,10 +54,10 @@ async function runTest() {
     };
 
     console.log("Input Bookings:");
-    console.log("Booking 1:", booking1.stops.map(s => `${s.stopType} at ${s.location.address}`));
-    console.log("Booking 2:", booking2.stops.map(s => `${s.stopType} at ${s.location.address}`));
+    console.log("Booking 1 (Alice):", booking1.stops.map(s => `${s.stopType} at ${s.location.address}`));
+    console.log("Booking 2 (Bob):", booking2.stops.map(s => `${s.stopType} at ${s.location.address}`));
     
-    // The flow expects dateTime properties to be Date objects, let's ensure they are for sanitizedBookings
+    // The flow expects dateTime properties to be Date objects.
     const sanitizedInput = {
         ...input,
         bookings: input.bookings.map(b => ({

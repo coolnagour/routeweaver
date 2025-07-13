@@ -61,13 +61,14 @@ const generateJourneyPayloadFlow = ai.defineFlow(
         dateTime: s.dateTime && typeof s.dateTime === 'string' ? new Date(s.dateTime) : s.dateTime,
       }))
     }));
-    
-    const allStopsWithParent = sanitizedBookings.flatMap(booking =>
-        booking.stops.map(stop => ({ ...stop, parentBooking: booking }))
+
+    const allStops = sanitizedBookings.flatMap(booking =>
+        booking.stops.map(stop => ({ ...stop, parentBookingId: booking.id, parentBookingRequestId: booking.requestId }))
     );
+    const bookingMap = new Map(sanitizedBookings.map(b => [b.id, b]));
     
-    let unvisitedStops = [...allStopsWithParent];
-    const orderedStops: (Stop & { parentBooking: Booking })[] = [];
+    let unvisitedStops = [...allStops];
+    const orderedStops: (Stop & { parentBookingId: string, parentBookingRequestId?: number })[] = [];
     const passengersInVehicle = new Set<string>();
 
     if (unvisitedStops.length === 0) {
@@ -79,9 +80,11 @@ const generateJourneyPayloadFlow = ai.defineFlow(
       throw new Error("Cannot create a journey with no pickup stops.");
     }
 
+    // Start with the earliest pickup time
     pickupStops.sort((a, b) => {
         const timeA = a.dateTime ? new Date(a.dateTime).getTime() : Infinity;
         const timeB = b.dateTime ? new Date(b.dateTime).getTime() : Infinity;
+        if (timeA === Infinity && timeB === Infinity) return 0;
         return timeA - timeB;
     });
     
@@ -100,36 +103,38 @@ const generateJourneyPayloadFlow = ai.defineFlow(
       });
 
       if (candidateStops.length === 0) {
-        // If no valid candidates, it means we only have drop-offs left for passengers not in vehicle, which is an error state.
-        // Or all passengers have been dropped off. Let's just add remaining stops by distance.
         const remainingStops = unvisitedStops.sort((a, b) => 
             getDistanceFromLatLonInMeters(currentStop!.location.lat, currentStop!.location.lng, a.location.lat, a.location.lng) -
             getDistanceFromLatLonInMeters(currentStop!.location.lat, currentStop!.location.lng, b.location.lat, b.location.lng)
         );
         orderedStops.push(...remainingStops);
-        break; // Exit loop
+        break; 
       }
       
-      let nextStop = candidateStops[0];
-      let minDistance = getDistanceFromLatLonInMeters(
-          currentStop.location.lat, currentStop.location.lng,
-          nextStop.location.lat, nextStop.location.lng
-      );
-      
-      for (let i = 1; i < candidateStops.length; i++) {
-        const distance = getDistanceFromLatLonInMeters(
+      // Sort candidates: 1st by distance (ascending), 2nd by type (pickups first)
+      candidateStops.sort((a, b) => {
+        const distA = getDistanceFromLatLonInMeters(
             currentStop.location.lat, currentStop.location.lng,
-            candidateStops[i].location.lat, candidateStops[i].location.lng
+            a.location.lat, a.location.lng
         );
-        if (distance < minDistance) {
-          minDistance = distance;
-          nextStop = candidateStops[i];
-        } else if (distance === minDistance) {
-            if (nextStop.stopType === 'dropoff' && candidateStops[i].stopType === 'pickup') {
-                nextStop = candidateStops[i];
-            }
+        const distB = getDistanceFromLatLonInMeters(
+            currentStop.location.lat, currentStop.location.lng,
+            b.location.lat, b.location.lng
+        );
+        
+        if (distA !== distB) {
+            return distA - distB;
         }
-      }
+
+        // If distances are the same, prefer pickup over dropoff
+        if (a.stopType !== b.stopType) {
+            return a.stopType === 'pickup' ? -1 : 1;
+        }
+
+        return 0; // Same distance, same type
+      });
+
+      const nextStop = candidateStops[0];
       
       orderedStops.push(nextStop);
       currentStop = nextStop;
@@ -143,17 +148,15 @@ const generateJourneyPayloadFlow = ai.defineFlow(
     }
     
     const journeyBookingsPayload = [];
-    const stopMap = new Map(allStopsWithParent.map(s => [s.id, s]));
 
     for (let i = 0; i < orderedStops.length; i++) {
         const stop = orderedStops[i];
-        const originalStop = stopMap.get(stop.id);
+        const parentBooking = bookingMap.get(stop.parentBookingId);
 
-        if (!originalStop) {
-          throw new Error(`Could not find original stop for ID: ${stop.id}`);
+        if (!parentBooking) {
+          throw new Error(`Could not find parent booking for stop ID: ${stop.id}`);
         }
         
-        const parentBooking = originalStop.parentBooking;
         const lastStopOfOriginalBooking = parentBooking.stops[parentBooking.stops.length - 1];
         const isFinalStopOfBooking = stop.id === lastStopOfOriginalBooking.id;
 
@@ -195,7 +198,7 @@ const generateJourneyPayloadFlow = ai.defineFlow(
     };
 
     const finalOrderedStops = orderedStops.map(s => {
-        const { parentBooking, ...stopRest } = s as any;
+        const { parentBookingId, parentBookingRequestId, ...stopRest } = s as any;
         return stopRest;
     });
 
