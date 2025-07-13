@@ -137,7 +137,7 @@ export default function RecentJourneys() {
       </CardHeader>
       <CardContent>
         {journeys.length > 0 ? (
-          <Accordion type="single" collapsible asChild>
+          <Accordion type="single" collapsible className="w-full">
           <Table>
             <TableHeader>
               <TableRow>
@@ -150,7 +150,7 @@ export default function RecentJourneys() {
             </TableHeader>
             
               {journeys.map((journey) => (
-                    <TableBody key={journey.id} asChild>
+                    <TableBody key={journey.id}>
                         <AccordionItem value={journey.id} asChild>
                             <>
                             <TableRow>
