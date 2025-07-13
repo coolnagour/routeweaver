@@ -150,9 +150,6 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
   function onSubmit(values: BookingFormData) {
     const bookingToSave: Booking = { ...values, stops: [] };
     
-    // Find the primary pickup (the first one) to determine the booking's schedule status
-    const primaryPickup = values.stops.find(s => s.stopType === 'pickup');
-
     bookingToSave.stops = values.stops.map(stop => {
       // If the booking is not scheduled (ASAP), ensure no pickup stops have a time.
       if (!isScheduled && stop.stopType === 'pickup') {
@@ -161,21 +158,19 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
       return stop;
     }) as Stop[];
 
-
     onSave(bookingToSave);
   }
   
   const handleScheduledToggle = (checked: boolean) => {
     setIsScheduled(checked);
     
-    // Find first pickup stop to update its date
     const firstPickupIndex = form.getValues('stops').findIndex(s => s.stopType === 'pickup');
 
     if (firstPickupIndex !== -1) {
         if (checked) {
-            form.setValue(`stops.${firstPickupIndex}.dateTime`, new Date());
+            form.setValue(`stops.${firstPickupIndex}.dateTime`, new Date(), { shouldValidate: true });
         } else {
-            form.setValue(`stops.${firstPickupIndex}.dateTime`, undefined);
+            form.setValue(`stops.${firstPickupIndex}.dateTime`, undefined, { shouldValidate: true });
         }
     }
   }
@@ -207,12 +202,14 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
                     <div className="flex justify-between items-center">
                         <h3 className="font-semibold text-lg text-primary">Pickup</h3>
                         <div className="flex items-center space-x-2">
-                             <Label htmlFor="schedule-switch">{isScheduled ? 'Scheduled' : 'ASAP'}</Label>
+                             <Label htmlFor="schedule-switch" className="text-sm">
+                                {isScheduled ? 'Scheduled Pickup' : 'ASAP Pickup'}
+                             </Label>
                             <Switch id="schedule-switch" checked={isScheduled} onCheckedChange={handleScheduledToggle} />
                         </div>
                     </div>
                    
-                    {isScheduled && firstPickupIndex !== -1 && (
+                    {firstPickupIndex !== -1 && (
                         <FormField
                             control={form.control}
                             name={`stops.${firstPickupIndex}.dateTime`}
@@ -229,6 +226,7 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
                                             'w-[calc(50%-0.25rem)] justify-start text-left font-normal bg-background',
                                             !field.value && 'text-muted-foreground'
                                         )}
+                                        disabled={!isScheduled}
                                         >
                                         <CalendarIcon className="mr-2 h-4 w-4" />
                                         {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
@@ -239,7 +237,13 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
                                     <Calendar
                                         mode="single"
                                         selected={field.value}
-                                        onSelect={field.onChange}
+                                        onSelect={(date) => {
+                                            const current = field.value || new Date();
+                                            const newDate = date || new Date();
+                                            newDate.setHours(current.getHours());
+                                            newDate.setMinutes(current.getMinutes());
+                                            field.onChange(newDate);
+                                        }}
                                         disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
                                         initialFocus
                                     />
@@ -257,6 +261,7 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
                                             const newDate = setMinutes(setHours(field.value || new Date(), hours), minutes);
                                             field.onChange(newDate);
                                         }}
+                                        disabled={!isScheduled}
                                     />
                                 </div>
                                 </div>
@@ -393,5 +398,3 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
       </Card>
   );
 }
-
-    
