@@ -85,7 +85,7 @@ const StopSchema = z.object({
   location: LocationSchema,
   stopType: z.enum(['pickup', 'dropoff']),
   bookingSegmentId: z.number().optional(),
-  dateTime: z.date().optional(),
+  dateTime: z.coerce.date().optional(),
   name: z.string().optional(),
   phone: z.string().optional(),
   pickupStopId: z.string().optional(),
@@ -135,5 +135,3 @@ export const SuggestionOutputSchema = z.object({
   suggestion: z.string(),
 });
 export type SuggestionOutput = z.infer<typeof SuggestionOutputSchema>;
-
-    

@@ -218,7 +218,7 @@ const saveJourneyFlow = ai.defineFlow(
         const journeyResult = await createJourney(server, journeyPayload);
         console.log('[Journey Flow] Journey creation successful:', journeyResult);
 
-        const journeyServerId = journeyResult?.journeys?.[0]?.id;
+        const journeyServerId = journeyResult?.journeys?.[0]?.[0]?.journey_id;
         if (!journeyServerId) {
           throw new Error('Journey server ID was not returned from the server.');
         }
@@ -236,7 +236,7 @@ const saveJourneyFlow = ai.defineFlow(
         });
 
         return {
-            journeyServerId: journeyServerId,
+            journeyServerId: parseInt(journeyServerId, 10),
             bookings: finalBookings,
             status: 'Scheduled',
             message: `Journey with ${finalBookings.length} booking(s) was successfully scheduled.`,
@@ -247,5 +247,3 @@ const saveJourneyFlow = ai.defineFlow(
     }
   }
 );
-
-    
