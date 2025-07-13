@@ -137,6 +137,7 @@ export default function RecentJourneys() {
       </CardHeader>
       <CardContent>
         {journeys.length > 0 ? (
+          <Accordion type="single" collapsible asChild>
           <Table>
             <TableHeader>
               <TableRow>
@@ -147,110 +148,110 @@ export default function RecentJourneys() {
                 <TableHead className="w-[150px] text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody>
+            
               {journeys.map((journey) => (
-                <Accordion type="single" collapsible asChild key={journey.id}>
-                    <AccordionItem value={journey.id} asChild>
-                        <>
-                        <TableRow>
-                            <TableCell className="font-medium">{getJourneyDateRange(journey.bookings)}</TableCell>
-                            <TableCell>{journey.bookings.length}</TableCell>
-                            <TableCell className="text-center">{getTotalPassengers(journey.bookings)}</TableCell>
-                            <TableCell className="text-right">
-                                <Badge variant={getStatusVariant(journey.status)}>{journey.status}</Badge>
-                            </TableCell>
-                            <TableCell className="text-right space-x-0">
-                                {journey.status === 'Draft' && (
-                                     <Button variant="ghost" size="icon" onClick={() => handlePublishJourney(journey)} disabled={publishingId === journey.id}>
-                                        {publishingId === journey.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    <TableBody key={journey.id} asChild>
+                        <AccordionItem value={journey.id} asChild>
+                            <>
+                            <TableRow>
+                                <TableCell className="font-medium">{getJourneyDateRange(journey.bookings)}</TableCell>
+                                <TableCell>{journey.bookings.length}</TableCell>
+                                <TableCell className="text-center">{getTotalPassengers(journey.bookings)}</TableCell>
+                                <TableCell className="text-right">
+                                    <Badge variant={getStatusVariant(journey.status)}>{journey.status}</Badge>
+                                </TableCell>
+                                <TableCell className="text-right space-x-0">
+                                    {journey.status === 'Draft' && (
+                                        <Button variant="ghost" size="icon" onClick={() => handlePublishJourney(journey)} disabled={publishingId === journey.id}>
+                                            {publishingId === journey.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                                        </Button>
+                                    )}
+                                    <Button variant="ghost" size="icon" onClick={() => handleEditJourney(journey.id)}>
+                                        <Edit className="h-4 w-4" />
                                     </Button>
-                                )}
-                                <Button variant="ghost" size="icon" onClick={() => handleEditJourney(journey.id)}>
-                                    <Edit className="h-4 w-4" />
-                                </Button>
-                                <AccordionTrigger />
-                            </TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell colSpan={5} className="p-0">
-                                <AccordionContent>
-                                    <div className="p-4 bg-muted/50">
-                                        <div className="flex justify-between items-center mb-2">
-                                            <h4 className="font-semibold">Bookings in this Journey:</h4>
-                                            {journey.journeyServerId && (
-                                                <div className="text-xs font-mono text-muted-foreground bg-background border p-1 rounded-md">
-                                                    Journey Server ID: {journey.journeyServerId}
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="grid gap-4 md:grid-cols-2">
-                                        {journey.bookings.map(booking => {
-                                            const bookingDateTime = getBookingDateTime(booking);
-                                            const pickups = getPassengersFromStops(booking.stops);
-                                            return (
-                                            <Card key={booking.id} className="bg-background">
-                                                <CardHeader className="p-3">
-                                                    <div className="flex justify-between items-start">
-                                                        <div>
-                                                            <CardTitle className="text-md">
-                                                                {bookingDateTime ? format(new Date(bookingDateTime), "PPP p") : 'Booking'}
-                                                            </CardTitle>
-                                                            <CardDescription>{pickups.length} passenger(s)</CardDescription>
-                                                        </div>
-                                                        {(booking.bookingServerId || booking.requestId) && (
-                                                            <div className="text-right text-[10px] font-mono text-muted-foreground space-y-0.5">
-                                                                {booking.bookingServerId && <div>Booking ID: {booking.bookingServerId}</div>}
-                                                                {booking.requestId && <div>Request ID: {booking.requestId}</div>}
-                                                            </div>
-                                                        )}
+                                    <AccordionTrigger />
+                                </TableCell>
+                            </TableRow>
+                            <TableRow>
+                                <TableCell colSpan={5} className="p-0">
+                                    <AccordionContent>
+                                        <div className="p-4 bg-muted/50">
+                                            <div className="flex justify-between items-center mb-2">
+                                                <h4 className="font-semibold">Bookings in this Journey:</h4>
+                                                {journey.journeyServerId && (
+                                                    <div className="text-xs font-mono text-muted-foreground bg-background border p-1 rounded-md">
+                                                        Journey Server ID: {journey.journeyServerId}
                                                     </div>
-                                                </CardHeader>
-                                                <CardContent className="p-3 pt-0 space-y-2 text-sm">
-                                                    <div className="space-y-1">
-                                                        {booking.stops.map(stop => (
-                                                            <div key={stop.id} className="flex items-start gap-2 pt-2 border-t first:border-t-0">
-                                                                <MapPin className="h-4 w-4 text-primary mt-0.5" />
-                                                                <div className="flex-1">
-                                                                    <p>
-                                                                        <span className="capitalize font-medium">{stop.stopType}: </span>
-                                                                        {stop.location.address}
-                                                                    </p>
-                                                                    
-                                                                    {stop.stopType === 'pickup' && stop.name && (
-                                                                        <span className="text-xs text-muted-foreground ml-2">({stop.name})</span>
-                                                                    )}
-                                                                    {stop.dateTime && (
-                                                                        <span className="text-xs text-muted-foreground ml-2 flex items-center gap-1"><Clock className="h-3 w-3" />{format(new Date(stop.dateTime), 'p')}</span>
-                                                                    )}
-                                                                    {stop.instructions && (
-                                                                        <div className="flex items-center gap-2 text-xs pl-1 mt-1 text-gray-500">
-                                                                            <MessageSquare className="h-3 w-3" />
-                                                                            <span>{stop.instructions}</span>
+                                                )}
+                                            </div>
+                                            <div className="grid gap-4 md:grid-cols-2">
+                                            {journey.bookings.map(booking => {
+                                                const bookingDateTime = getBookingDateTime(booking);
+                                                const pickups = getPassengersFromStops(booking.stops);
+                                                return (
+                                                <Card key={booking.id} className="bg-background">
+                                                    <CardHeader className="p-3">
+                                                        <div className="flex justify-between items-start">
+                                                            <div>
+                                                                <CardTitle className="text-md">
+                                                                    {bookingDateTime ? format(new Date(bookingDateTime), "PPP p") : 'Booking'}
+                                                                </CardTitle>
+                                                                <CardDescription>{pickups.length} passenger(s)</CardDescription>
+                                                            </div>
+                                                            {(booking.bookingServerId || booking.requestId) && (
+                                                                <div className="text-right text-[10px] font-mono text-muted-foreground space-y-0.5">
+                                                                    {booking.bookingServerId && <div>Booking ID: {booking.bookingServerId}</div>}
+                                                                    {booking.requestId && <div>Request ID: {booking.requestId}</div>}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </CardHeader>
+                                                    <CardContent className="p-3 pt-0 space-y-2 text-sm">
+                                                        <div className="space-y-1">
+                                                            {booking.stops.map(stop => (
+                                                                <div key={stop.id} className="flex items-start gap-2 pt-2 border-t first:border-t-0">
+                                                                    <MapPin className="h-4 w-4 text-primary mt-0.5" />
+                                                                    <div className="flex-1">
+                                                                        <p>
+                                                                            <span className="capitalize font-medium">{stop.stopType}: </span>
+                                                                            {stop.location.address}
+                                                                        </p>
+                                                                        
+                                                                        {stop.stopType === 'pickup' && stop.name && (
+                                                                            <span className="text-xs text-muted-foreground ml-2">({stop.name})</span>
+                                                                        )}
+                                                                        {stop.dateTime && (
+                                                                            <span className="text-xs text-muted-foreground ml-2 flex items-center gap-1"><Clock className="h-3 w-3" />{format(new Date(stop.dateTime), 'p')}</span>
+                                                                        )}
+                                                                        {stop.instructions && (
+                                                                            <div className="flex items-center gap-2 text-xs pl-1 mt-1 text-gray-500">
+                                                                                <MessageSquare className="h-3 w-3" />
+                                                                                <span>{stop.instructions}</span>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                    {stop.bookingSegmentId && (
+                                                                        <div className="text-[10px] font-mono text-muted-foreground">
+                                                                            SegID: {stop.bookingSegmentId}
                                                                         </div>
                                                                     )}
                                                                 </div>
-                                                                {stop.bookingSegmentId && (
-                                                                    <div className="text-[10px] font-mono text-muted-foreground">
-                                                                        SegID: {stop.bookingSegmentId}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </CardContent>
-                                            </Card>
-                                        )})}
+                                                            ))}
+                                                        </div>
+                                                    </CardContent>
+                                                </Card>
+                                            )})}
+                                            </div>
                                         </div>
-                                    </div>
-                                </AccordionContent>
-                            </TableCell>
-                        </TableRow>
-                        </>
-                    </AccordionItem>
-                </Accordion>
+                                    </AccordionContent>
+                                </TableCell>
+                            </TableRow>
+                            </>
+                        </AccordionItem>
+                    </TableBody>
               ))}
-            </TableBody>
           </Table>
+          </Accordion>
         ) : (
             <div className="text-center py-16 border-2 border-dashed rounded-lg">
                 <p className="text-muted-foreground">You haven't booked any journeys yet.</p>
