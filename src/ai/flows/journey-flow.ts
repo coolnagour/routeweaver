@@ -73,15 +73,26 @@ const saveJourneyFlow = ai.defineFlow(
             requestId: result.request_id, 
             stops: [...booking.stops] // Important: work with a copy
         };
+        
+        // Map server booking segments back to our local stops.
+        if (result.bookingsegments.length > 0) {
+          // The first segment represents the main journey (pickup to destination)
+          const mainSegmentId = result.bookingsegments[0].id.toString();
+          // Assign this ID to the first and last stop of our local booking
+          if (bookingWithServerIds.stops.length > 0) {
+            bookingWithServerIds.stops[0].bookingSegmentId = mainSegmentId;
+            bookingWithServerIds.stops[bookingWithServerIds.stops.length - 1].bookingSegmentId = mainSegmentId;
+          }
 
-        // Match server booking segments back to our local stops using pickup_order
-        for (const segment of result.bookingsegments) {
-            const stopIndex = parseInt(segment.pickup_order, 10) - 1;
-            if (stopIndex >= 0 && stopIndex < bookingWithServerIds.stops.length) {
-                bookingWithServerIds.stops[stopIndex].bookingSegmentId = segment.id.toString();
-            } else {
-                console.warn(`[Journey Flow] Could not match booking segment with pickup_order: ${segment.pickup_order}`);
+          // The rest of the segments correspond to the via stops in order
+          const viaSegments = result.bookingsegments.slice(1);
+          const localViaStops = bookingWithServerIds.stops.slice(1, -1);
+          
+          for (let i = 0; i < viaSegments.length; i++) {
+            if (localViaStops[i]) {
+              localViaStops[i].bookingSegmentId = viaSegments[i].id.toString();
             }
+          }
         }
         
         createdBookings.push(bookingWithServerIds);
