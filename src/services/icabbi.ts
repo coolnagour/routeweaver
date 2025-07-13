@@ -33,12 +33,15 @@ const formatBookingForIcabbi = (booking: Booking, server: ServerConfig) => {
     const lastStop = booking.stops[booking.stops.length - 1];
     const viaStops = booking.stops.slice(1, -1);
 
-    let formattedPhone = (pickupStop.phone || '').replace(/\D/g, '');
+    let formattedPhone = '';
     if (pickupStop.phone) {
+        const cleanedPhone = pickupStop.phone.replace(/\D/g, '');
         const defaultCountry = server.countryCodes?.[0]?.toUpperCase() as any;
-        const phoneNumber = parsePhoneNumberFromString(pickupStop.phone, defaultCountry);
+        const phoneNumber = parsePhoneNumberFromString(cleanedPhone, defaultCountry);
         if (phoneNumber && phoneNumber.isValid()) {
             formattedPhone = phoneNumber.number.toString(); 
+        } else {
+            formattedPhone = cleanedPhone;
         }
     }
 
