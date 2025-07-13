@@ -15,7 +15,8 @@ function createStop(id: string, type: 'pickup' | 'dropoff', address: string, lat
         name: type === 'pickup' ? name || `Passenger ${id}` : undefined,
         phone: '555-1234',
         instructions: '',
-        pickupStopId: pickupId,
+        // Only dropoffs should have a pickupStopId
+        pickupStopId: type === 'dropoff' ? pickupId : undefined,
         // Assign arbitrary but unique segment IDs for testing purposes
         bookingSegmentId: parseInt(id.replace('s', ''), 10) + 1000, 
     };
@@ -26,9 +27,9 @@ async function runTest() {
 
     // SCENARIO: P1 -> P2 -> D1 -> D2
     const p1 = createStop('s1', 'pickup', 'Terminal Rd S, North Wall, Dublin, Ireland', 53.3479056, -6.1954911, undefined, 'Robert Smith');
-    const p2 = createStop('s3', 'pickup', 'Sutton Cross, Burrow, Dublin, Ireland', 53.3899572, -6.109947, undefined, 'John Smith');
-
     const d1 = createStop('s2', 'dropoff', 'Howth Rd, Dublin, Ireland', 53.3762177, -6.188735299999999, 's1');
+    
+    const p2 = createStop('s3', 'pickup', 'Sutton Cross, Burrow, Dublin, Ireland', 53.3899572, -6.109947, undefined, 'John Smith');
     const d2 = createStop('s4', 'dropoff', 'Howth Rd, Dublin, Ireland', 53.3762177, -6.188735299999999, 's3');
     
     const booking1: Booking = {
