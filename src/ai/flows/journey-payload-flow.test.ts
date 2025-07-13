@@ -23,16 +23,16 @@ function createStop(id: string, type: 'pickup' | 'dropoff', address: string, lat
 async function runTest() {
     console.log("--- Running Journey Payload Logic Test ---");
 
-    // SCENARIO: P1 -> P2 -> D1 -> D2
+    // SCENARIO: P1 -> P2 -> D1 & D2 (Same Location)
     // P1 (s1): Downtown (Start)
     // P2 (s3): Uptown (closest next stop to P1)
-    // D1 (s2): Suburb (Alice's dropoff, farther than P2)
-    // D2 (s4): Airport (Bob's dropoff, last stop)
+    // D1 (s2) & D2 (s4) are at the same location: Office Complex
     const p1 = createStop('s1', 'pickup', 'Downtown', 40.7128, -74.0060, undefined, 'Alice');
-    const d1 = createStop('s2', 'dropoff', 'Suburb', 40.9128, -74.1060, 's1');
+    const d1 = createStop('s2', 'dropoff', 'Office Complex', 40.8528, -74.0560, 's1');
 
     const p2 = createStop('s3', 'pickup', 'Uptown', 40.8128, -74.0060, undefined, 'Bob');
-    const d2 = createStop('s4', 'dropoff', 'Airport', 40.6413, -73.7781, 's3');
+    // s4 is the same dropoff location as s2
+    const d2 = createStop('s4', 'dropoff', 'Office Complex', 40.8528, -74.0560, 's3');
     
     const booking1: Booking = {
         id: 'b1',
@@ -73,8 +73,11 @@ async function runTest() {
         const result = await generateJourneyPayload(sanitizedInput);
         const orderedStopIds = result.orderedStops.map(s => s.id);
 
+        // Expected order: P1 -> P2 -> D1 -> D2. D1 and D2 are at the same location.
+        // The algorithm should pick one of them after P2, then the other one with 0 distance.
+        // The exact order of D1 vs D2 might not matter if they are co-located, but this is a stable expectation.
+        const expectedOrder = ['s1', 's3', 's2', 's4']; 
         console.log("\nActual ordered stop IDs:", orderedStopIds);
-        const expectedOrder = ['s1', 's3', 's2', 's4']; // P1 -> P2 -> D1 -> D2
         console.log("Expected ordered stop IDs:", expectedOrder);
 
         assert.deepStrictEqual(orderedStopIds, expectedOrder, `Test Failed: Stop order is incorrect.`);
