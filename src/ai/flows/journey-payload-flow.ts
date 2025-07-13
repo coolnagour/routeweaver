@@ -178,7 +178,10 @@ const generateJourneyPayloadFlow = ai.defineFlow(
 
         const isFinalStopOfBooking = stop.id === stop.parentBooking.stops[stop.parentBooking.stops.length - 1].id;
         
-        const idToUse = isFinalStopOfBooking ? stop.parentBooking.requestId : stop.bookingSegmentId;
+        // The main pickup stop of a booking provides the segmentId for itself and its vias.
+        const mainPickupOfStopBooking = stop.parentBooking.stops.find(s => s.stopType === 'pickup');
+        
+        const idToUse = isFinalStopOfBooking ? stop.parentBooking.requestId : stop.bookingSegmentId || mainPickupOfStopBooking?.bookingSegmentId;
         const idType = isFinalStopOfBooking ? 'request_id' : 'bookingsegment_id';
 
         if (!idToUse) {
