@@ -183,9 +183,9 @@ const generateJourneyPayloadFlow = ai.defineFlow(
         const isFinalStopOfBooking = stop.id === stop.parentBooking.stops[stop.parentBooking.stops.length - 1].id;
         
         // Use the map to get the original stop with all its properties like bookingSegmentId
-        const originalStop = stopMap.get(stop.id);
+        const originalStopFromMap = stopMap.get(stop.id);
 
-        const idToUse = isFinalStopOfBooking ? stop.parentBooking.requestId : originalStop?.bookingSegmentId;
+        const idToUse = isFinalStopOfBooking ? stop.parentBooking.requestId : originalStopFromMap?.bookingSegmentId;
         const idType = isFinalStopOfBooking ? 'request_id' : 'bookingsegment_id';
 
         if (!idToUse) {
