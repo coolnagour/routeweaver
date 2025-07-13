@@ -171,7 +171,14 @@ export default function RecentJourneys() {
                       <TableCell>{journey.bookings.length}</TableCell>
                       <TableCell className="text-center">{getTotalPassengers(journey.bookings)}</TableCell>
                       <TableCell className="text-right">
-                          <Badge variant={getStatusVariant(journey.status)}>{journey.status}</Badge>
+                          <div className="flex flex-col items-end space-y-1">
+                              <Badge variant={getStatusVariant(journey.status)}>{journey.status}</Badge>
+                              {journey.journeyServerId && (
+                                <span className="text-xs font-mono text-muted-foreground">
+                                    ID: {journey.journeyServerId}
+                                </span>
+                              )}
+                          </div>
                       </TableCell>
                       <TableCell className="text-right space-x-0">
                           {journey.status === 'Draft' && (
@@ -196,11 +203,6 @@ export default function RecentJourneys() {
                           <div className="p-4 bg-muted/50">
                               <div className="flex justify-between items-center mb-2">
                                   <h4 className="font-semibold">Bookings in this Journey:</h4>
-                                  {journey.journeyServerId && (
-                                      <div className="text-xs font-mono text-muted-foreground bg-background border p-1 rounded-md">
-                                          Journey Server ID: {journey.journeyServerId}
-                                      </div>
-                                  )}
                               </div>
                               <div className="grid gap-4 md:grid-cols-2">
                               {journey.bookings.map(booking => {
@@ -209,10 +211,10 @@ export default function RecentJourneys() {
                                   return (
                                   <Card key={booking.id} className="bg-background">
                                       <CardHeader className="p-3">
-                                          <div className="flex justify-between items-start">
+                                          <div className="flex justify-between items-start gap-2">
                                               <div>
                                                   <CardTitle className="text-md">
-                                                      {bookingDateTime ? format(new Date(bookingDateTime), "PPP p") : 'Booking'}
+                                                      {bookingDateTime ? format(new Date(bookingDateTime), "PPP p") : 'ASAP Booking'}
                                                   </CardTitle>
                                                   <CardDescription>{pickups.length} passenger(s)</CardDescription>
                                               </div>
