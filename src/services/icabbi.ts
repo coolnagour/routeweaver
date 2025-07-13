@@ -35,13 +35,10 @@ const formatBookingForIcabbi = (booking: Booking, server: ServerConfig) => {
 
     let formattedPhone = 'N/A';
     if (pickupStop.phone) {
-        // libphonenumber-js can handle various formats, including those with hyphens
         const defaultCountry = server.countryCodes?.[0]?.toUpperCase() as any;
         const phoneNumber = parsePhoneNumberFromString(pickupStop.phone, defaultCountry);
         
-        // Only use the number if the library considers it valid
         if (phoneNumber && phoneNumber.isValid()) {
-            // .number property already gives the E.164 formatted string (e.g., "+353...")
             formattedPhone = phoneNumber.number;
         }
     }
