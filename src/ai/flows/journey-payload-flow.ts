@@ -63,35 +63,30 @@ const generateJourneyPayloadFlow = ai.defineFlow(
     }));
     
     // Step 1: Intelligent stop ordering using a "nearest neighbor" approach
-    const allStopsWithParent = sanitizedBookings.flatMap((booking, bookingIndex) => 
-        booking.stops.map(stop => ({...stop, parentBooking: booking, originalBookingIndex: bookingIndex }))
+    const allStopsWithParent = sanitizedBookings.flatMap((booking) => 
+        booking.stops.map(stop => ({...stop, parentBooking: booking }))
     );
     
     let unvisitedStops = [...allStopsWithParent];
-    const orderedStops: (Stop & { parentBooking: Booking; originalBookingIndex: number })[] = [];
+    const orderedStops: (Stop & { parentBooking: Booking })[] = [];
     const passengersInVehicle = new Set<string>();
 
     if (unvisitedStops.length === 0) {
         return { journeyPayload: { error: 'No stops to process.' }, orderedStops: [] };
     }
 
-    // Find the starting stop (earliest pickup time, then by user booking order)
+    // Find the starting stop (earliest pickup time)
     const pickupStops = unvisitedStops.filter(s => s.stopType === 'pickup');
 
     if (pickupStops.length === 0) {
       throw new Error("Cannot create a journey with no pickup stops.");
     }
 
+    // Sort pickups by time only. The nearest will be determined in the loop.
     pickupStops.sort((a, b) => {
         const timeA = a.dateTime ? new Date(a.dateTime).getTime() : Infinity;
         const timeB = b.dateTime ? new Date(b.dateTime).getTime() : Infinity;
-        
-        if (timeA !== timeB) {
-            return timeA - timeB;
-        }
-
-        // If times are the same (or both are ASAP), sort by original booking order
-        return a.originalBookingIndex - b.originalBookingIndex;
+        return timeA - timeB;
     });
     
     let currentStop = pickupStops[0];
@@ -176,7 +171,8 @@ const generateJourneyPayloadFlow = ai.defineFlow(
             );
         }
 
-        const isFinalStopOfBooking = stop.id === stop.parentBooking.stops[stop.parentBooking.stops.length - 1].id;
+        const isFinalStopOfBooking = stop.stopType === 'dropoff' && stop.parentBooking.stops.some(s => s.id === stop.id && s.stopType === 'dropoff');
+
         
         const idToUse = isFinalStopOfBooking ? stop.parentBooking.requestId : stop.bookingSegmentId;
         const idType = isFinalStopOfBooking ? 'request_id' : 'bookingsegment_id';
@@ -223,7 +219,7 @@ const generateJourneyPayloadFlow = ai.defineFlow(
 
     // Clean the parentBooking and originalBookingIndex properties from the ordered stops for the response
     const finalOrderedStops = orderedStops.map(s => {
-        const { parentBooking, originalBookingIndex, ...stopRest } = s;
+        const { parentBooking, ...stopRest } = s as any; // Remove any extra properties like originalBookingIndex if they exist
         return stopRest;
     });
 
