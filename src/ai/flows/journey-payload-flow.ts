@@ -47,7 +47,6 @@ export async function generateJourneyPayload(input: JourneyPayloadInput): Promis
   return generateJourneyPayloadFlow(input);
 }
 
-
 const generateJourneyPayloadFlow = ai.defineFlow(
   {
     name: 'generateJourneyPayloadFlow',
@@ -65,7 +64,12 @@ const generateJourneyPayloadFlow = ai.defineFlow(
     }));
     
     // Step 1: Intelligent stop ordering using a "nearest neighbor" approach
-    const allStopsWithParent = sanitizedBookings.flatMap((b, bookingIndex) => b.stops.map(s => ({...s, parentBooking: b, originalBookingIndex: bookingIndex })));
+    const allStopsWithParent = sanitizedBookings.flatMap((booking, bookingIndex) => 
+        booking.stops.map(stop => ({...stop, parentBooking: booking, originalBookingIndex: bookingIndex }))
+    );
+
+    const stopMap = new Map<string, Stop>();
+    allStopsWithParent.forEach(stop => stopMap.set(stop.id, stop));
     
     let unvisitedStops = [...allStopsWithParent];
     const orderedStops: (Stop & { parentBooking: Booking; originalBookingIndex: number })[] = [];
@@ -178,10 +182,10 @@ const generateJourneyPayloadFlow = ai.defineFlow(
 
         const isFinalStopOfBooking = stop.id === stop.parentBooking.stops[stop.parentBooking.stops.length - 1].id;
         
-        // The main pickup stop of a booking provides the segmentId for itself and its vias.
-        const mainPickupOfStopBooking = stop.parentBooking.stops.find(s => s.stopType === 'pickup');
-        
-        const idToUse = isFinalStopOfBooking ? stop.parentBooking.requestId : stop.bookingSegmentId || mainPickupOfStopBooking?.bookingSegmentId;
+        // Use the map to get the original stop with all its properties like bookingSegmentId
+        const originalStop = stopMap.get(stop.id);
+
+        const idToUse = isFinalStopOfBooking ? stop.parentBooking.requestId : originalStop?.bookingSegmentId;
         const idType = isFinalStopOfBooking ? 'request_id' : 'bookingsegment_id';
 
         if (!idToUse) {
