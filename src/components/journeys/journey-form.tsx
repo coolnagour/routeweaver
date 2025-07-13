@@ -199,15 +199,7 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
             <CardContent className="space-y-4">
                 {/* Pickup Section */}
                 <div className="p-4 border rounded-lg space-y-3 bg-muted/20">
-                    <div className="flex justify-between items-center">
-                        <h3 className="font-semibold text-lg text-primary">Pickup</h3>
-                        <div className="flex items-center space-x-2">
-                             <Label htmlFor="schedule-switch" className="text-sm">
-                                {isScheduled ? 'Scheduled Pickup' : 'ASAP Pickup'}
-                             </Label>
-                            <Switch id="schedule-switch" checked={isScheduled} onCheckedChange={handleScheduledToggle} />
-                        </div>
-                    </div>
+                    <h3 className="font-semibold text-lg text-primary">Pickup</h3>
                    
                     {firstPickupIndex !== -1 && (
                         <FormField
@@ -215,7 +207,15 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
                             name={`stops.${firstPickupIndex}.dateTime`}
                             render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Pickup Date & Time</FormLabel>
+                                <div className="flex justify-between items-center">
+                                    <FormLabel>Pickup Date & Time</FormLabel>
+                                    <div className="flex items-center space-x-2">
+                                        <Label htmlFor="schedule-switch" className="text-sm font-normal">
+                                            Schedule for later
+                                        </Label>
+                                        <Switch id="schedule-switch" checked={isScheduled} onCheckedChange={handleScheduledToggle} />
+                                    </div>
+                                </div>
                                 <div className="flex gap-2">
                                 <Popover>
                                     <PopoverTrigger asChild>
@@ -229,7 +229,10 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
                                         disabled={!isScheduled}
                                         >
                                         <CalendarIcon className="mr-2 h-4 w-4" />
-                                        {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
+                                        {isScheduled
+                                            ? (field.value ? format(field.value, 'PPP') : <span>Pick a date</span>)
+                                            : <span>ASAP</span>
+                                        }
                                         </Button>
                                     </FormControl>
                                     </PopoverTrigger>
