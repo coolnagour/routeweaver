@@ -3,7 +3,7 @@
 
 import type { ServerConfig } from "@/config/servers";
 import type { Booking, Account } from "@/types";
-import parsePhoneNumberFromString from 'libphonenumber-js';
+import parsePhoneNumberFromString, { getCountryCallingCode } from 'libphonenumber-js';
 
 interface IcabbiApiCallOptions {
     server: ServerConfig;
@@ -32,11 +32,35 @@ const formatBookingForIcabbi = (booking: Booking, server: ServerConfig) => {
     const firstStop = booking.stops[0];
     const lastStop = booking.stops[booking.stops.length - 1];
     const viaStops = booking.stops.slice(1, -1);
+    
+    const defaultCountry = server.countryCodes?.[0]?.toUpperCase() as any;
+
+    let formattedPhone = '';
+    if (pickupStop.phone) {
+        const phoneNumber = parsePhoneNumberFromString(pickupStop.phone, defaultCountry);
+        if (phoneNumber && phoneNumber.isValid()) {
+            formattedPhone = phoneNumber.number;
+        }
+    }
+
+    if (!formattedPhone) {
+        try {
+            const countryCallingCode = getCountryCallingCode(defaultCountry);
+            // Create a placeholder number that is syntactically valid E.164
+            formattedPhone = `+${countryCallingCode}000000000`;
+        } catch (e) {
+            // Fallback for an invalid country code, though this shouldn't happen with valid config
+            console.error(`Could not get calling code for country: ${defaultCountry}`);
+            formattedPhone = "+10000000000"; // Default to a generic placeholder
+        }
+    }
+
 
     const payload: any = {
         date: pickupStop.dateTime?.toISOString() || new Date().toISOString(),
         source: "DISPATCH",
         name: pickupStop.name || 'N/A',
+        phone: formattedPhone,
         address: {
             lat: firstStop.location.lat.toString(),
             lng: firstStop.location.lng.toString(),
@@ -59,15 +83,6 @@ const formatBookingForIcabbi = (booking: Booking, server: ServerConfig) => {
         site_id: booking.siteId,
         with_bookingsegments: true,
     };
-
-    if (pickupStop.phone) {
-        const defaultCountry = server.countryCodes?.[0]?.toUpperCase() as any;
-        const phoneNumber = parsePhoneNumberFromString(pickupStop.phone, defaultCountry);
-        
-        if (phoneNumber && phoneNumber.isValid()) {
-            payload.phone = phoneNumber.number;
-        }
-    }
     
     return payload;
 };
