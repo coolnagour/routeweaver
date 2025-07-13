@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview Manages journey-related operations using the iCabbi API.
@@ -72,14 +73,16 @@ const saveJourneyFlow = ai.defineFlow(
         console.log(`[Journey Flow] Creating booking for passenger: ${booking.stops.find(s=>s.stopType === 'pickup')?.name}`);
         const result = await createBooking(server, bookingWithContext);
         
-        if (!result || !result.id || !result.request_id || !result.bookingsegments) {
+        const bookingRequestId = result?.bookingsegments?.[0]?.request_id;
+        
+        if (!result || !result.id || !bookingRequestId || !result.bookingsegments) {
           throw new Error(`Invalid response from createBooking. Response: ${JSON.stringify(result)}`);
         }
 
         const bookingWithServerIds: Booking = { 
             ...booking, 
             bookingServerId: result.id, 
-            requestId: result.request_id, 
+            requestId: parseInt(bookingRequestId, 10),
             stops: [...booking.stops] // Important: work with a copy
         };
         
@@ -105,7 +108,7 @@ const saveJourneyFlow = ai.defineFlow(
         }
         
         createdBookings.push(bookingWithServerIds);
-        console.log(`[Journey Flow] Successfully processed booking with API ID: ${result.id} and Request ID: ${result.request_id}`);
+        console.log(`[Journey Flow] Successfully processed booking with API ID: ${result.id} and Request ID: ${bookingRequestId}`);
 
       } catch (error) {
         const passengerName = booking.stops.find(s => s.stopType === 'pickup')?.name || 'Unknown';
