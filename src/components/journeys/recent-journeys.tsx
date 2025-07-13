@@ -59,13 +59,45 @@ export default function RecentJourneys() {
       router.push('/');
       return;
     }
-    // A real app would prompt for site/account if not saved on the journey
-    // For now, we prevent publishing if they are missing.
-    toast({
-        variant: 'destructive',
-        title: 'Publishing Not Available',
-        description: 'Please open the journey in the editor to select a Site and Account before publishing.'
-    });
+
+    if (!journey.siteId || !journey.account) {
+        toast({
+            variant: 'destructive',
+            title: 'Information Missing',
+            description: 'Please open the journey in the editor to select a Site and Account before publishing.'
+        });
+        return;
+    }
+
+    setPublishingId(journey.id);
+    try {
+        const result = await saveJourney({ bookings: journey.bookings, server, siteId: journey.siteId, accountId: journey.account.id });
+        
+        const publishedJourney: Journey = {
+            ...journey,
+            journeyServerId: result.journeyServerId,
+            status: 'Scheduled',
+            bookings: result.bookings,
+        };
+        
+        const updatedJourneys = journeys.map(j => j.id === journey.id ? publishedJourney : j);
+        setJourneys(updatedJourneys);
+
+        toast({
+          title: 'Journey Published!',
+          description: result.message,
+        });
+        
+    } catch (error) {
+        console.error("Failed to publish journey from list:", error);
+        toast({
+          variant: "destructive",
+          title: "Error Publishing Journey",
+          description: error instanceof Error ? error.message : "Could not publish the journey. Please try again.",
+        });
+    } finally {
+        setPublishingId(null);
+    }
   }
 
   const getJourneyDateRange = (bookings: Booking[]) => {
@@ -207,3 +239,5 @@ export default function RecentJourneys() {
     </div>
   );
 }
+
+    

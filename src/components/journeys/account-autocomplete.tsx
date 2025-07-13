@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 
 interface AccountAutocompleteProps {
   onAccountSelect: (account: Account | null) => void;
+  initialAccount?: Account | null;
 }
 
 // Simple debounce function
@@ -31,10 +32,10 @@ function debounce<F extends (...args: any[]) => any>(func: F, waitFor: number) {
   return debounced;
 }
 
-export default function AccountAutocomplete({ onAccountSelect }: AccountAutocompleteProps) {
+export default function AccountAutocomplete({ onAccountSelect, initialAccount }: AccountAutocompleteProps) {
   const [open, setOpen] = useState(false);
-  const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedAccount, setSelectedAccount] = useState<Account | null>(initialAccount || null);
+  const [searchTerm, setSearchTerm] = useState(initialAccount?.name || '');
   const [results, setResults] = useState<Account[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { server } = useServer();
@@ -67,12 +68,12 @@ export default function AccountAutocomplete({ onAccountSelect }: AccountAutocomp
   const debouncedSearch = useCallback(debounce((query: string) => handleSearch(query), 500), [handleSearch]);
 
   useEffect(() => {
-    if (searchTerm.trim()) {
+    if (searchTerm.trim() && searchTerm !== selectedAccount?.name) {
       debouncedSearch(searchTerm);
     } else {
       setResults([]);
     }
-  }, [searchTerm, debouncedSearch]);
+  }, [searchTerm, debouncedSearch, selectedAccount?.name]);
 
 
   const handleSelect = (account: Account) => {
@@ -147,4 +148,6 @@ export default function AccountAutocomplete({ onAccountSelect }: AccountAutocomp
     </Popover>
   );
 }
+    
+
     

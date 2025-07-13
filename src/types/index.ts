@@ -43,6 +43,8 @@ export interface Journey {
   journeyServerId?: number; // ID from iCabbi API
   bookings: Booking[];
   status: 'Draft' | 'Scheduled' | 'Completed' | 'Cancelled';
+  siteId?: number;
+  account?: Account | null;
 }
 
 // Stored template has string dates
@@ -133,3 +135,5 @@ export const SuggestionOutputSchema = z.object({
   suggestion: z.string(),
 });
 export type SuggestionOutput = z.infer<typeof SuggestionOutputSchema>;
+
+    

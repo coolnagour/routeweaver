@@ -45,7 +45,7 @@ export default function JourneyBuilder({
   const [selectedSiteId, setSelectedSiteId] = useState<number | undefined>(undefined);
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
   
-  const getInitialBookings = (data: Partial<JourneyTemplate> | null | undefined): Booking[] => {
+  const getInitialBookings = (data: Partial<JourneyTemplate | Journey> | null | undefined): Booking[] => {
     if (!data || !data.bookings) return [];
     // Deep copy to prevent mutation of the source
     return JSON.parse(JSON.stringify(data.bookings)).map((b: any) => ({
@@ -64,17 +64,18 @@ export default function JourneyBuilder({
   const [currentJourney, setCurrentJourney] = useState<Journey | null>(null);
   
   useEffect(() => {
-    // This effect runs when the page loads with initialData or a journeyId
     if (journeyId) {
         const foundJourney = journeys.find(j => j.id === journeyId);
         if (foundJourney) {
           setCurrentJourney(foundJourney);
-          setBookings(getInitialBookings({ bookings: foundJourney.bookings }));
+          setBookings(getInitialBookings(foundJourney));
+          setSelectedSiteId(foundJourney.siteId);
+          setSelectedAccount(foundJourney.account || null);
         }
     } else {
         setBookings(getInitialBookings(initialData));
         setTemplateName(initialData?.name || '');
-        setCurrentJourney(null); // Reset current journey if creating new
+        setCurrentJourney(null);
     }
   }, [initialData, journeyId, journeys]);
 
@@ -108,30 +109,39 @@ export default function JourneyBuilder({
     }
 
     if (currentJourney && onUpdateJourney) {
-      const updatedJourney: Journey = {
+      const updatedJourneyData: Journey = {
         ...currentJourney,
         bookings: bookings,
         status: 'Draft',
+        siteId: selectedSiteId,
+        account: selectedAccount,
       };
-      onUpdateJourney(updatedJourney);
+      onUpdateJourney(updatedJourneyData);
       toast({
         title: 'Journey Updated!',
         description: `Your journey has been successfully updated locally.`,
       });
-      setCurrentJourney(updatedJourney);
+      setCurrentJourney(updatedJourneyData);
     } else {
         const newJourney: Journey = {
             id: `local_${new Date().toISOString()}`,
             status: 'Draft',
-            bookings: bookings
+            bookings: bookings,
+            siteId: selectedSiteId,
+            account: selectedAccount,
         };
         setJourneys([newJourney, ...journeys]);
         toast({
             title: 'Journey Saved!',
             description: 'Your journey has been saved as a draft.',
         });
-        setCurrentJourney(newJourney);
-        router.push(`/journeys/${newJourney.id}/edit`);
+        
+        // If we are not already on an edit page, redirect to the new one
+        if (!isEditingJourney) {
+             router.push(`/journeys/${newJourney.id}/edit`);
+        } else {
+            setCurrentJourney(newJourney);
+        }
     }
   }
 
@@ -207,12 +217,13 @@ export default function JourneyBuilder({
     try {
         const result = await saveJourney({ bookings: journeyToPublish.bookings, server, siteId: selectedSiteId, accountId: selectedAccount.id });
         
-        // Update the existing journey with the API IDs instead of creating a new one.
         const publishedJourney: Journey = {
             ...journeyToPublish,
             journeyServerId: result.journeyServerId,
             status: 'Scheduled',
-            bookings: result.bookings, // This now contains local `id`, `bookingServerId`, and `requestId`
+            bookings: result.bookings, 
+            siteId: selectedSiteId,
+            account: selectedAccount,
         };
         
         const updatedJourneys = journeys.map(j => j.id === journeyToPublish.id ? publishedJourney : j);
@@ -238,7 +249,7 @@ export default function JourneyBuilder({
   
   const getTitle = () => {
     if (isEditingTemplate) return `Editing Template: ${initialData?.name}`;
-    if (isEditingJourney) return `Editing Journey`;
+    if (isEditingJourney && currentJourney) return `Editing Journey`;
     if (initialData?.name) return `New Journey from: ${initialData.name}`;
     return 'Create a New Journey';
   };
@@ -256,7 +267,11 @@ export default function JourneyBuilder({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                   <label className="text-sm font-medium mb-2 block">Site</label>
-                  <Select onValueChange={(value) => setSelectedSiteId(Number(value))} disabled={isFetchingSites}>
+                  <Select 
+                      value={selectedSiteId?.toString()}
+                      onValueChange={(value) => setSelectedSiteId(Number(value))} 
+                      disabled={isFetchingSites}
+                  >
                       <SelectTrigger>
                           {isFetchingSites ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Building className="mr-2 h-4 w-4" />}
                           <SelectValue placeholder={isFetchingSites ? "Loading sites..." : "Select a site"} />
@@ -277,7 +292,10 @@ export default function JourneyBuilder({
               </div>
                 <div>
                   <label className="text-sm font-medium mb-2 block">Account</label>
-                  <AccountAutocomplete onAccountSelect={setSelectedAccount} />
+                  <AccountAutocomplete 
+                      onAccountSelect={setSelectedAccount}
+                      initialAccount={selectedAccount}
+                  />
               </div>
           </div>
         </CardContent>
@@ -314,3 +332,5 @@ export default function JourneyBuilder({
     </div>
   );
 }
+
+    
