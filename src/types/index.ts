@@ -86,7 +86,7 @@ const StopSchema = z.object({
   instructions: z.string().optional(),
 });
 
-const BookingSchema = z.object({
+export const BookingSchema = z.object({
   id: z.string(),
   stops: z.array(StopSchema),
   siteId: z.number().optional(),
@@ -111,6 +111,7 @@ export type JourneyInput = z.infer<typeof JourneyInputSchema>;
 
 export const JourneyOutputSchema = z.object({
   journeyId: z.string(),
+  bookings: z.array(BookingSchema), // Return the created bookings with their new IDs
   status: z.string(),
   message: z.string(),
 });

@@ -8,7 +8,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import { JourneyInputSchema, JourneyOutputSchema, ServerConfigSchema } from '@/types';
+import { BookingSchema, JourneyInputSchema, JourneyOutputSchema, ServerConfigSchema } from '@/types';
 import { createBooking, createJourney } from '@/services/icabbi';
 import type { Booking, JourneyOutput } from '@/types';
 
@@ -38,7 +38,7 @@ const saveJourneyFlow = ai.defineFlow(
     }
 
     // Step 1: Create each booking individually to get their IDs and segment IDs
-    const createdBookings = [];
+    const createdBookings: Booking[] = [];
     for (const booking of bookings as Booking[]) {
       try {
         // Add the journey-level siteId and accountId to each booking before creating it
@@ -46,7 +46,12 @@ const saveJourneyFlow = ai.defineFlow(
         console.log(`[Journey Flow] Creating booking for passenger: ${booking.stops[0]?.name}`);
         const result = await createBooking(server, bookingWithContext);
         if (result && result.id && result.bookingsegments) {
-          createdBookings.push(result);
+          // The API returns the full booking object. Let's use it but keep our original stop IDs for now.
+          const createdBookingWithApiId: Booking = {
+            ...booking, // Keep original structure and local stop IDs
+            id: result.id, // Overwrite with API booking ID
+          };
+          createdBookings.push(createdBookingWithApiId);
           console.log(`[Journey Flow] Successfully created booking with ID: ${result.id}`);
         } else {
           throw new Error('Invalid response from createBooking');
@@ -57,45 +62,31 @@ const saveJourneyFlow = ai.defineFlow(
       }
     }
 
-    // Artificial delay if needed, similar to script
-    // await new Promise(resolve => setTimeout(resolve, 3000));
-
-    // Step 2: Construct the journey payload from the created bookings
+    // This is a complex part of the original script logic that we are replicating.
+    // It seems to create a structure for the journey based on booking segments.
+    // Note: The iCabbi Journey API is not fully documented publicly, so this is based on observed behavior.
     const journeyBookingsPayload = [];
-    const now = Math.floor(new Date().getTime() / 1000);
-    let plannedDate = now;
+    let plannedDate = Math.floor(new Date().getTime() / 1000);
 
     for (const createdBooking of createdBookings) {
-        // Add the pickup segment
-        const pickupSegment = createdBooking.bookingsegments[0];
-        if (pickupSegment) {
-            journeyBookingsPayload.push({
-                bookingsegment_id: pickupSegment.id,
-                planned_date: plannedDate,
-                distance: 0, // Group with next stop
-            });
-        }
-        
-        // Add the dropoff segment (as destination)
-        // Note: The script logic for journeys is complex. This is a direct interpretation.
+        // Here we'd need the booking segments from the real API response if the logic gets more complex.
+        // For now, the assumption is one pickup/one dropoff per booking, and we can link by request_id.
+        // This part of the logic might need refinement based on real-world multi-stop scenarios.
+        journeyBookingsPayload.push({
+            request_id: createdBooking.id,
+            planned_date: plannedDate,
+            distance: 1000,
+        });
         journeyBookingsPayload.push({
             request_id: createdBooking.id,
             is_destination: "true",
             planned_date: plannedDate + 600, // Example offset
-            distance: 1000, // Example distance
+            distance: 0,
         });
 
-        plannedDate += 1200; // Increment time for the next booking's pickup
+        plannedDate += 1200; // Increment time for the next booking
     }
     
-    // Ensure the very last stop has distance 0 if it's a dropoff
-    if (journeyBookingsPayload.length > 0) {
-        const lastElement = journeyBookingsPayload[journeyBookingsPayload.length - 1];
-        if (lastElement.is_destination) {
-            lastElement.distance = 0;
-        }
-    }
-
     const journeyPayload = {
         logs: "false",
         delete_outstanding_journeys: "false",
@@ -113,11 +104,11 @@ const saveJourneyFlow = ai.defineFlow(
         const journeyResult = await createJourney(server, journeyPayload);
         console.log('[Journey Flow] Journey creation successful:', journeyResult);
 
-        // Assuming the journey creation gives back a journey ID or some confirmation
         const journeyId = journeyResult?.journeys?.[0]?.id || `journey_${new Date().toISOString()}`;
 
         return {
             journeyId: journeyId,
+            bookings: createdBookings, // Return the bookings with their new API IDs
             status: 'SUCCESS',
             message: `Journey with ${createdBookings.length} booking(s) was successfully scheduled.`,
         };
@@ -127,5 +118,3 @@ const saveJourneyFlow = ai.defineFlow(
     }
   }
 );
-
-    

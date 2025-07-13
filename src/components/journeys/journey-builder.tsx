@@ -201,9 +201,9 @@ export default function JourneyBuilder({
         const result = await saveJourney({ bookings: journeyToPublish.bookings, server, siteId: selectedSiteId, accountId: selectedAccount.id });
         
         const publishedJourney: Journey = {
-            ...journeyToPublish,
-            id: result.journeyId, // Replace local ID with real ID from iCabbi
+            id: result.journeyId, // Use real ID from iCabbi
             status: 'Scheduled',
+            bookings: result.bookings, // Use the returned bookings with their new API IDs
         };
         
         // Remove the old draft journey and add the new published one
