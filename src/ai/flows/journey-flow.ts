@@ -56,7 +56,7 @@ const saveJourneyFlow = ai.defineFlow(
       throw new Error('No bookings provided to create a journey.');
     }
 
-    // Ensure all dateTime properties are Date objects
+    // Ensure all dateTime properties are Date objects for processing
     const sanitizedBookings = bookings.map(b => ({
       ...b,
       stops: b.stops.map(s => ({
@@ -230,14 +230,17 @@ const saveJourneyFlow = ai.defineFlow(
           throw new Error('Journey server ID was not returned from the server.');
         }
 
-        // Clean parentBooking before returning
+        // Clean parentBooking and stringify dates before returning
         const finalBookings = createdBookings.map(b => {
           const { stops, ...rest } = b;
           return {
             ...rest,
             stops: stops.map(s => {
               const { parentBooking, ...stopRest } = s;
-              return stopRest;
+              return {
+                  ...stopRest,
+                  dateTime: stopRest.dateTime?.toISOString()
+              };
             })
           };
         });
