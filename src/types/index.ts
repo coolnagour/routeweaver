@@ -24,7 +24,7 @@ export interface Stop {
 
 export interface Booking {
   id: string; // Local/React ID
-  bookingApiId?: string; // ID from iCabbi API
+  bookingServerId?: number; // ID from iCabbi API
   stops: Stop[];
   siteId?: number;
   accountId?: number;
@@ -38,13 +38,13 @@ export interface Account {
 
 export interface Journey {
   id: string; // Local/React ID
-  journeyApiId?: string; // ID from iCabbi API
+  journeyServerId?: number; // ID from iCabbi API
   bookings: Booking[];
   status: 'Draft' | 'Scheduled' | 'Completed' | 'Cancelled';
 }
 
 // Stored template has string dates
-export type TemplateBooking = Omit<Booking, 'stops' | 'siteId' | 'accountId'> & { stops: (Omit<Stop, 'dateTime'> & { dateTime?: string })[] };
+export type TemplateBooking = Omit<Booking, 'stops' | 'siteId' | 'accountId' | 'bookingServerId'> & { stops: (Omit<Stop, 'dateTime'> & { dateTime?: string })[] };
 
 export interface JourneyTemplate {
   id: string;
@@ -89,7 +89,7 @@ const StopSchema = z.object({
 
 export const BookingSchema = z.object({
   id: z.string(),
-  bookingApiId: z.string().optional(),
+  bookingServerId: z.number().optional(),
   stops: z.array(StopSchema),
   siteId: z.number().optional(),
   accountId: z.number().optional(),
@@ -112,7 +112,7 @@ export type JourneyInput = z.infer<typeof JourneyInputSchema>;
 
 
 export const JourneyOutputSchema = z.object({
-  journeyApiId: z.string(),
+  journeyServerId: z.number(),
   bookings: z.array(BookingSchema), // Return bookings with original local ID and new bookingApiId
   status: z.string(),
   message: z.string(),

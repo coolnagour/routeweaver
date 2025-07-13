@@ -210,9 +210,9 @@ export default function JourneyBuilder({
         // Update the existing journey with the API IDs instead of creating a new one.
         const publishedJourney: Journey = {
             ...journeyToPublish,
-            journeyApiId: result.journeyApiId,
+            journeyServerId: result.journeyServerId,
             status: 'Scheduled',
-            bookings: result.bookings, // This now contains both local `id` and `bookingApiId`
+            bookings: result.bookings, // This now contains both local `id` and `bookingServerId`
         };
         
         const updatedJourneys = journeys.map(j => j.id === journeyToPublish.id ? publishedJourney : j);

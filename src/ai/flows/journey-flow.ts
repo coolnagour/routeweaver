@@ -47,11 +47,11 @@ const saveJourneyFlow = ai.defineFlow(
         
         if (result && result.id) {
           // The API returns the full booking object. Let's keep our local IDs and add the API ID.
-          const bookingWithApiId: Booking = {
+          const bookingWithServerId: Booking = {
             ...booking, // Keep original booking structure with local IDs
-            bookingApiId: result.id, // Add the new API booking ID
+            bookingServerId: result.id, // Add the new API booking ID
           };
-          createdBookings.push(bookingWithApiId);
+          createdBookings.push(bookingWithServerId);
           console.log(`[Journey Flow] Successfully created booking with local ID ${booking.id} and API ID: ${result.id}`);
         } else {
           throw new Error('Invalid response from createBooking');
@@ -62,23 +62,23 @@ const saveJourneyFlow = ai.defineFlow(
       }
     }
 
-    // Step 2: Prepare the payload for creating the journey, using the new bookingApiIds
+    // Step 2: Prepare the payload for creating the journey, using the new bookingServerIds
     const journeyBookingsPayload = [];
     let plannedDate = Math.floor(new Date().getTime() / 1000);
 
     for (const createdBooking of createdBookings) {
-        if (!createdBooking.bookingApiId) {
+        if (!createdBooking.bookingServerId) {
             // This should not happen if the previous step succeeded
-            throw new Error(`Booking with local ID ${createdBooking.id} is missing an API ID.`);
+            throw new Error(`Booking with local ID ${createdBooking.id} is missing a server ID.`);
         }
         // This part of the logic might need refinement based on real-world multi-stop scenarios.
         journeyBookingsPayload.push({
-            request_id: createdBooking.bookingApiId,
+            request_id: createdBooking.bookingServerId,
             planned_date: plannedDate,
             distance: 1000,
         });
         journeyBookingsPayload.push({
-            request_id: createdBooking.bookingApiId,
+            request_id: createdBooking.bookingServerId,
             is_destination: "true",
             planned_date: plannedDate + 600, // Example offset
             distance: 0,
@@ -104,14 +104,14 @@ const saveJourneyFlow = ai.defineFlow(
         const journeyResult = await createJourney(server, journeyPayload);
         console.log('[Journey Flow] Journey creation successful:', journeyResult);
 
-        const journeyApiId = journeyResult?.journeys?.[0]?.id;
-        if (!journeyApiId) {
-          throw new Error('Journey API ID was not returned from the server.');
+        const journeyServerId = journeyResult?.journeys?.[0]?.id;
+        if (!journeyServerId) {
+          throw new Error('Journey server ID was not returned from the server.');
         }
 
         return {
-            journeyApiId: journeyApiId,
-            bookings: createdBookings, // Return the bookings with local IDs and new API IDs
+            journeyServerId: journeyServerId,
+            bookings: createdBookings, // Return the bookings with local IDs and new server IDs
             status: 'Scheduled',
             message: `Journey with ${createdBookings.length} booking(s) was successfully scheduled.`,
         };
