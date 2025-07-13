@@ -156,7 +156,7 @@ export default function RecentJourneys() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Date(s)</TableHead>
+                <TableHead>Journey Details</TableHead>
                 <TableHead>Bookings</TableHead>
                 <TableHead className="text-center">Total Passengers</TableHead>
                 <TableHead className="text-right">Status</TableHead>
@@ -167,18 +167,20 @@ export default function RecentJourneys() {
               {journeys.map((journey) => (
                 <React.Fragment key={journey.id}>
                   <TableRow>
-                      <TableCell className="font-medium">{getJourneyDateRange(journey.bookings)}</TableCell>
+                      <TableCell className="font-medium">
+                        <div className="flex flex-col">
+                            <span>{getJourneyDateRange(journey.bookings)}</span>
+                            {journey.journeyServerId && (
+                                <span className="text-xs text-muted-foreground font-mono">
+                                    ID: {journey.journeyServerId}
+                                </span>
+                            )}
+                        </div>
+                      </TableCell>
                       <TableCell>{journey.bookings.length}</TableCell>
                       <TableCell className="text-center">{getTotalPassengers(journey.bookings)}</TableCell>
                       <TableCell className="text-right">
-                          <div className="flex flex-col items-end space-y-1">
-                              <Badge variant={getStatusVariant(journey.status)}>{journey.status}</Badge>
-                              {journey.journeyServerId && (
-                                <span className="text-xs font-mono text-muted-foreground">
-                                    ID: {journey.journeyServerId}
-                                </span>
-                              )}
-                          </div>
+                        <Badge variant={getStatusVariant(journey.status)}>{journey.status}</Badge>
                       </TableCell>
                       <TableCell className="text-right space-x-0">
                           {journey.status === 'Draft' && (
