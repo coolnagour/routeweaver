@@ -23,7 +23,7 @@ function createStop(id: string, type: 'pickup' | 'dropoff', address: string, lat
 async function runTest() {
     console.log("--- Running Journey Payload Logic Test ---");
 
-    // SCENARIO: P1 -> P2 -> D1 -> D2 (Same Location)
+    // SCENARIO: P1 -> P2 -> D1 -> D2
     // P1 (s1): "Terminal Rd S", lat: 53.3479056, lng: -6.1954911
     // P2 (s3): "Sutton Cross", lat: 53.3899572, lng: -6.109947
     // D1 & D2 (s2, s4): "Howth Rd", lat: 53.3762177, lng: -6.188735299999999
