@@ -35,11 +35,10 @@ const formatBookingForIcabbi = (booking: Booking, server: ServerConfig) => {
 
     let formattedPhone = (pickupStop.phone || '').replace(/\D/g, '');
     if (pickupStop.phone) {
-        // Use the first country code from server config as default for parsing
         const defaultCountry = server.countryCodes?.[0]?.toUpperCase() as any;
         const phoneNumber = parsePhoneNumberFromString(pickupStop.phone, defaultCountry);
         if (phoneNumber && phoneNumber.isValid()) {
-            formattedPhone = phoneNumber.number.toString(); // E.164 format
+            formattedPhone = phoneNumber.number.toString(); 
         }
     }
 
@@ -49,7 +48,7 @@ const formatBookingForIcabbi = (booking: Booking, server: ServerConfig) => {
         source: "DISPATCH",
         name: pickupStop.name || 'N/A',
         phone: formattedPhone || 'N/A',
-        customer_id: "123", // Example customer_id
+        customer_id: "123", 
         address: {
             lat: firstStop.location.lat.toString(),
             lng: firstStop.location.lng.toString(),
@@ -105,7 +104,6 @@ export async function callIcabbiApi({ server, method, endpoint, body }: IcabbiAp
         
         const responseText = await response.text();
         console.log(`[iCabbi API Response] <--- Status: ${response.status}`);
-        // Only log body for non-204 responses
         if (responseText) {
             console.log(`[iCabbi API Response Body]:`, responseText);
         }
@@ -136,9 +134,6 @@ export async function callIcabbiApi({ server, method, endpoint, body }: IcabbiAp
     }
 }
 
-/**
- * Creates a booking using the iCabbi API.
- */
 export async function createBooking(server: ServerConfig, booking: Booking) {
     const payload = formatBookingForIcabbi(booking, server);
 
@@ -149,13 +144,9 @@ export async function createBooking(server: ServerConfig, booking: Booking) {
         body: payload,
     });
     
-    // The script expects the nested 'booking' object
     return response.body.booking;
 }
 
-/**
- * Creates a journey by linking existing booking segments.
- */
 export async function createJourney(server: ServerConfig, journeyPayload: any) {
     const response = await callIcabbiApi({
         server,
@@ -167,9 +158,6 @@ export async function createJourney(server: ServerConfig, journeyPayload: any) {
     return response.body;
 }
 
-/**
- * Fetches available sites from the iCabbi API.
- */
 export async function getSites(server: ServerConfig): Promise<{ id: number, name: string, ref: string }[]> {
     const response = await callIcabbiApi({
         server,
@@ -187,9 +175,6 @@ export async function getSites(server: ServerConfig): Promise<{ id: number, name
     return [];
 }
 
-/**
- * Searches for accounts by name.
- */
 export async function searchAccountsByName(server: ServerConfig, query: string, options: { limit?: number, offset?: number } = {}): Promise<Account[]> {
   const { limit = 25, offset = 0 } = options;
   const params = new URLSearchParams({
