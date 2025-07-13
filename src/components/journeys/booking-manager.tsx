@@ -32,7 +32,7 @@ export default function BookingManager({ bookings, setBookings }: BookingManager
     setEditingBooking({
       id: uuidv4(),
       stops: [
-        { id: uuidv4(), location: emptyLocation, stopType: 'pickup', name: '', phone: '', dateTime: new Date() },
+        { id: uuidv4(), location: emptyLocation, stopType: 'pickup', name: '', phone: '', dateTime: undefined },
         { id: uuidv4(), location: emptyLocation, stopType: 'dropoff' }
       ]
     });
@@ -100,7 +100,7 @@ export default function BookingManager({ bookings, setBookings }: BookingManager
                   <Card key={booking.id} className="p-3">
                       <div className="flex justify-between items-start">
                       <div className="space-y-2 flex-1">
-                          {bookingDateTime && <p className="font-semibold text-primary">{format(new Date(bookingDateTime), 'PPP p')}</p>}
+                          {bookingDateTime ? <p className="font-semibold text-primary">{format(new Date(bookingDateTime), 'PPP p')}</p> : <p className="font-semibold text-primary">ASAP</p>}
                           <p className="text-sm text-muted-foreground flex items-center gap-2"><Users className="h-4 w-4" />{pickups.length} passenger(s)</p>
                           
                           {booking.stops.map(stop => {

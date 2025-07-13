@@ -28,6 +28,7 @@ import { generateSuggestion } from '@/ai/flows/suggestion-flow';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { v4 as uuidv4 } from 'uuid';
+import { Switch } from '../ui/switch';
 
 const locationSchema = z.object({
     address: z.string().min(2, { message: 'Address is required.' }),
@@ -59,17 +60,8 @@ const formSchema = z.object({
   id: z.string().optional(),
   stops: z.array(stopSchema).min(2, 'At least two stops are required.')
 }).refine(data => {
-    const firstPickup = data.stops[0];
-    if (firstPickup.stopType !== 'pickup' || !firstPickup.dateTime) {
-        return false;
-    }
-    return true;
-}, {
-    message: "The first stop must be a pickup with a valid date and time.",
-    path: ["stops", "0", "dateTime"],
-}).refine(data => {
     const firstPickupTime = data.stops[0]?.dateTime?.getTime();
-    if (!firstPickupTime) return true; // Already handled by the rule above
+    if (!firstPickupTime) return true; // ASAP booking, validation passes
 
     const subsequentPickups = data.stops.filter((s, index) => s.stopType === 'pickup' && index > 0);
     return subsequentPickups.every(p => !p.dateTime || p.dateTime.getTime() >= firstPickupTime);
@@ -91,6 +83,7 @@ const emptyLocation = { address: '', lat: 0, lng: 0 };
 export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFormProps) {
   const { toast } = useToast();
   const [generatingFields, setGeneratingFields] = useState<Record<string, boolean>>({});
+  const [isScheduled, setIsScheduled] = useState(!!initialData?.stops?.[0]?.dateTime);
 
   const form = useForm<BookingFormData>({
     resolver: zodResolver(formSchema),
@@ -105,7 +98,7 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
           instructions: s.instructions || '',
           pickupStopId: s.pickupStopId || ''
       })) : [
-        { id: uuidv4(), location: emptyLocation, stopType: 'pickup', name: '', phone: '', dateTime: new Date(), instructions: '' },
+        { id: uuidv4(), location: emptyLocation, stopType: 'pickup', name: '', phone: '', dateTime: undefined, instructions: '' },
         { id: uuidv4(), location: emptyLocation, stopType: 'dropoff', pickupStopId: '', instructions: '' }
       ] 
     },
@@ -154,8 +147,22 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
 
 
   function onSubmit(values: BookingFormData) {
+    // If not scheduled, ensure dateTime is undefined before saving.
+    if (!isScheduled) {
+        values.stops[0].dateTime = undefined;
+    }
     onSave(values as Booking);
   }
+  
+  const handleScheduledToggle = (checked: boolean) => {
+    setIsScheduled(checked);
+    if (checked) {
+        form.setValue('stops.0.dateTime', new Date());
+    } else {
+        form.setValue('stops.0.dateTime', undefined);
+    }
+  }
+
 
   const firstStop = stopFields[0];
   const lastStop = stopFields[stopFields.length - 1];
@@ -179,58 +186,67 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
             <CardContent className="space-y-4">
                 {/* Pickup Section */}
                 <div className="p-4 border rounded-lg space-y-3 bg-muted/20">
-                    <h3 className="font-semibold text-lg text-primary">Pickup</h3>
-                    <FormField
-                        control={form.control}
-                        name={`stops.0.dateTime`}
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Pickup Date & Time</FormLabel>
-                            <div className="flex gap-2">
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                <FormControl>
-                                    <Button
-                                    variant={'outline'}
-                                    className={cn(
-                                        'w-[calc(50%-0.25rem)] justify-start text-left font-normal bg-background',
-                                        !field.value && 'text-muted-foreground'
-                                    )}
-                                    >
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
-                                    </Button>
-                                </FormControl>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
-                                <Calendar
-                                    mode="single"
-                                    selected={field.value}
-                                    onSelect={field.onChange}
-                                    disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
-                                    initialFocus
-                                />
-                                </PopoverContent>
-                            </Popover>
-                            <div className="relative w-[calc(50%-0.25rem)]">
-                                <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                    type="time"
-                                    className="pl-10 bg-background"
-                                    value={field.value ? format(field.value, 'HH:mm') : ''}
-                                    onChange={(e) => {
-                                        const time = e.target.value;
-                                        const [hours, minutes] = time.split(':').map(Number);
-                                        const newDate = setMinutes(setHours(field.value || new Date(), hours), minutes);
-                                        field.onChange(newDate);
-                                    }}
-                                />
-                            </div>
-                            </div>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
+                    <div className="flex justify-between items-center">
+                        <h3 className="font-semibold text-lg text-primary">Pickup</h3>
+                        <div className="flex items-center space-x-2">
+                             <Label htmlFor="schedule-switch">{isScheduled ? 'Scheduled' : 'ASAP'}</Label>
+                            <Switch id="schedule-switch" checked={isScheduled} onCheckedChange={handleScheduledToggle} />
+                        </div>
+                    </div>
+                   
+                    {isScheduled && (
+                        <FormField
+                            control={form.control}
+                            name={`stops.0.dateTime`}
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Pickup Date & Time</FormLabel>
+                                <div className="flex gap-2">
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                    <FormControl>
+                                        <Button
+                                        variant={'outline'}
+                                        className={cn(
+                                            'w-[calc(50%-0.25rem)] justify-start text-left font-normal bg-background',
+                                            !field.value && 'text-muted-foreground'
+                                        )}
+                                        >
+                                        <CalendarIcon className="mr-2 h-4 w-4" />
+                                        {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
+                                        </Button>
+                                    </FormControl>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                    <Calendar
+                                        mode="single"
+                                        selected={field.value}
+                                        onSelect={field.onChange}
+                                        disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
+                                        initialFocus
+                                    />
+                                    </PopoverContent>
+                                </Popover>
+                                <div className="relative w-[calc(50%-0.25rem)]">
+                                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        type="time"
+                                        className="pl-10 bg-background"
+                                        value={field.value ? format(field.value, 'HH:mm') : ''}
+                                        onChange={(e) => {
+                                            const time = e.target.value;
+                                            const [hours, minutes] = time.split(':').map(Number);
+                                            const newDate = setMinutes(setHours(field.value || new Date(), hours), minutes);
+                                            field.onChange(newDate);
+                                        }}
+                                    />
+                                </div>
+                                </div>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                    )}
                     <Controller
                         control={form.control}
                         name={`stops.0.location`}
