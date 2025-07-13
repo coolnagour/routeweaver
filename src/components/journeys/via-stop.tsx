@@ -161,7 +161,7 @@ export default function ViaStop({
              <FormField
                  control={control}
                  name={`stops.${index}.pickupStopId`}
-                 render={({ field }) => (
+                 render={({ field, fieldState }) => (
                  <FormItem>
                      <FormLabel>Passenger to Drop Off</FormLabel>
                      <Select onValueChange={field.onChange} defaultValue={field.value}>
@@ -180,7 +180,7 @@ export default function ViaStop({
                              )}
                          </SelectContent>
                      </Select>
-                     <FormMessage />
+                     <FormMessage>{fieldState.error?.message}</FormMessage>
                  </FormItem>
                  )}
              />

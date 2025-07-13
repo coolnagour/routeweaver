@@ -43,6 +43,15 @@ const stopSchema = z.object({
   phone: z.string().optional(),
   pickupStopId: z.string().optional(),
   instructions: z.string().optional(),
+}).refine(data => {
+    // If it's a dropoff, it MUST have a pickupStopId
+    if (data.stopType === 'dropoff') {
+        return !!data.pickupStopId;
+    }
+    return true;
+}, {
+    message: 'A passenger must be selected for this drop-off.',
+    path: ['pickupStopId'], // Target the specific field for the error
 });
 
 const formSchema = z.object({
@@ -51,25 +60,22 @@ const formSchema = z.object({
 }).refine(data => {
     const firstPickup = data.stops[0];
     if (firstPickup.stopType !== 'pickup' || !firstPickup.dateTime) {
-        return false; // First stop must be a pickup with a date/time
+        return false;
     }
-
-    const firstPickupTime = firstPickup.dateTime.getTime();
-    const subsequentPickups = data.stops.filter((s, index) => s.stopType === 'pickup' && index > 0);
-
-    if (!subsequentPickups.every(p => !p.dateTime || p.dateTime.getTime() >= firstPickupTime)) {
-        return false; // Subsequent pickup times must not be before first
-    }
-    
-    // Ensure all dropoffs are linked
-    const pickupIds = data.stops.filter(s => s.stopType === 'pickup').map(s => s.id);
-    const dropoffs = data.stops.filter(s => s.stopType === 'dropoff');
-    return dropoffs.every(d => d.pickupStopId && pickupIds.includes(d.pickupStopId));
+    return true;
 }, {
-    message: "Each drop-off must be linked to a pickup. The first stop must be a pickup with a date/time. Subsequent pickup times must not be before the first one.",
+    message: "The first stop must be a pickup with a valid date and time.",
+    path: ["stops", "0", "dateTime"],
+}).refine(data => {
+    const firstPickupTime = data.stops[0]?.dateTime?.getTime();
+    if (!firstPickupTime) return true; // Already handled by the rule above
+
+    const subsequentPickups = data.stops.filter((s, index) => s.stopType === 'pickup' && index > 0);
+    return subsequentPickups.every(p => !p.dateTime || p.dateTime.getTime() >= firstPickupTime);
+}, {
+    message: "Subsequent pickup times must not be before the first pickup.",
     path: ["stops"],
 });
-
 
 type BookingFormData = z.infer<typeof formSchema>;
 
