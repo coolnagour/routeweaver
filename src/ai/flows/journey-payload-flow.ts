@@ -82,10 +82,11 @@ const generateJourneyPayloadFlow = ai.defineFlow(
       throw new Error("Cannot create a journey with no pickup stops.");
     }
 
-    // Sort pickups by time only. The nearest will be determined in the loop.
+    // Sort pickups by time to find the absolute earliest start for the entire journey.
     pickupStops.sort((a, b) => {
         const timeA = a.dateTime ? new Date(a.dateTime).getTime() : Infinity;
         const timeB = b.dateTime ? new Date(b.dateTime).getTime() : Infinity;
+        // If times are equal or both are ASAP, this won't change order, which is fine.
         return timeA - timeB;
     });
     
@@ -123,7 +124,7 @@ const generateJourneyPayloadFlow = ai.defineFlow(
         continue;
       }
       
-      // Find the closest stop among the valid candidates
+      // Find the closest stop among the valid candidates based purely on distance
       let nextStop = candidateStops[0];
       let minDistance = getDistanceFromLatLonInMeters(
           currentStop.location.lat, currentStop.location.lng,
@@ -171,8 +172,11 @@ const generateJourneyPayloadFlow = ai.defineFlow(
             );
         }
 
-        const isFinalStopOfBooking = stop.stopType === 'dropoff' && stop.parentBooking.stops.some(s => s.id === stop.id && s.stopType === 'dropoff');
-
+        // The final stop of a BOOKING (not the journey) is its destination.
+        // A booking's final stop is the last stop in its original `stops` array.
+        const originalBookingStops = stop.parentBooking.stops;
+        const lastStopOfOriginalBooking = originalBookingStops[originalBookingStops.length - 1];
+        const isFinalStopOfBooking = stop.id === lastStopOfOriginalBooking.id;
         
         const idToUse = isFinalStopOfBooking ? stop.parentBooking.requestId : stop.bookingSegmentId;
         const idType = isFinalStopOfBooking ? 'request_id' : 'bookingsegment_id';
