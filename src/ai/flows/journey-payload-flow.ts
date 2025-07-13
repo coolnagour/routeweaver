@@ -81,19 +81,17 @@ export async function generateJourneyPayload(input: JourneyPayloadInput): Promis
       const candidateStops = unvisitedStops.filter(s => {
         if (s.stopType === 'pickup') return true;
         if (s.stopType === 'dropoff' && s.pickupStopId) {
+          // A dropoff is only valid if the corresponding pickup has been completed (i.e., passenger is in vehicle)
           return passengersInVehicle.has(s.pickupStopId);
         }
         return false;
       });
 
       if (candidateStops.length === 0) {
-        // If no valid candidates, it implies an issue like a stranded passenger.
-        // As a fallback, just add remaining stops sorted by distance to avoid an infinite loop.
-        const remainingStops = unvisitedStops.sort((a, b) => 
-            getDistanceFromLatLonInMeters(currentStop!.location.lat, currentStop!.location.lng, a.location.lat, a.location.lng) -
-            getDistanceFromLatLonInMeters(currentStop!.location.lat, currentStop!.location.lng, b.location.lat, b.location.lng)
-        );
-        orderedStops.push(...remainingStops);
+        // If no valid candidates, it implies an issue like a stranded passenger or invalid data.
+        // As a fallback, just add remaining stops to avoid an infinite loop. This part can be improved with better error handling.
+        console.warn("Routing warning: No valid candidate stops found. Adding remaining stops as is.", unvisitedStops);
+        orderedStops.push(...unvisitedStops);
         break; 
       }
       
@@ -117,8 +115,8 @@ export async function generateJourneyPayload(input: JourneyPayloadInput): Promis
           }
       }
       
-      orderedStops.push(nextStop);
-      currentStop = nextStop;
+      currentStop = nextStop; // The next stop becomes our new current stop
+      orderedStops.push(currentStop);
       unvisitedStops = unvisitedStops.filter(s => s.id !== currentStop.id);
 
       if (currentStop.stopType === 'pickup') {

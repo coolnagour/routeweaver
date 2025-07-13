@@ -27,10 +27,15 @@ async function runTest() {
 
     // SCENARIO: P1 -> P2 -> D1 -> D2
     const p1 = createStop('s1', 'pickup', 'Terminal Rd S, North Wall, Dublin, Ireland', 53.3479056, -6.1954911, undefined, 'Robert Smith');
-    const d1 = createStop('s2', 'dropoff', 'Howth Rd, Dublin, Ireland', 53.3762177, -6.188735299999999, 's1');
-    
     const p2 = createStop('s3', 'pickup', 'Sutton Cross, Burrow, Dublin, Ireland', 53.3899572, -6.109947, undefined, 'John Smith');
-    const d2 = createStop('s4', 'dropoff', 'Howth Rd, Dublin, Ireland', 53.3762177, -6.188735299999999, 's3');
+    
+    // Both passengers are going to the same location
+    const dropoffAddress = 'Howth Rd, Dublin, Ireland';
+    const dropoffLat = 53.3762177;
+    const dropoffLng = -6.188735299999999;
+    
+    const d1 = createStop('s2', 'dropoff', dropoffAddress, dropoffLat, dropoffLng, 's1');
+    const d2 = createStop('s4', 'dropoff', dropoffAddress, dropoffLat, dropoffLng, 's3');
     
     const booking1: Booking = {
         id: 'b1',
@@ -83,7 +88,6 @@ async function runTest() {
         const orderedStopIds = result.orderedStops.map(s => s.id);
 
         // Expected order: P1 -> P2 -> D1 -> D2. 
-        // D1 and D2 are at the same location. The routing logic should handle this gracefully.
         const expectedOrder = ['s1', 's3', 's2', 's4']; 
         console.log("\nActual ordered stop IDs:", orderedStopIds);
         console.log("Expected ordered stop IDs:", expectedOrder);
