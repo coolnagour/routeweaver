@@ -126,41 +126,94 @@ const saveJourneyFlow = ai.defineFlow(
       }
     }
 
-    // Step 2: Complex stop ordering logic
+    // Step 2: Intelligent stop ordering using a "nearest neighbor" approach
     const allStopsWithParent = processedBookings.flatMap(b => b.stops.map(s => ({...s, parentBooking: b })));
+    
+    let unvisitedStops = [...allStopsWithParent];
+    const orderedStops: (Stop & { parentBooking: Booking })[] = [];
+    const passengersInVehicle = new Set<string>();
 
-    // Separate pickups and drop-offs
-    const pickups = allStopsWithParent.filter(s => s.stopType === 'pickup');
-    const dropoffs = allStopsWithParent.filter(s => s.stopType === 'dropoff');
-
-    // Sort pickups by date
-    pickups.sort((a, b) => {
+    // Find the starting stop (earliest pickup time, or first if all ASAP)
+    unvisitedStops.sort((a, b) => {
         const timeA = a.dateTime ? new Date(a.dateTime).getTime() : Infinity;
         const timeB = b.dateTime ? new Date(b.dateTime).getTime() : Infinity;
-        if (timeA !== timeB) return timeA - timeB;
-        return (a.parentBooking.id > b.parentBooking.id) ? 1 : -1; // Consistent tie-breaking
+        if (timeA !== Infinity || timeB !== Infinity) {
+          if (timeA !== timeB) return timeA - timeB;
+        }
+        return (a.parentBooking.id > b.parentBooking.id) ? 1 : -1;
     });
 
-    if (pickups.length === 0) {
+    let currentStop = unvisitedStops.find(s => s.stopType === 'pickup');
+    if (!currentStop) {
       throw new Error("Cannot create a journey with no pickup stops.");
     }
-    const lastPickupLocation = pickups[pickups.length - 1].location;
 
-    // Sort drop-offs by distance from the LAST pickup
-    dropoffs.sort((a, b) => {
-      const distA = getDistanceFromLatLonInMeters(lastPickupLocation.lat, lastPickupLocation.lng, a.location.lat, a.location.lng);
-      const distB = getDistanceFromLatLonInMeters(lastPickupLocation.lat, lastPickupLocation.lng, b.location.lat, b.location.lng);
-      if (distA !== distB) return distA - distB;
-      return (a.parentBooking.id > b.parentBooking.id) ? 1 : -1; // Consistent tie-breaking
-    });
+    // Initialize the route
+    orderedStops.push(currentStop);
+    unvisitedStops = unvisitedStops.filter(s => s.id !== currentStop!.id);
+    if (currentStop.stopType === 'pickup') {
+      passengersInVehicle.add(currentStop.id);
+    }
+    
+    // Iteratively find the next closest stop
+    while (unvisitedStops.length > 0) {
+      // Get a list of candidates for the next stop
+      const candidateStops = unvisitedStops.filter(s => {
+        // A pickup is always a valid candidate
+        if (s.stopType === 'pickup') return true;
+        // A dropoff is only valid if its corresponding passenger is in the vehicle
+        if (s.stopType === 'dropoff' && s.pickupStopId) {
+          return passengersInVehicle.has(s.pickupStopId);
+        }
+        return false;
+      });
 
-    // Combine into final ordered list
-    const orderedStops = [...pickups, ...dropoffs];
+      if (candidateStops.length === 0) {
+        // This can happen if there are un-droppable passengers. Add remaining dropoffs by distance.
+        const remainingDropoffs = unvisitedStops.filter(s => s.stopType === 'dropoff');
+        remainingDropoffs.sort((a, b) =>
+            getDistanceFromLatLonInMeters(currentStop!.location.lat, currentStop!.location.lng, a.location.lat, a.location.lng) -
+            getDistanceFromLatLonInMeters(currentStop!.location.lat, currentStop!.location.lng, b.location.lat, b.location.lng)
+        );
+        orderedStops.push(...remainingDropoffs);
+        unvisitedStops = unvisitedStops.filter(s => !remainingDropoffs.some(d => d.id === s.id));
+        continue;
+      }
+      
+      // Find the closest stop among the valid candidates
+      let nextStop = candidateStops[0];
+      let minDistance = getDistanceFromLatLonInMeters(
+          currentStop.location.lat, currentStop.location.lng,
+          nextStop.location.lat, nextStop.location.lng
+      );
+      
+      for (let i = 1; i < candidateStops.length; i++) {
+        const distance = getDistanceFromLatLonInMeters(
+            currentStop.location.lat, currentStop.location.lng,
+            candidateStops[i].location.lat, candidateStops[i].location.lng
+        );
+        if (distance < minDistance) {
+          minDistance = distance;
+          nextStop = candidateStops[i];
+        }
+      }
+      
+      // Add the next stop to our ordered list and update state
+      currentStop = nextStop;
+      orderedStops.push(currentStop);
+      unvisitedStops = unvisitedStops.filter(s => s.id !== currentStop.id);
+
+      if (currentStop.stopType === 'pickup') {
+        passengersInVehicle.add(currentStop.id);
+      } else if (currentStop.stopType === 'dropoff' && currentStop.pickupStopId) {
+        passengersInVehicle.delete(currentStop.pickupStopId);
+      }
+    }
     
     // Step 3: Build the journey payload with corrected distance and date logic
     const journeyBookingsPayload = [];
     const pickupMap = new Map<string, Stop>();
-    pickups.forEach(s => pickupMap.set(s.id, s));
+    orderedStops.filter(s => s.stopType === 'pickup').forEach(s => pickupMap.set(s.id, s));
 
     for (let i = 0; i < orderedStops.length; i++) {
         const stop = orderedStops[i];
