@@ -152,7 +152,7 @@ const saveJourneyFlow = ai.defineFlow(
         return a.originalBookingIndex - b.originalBookingIndex;
     });
     
-    const currentStop = pickupStops[0];
+    let currentStop = pickupStops[0];
 
     // Initialize the route
     orderedStops.push(currentStop);
@@ -321,5 +321,3 @@ const saveJourneyFlow = ai.defineFlow(
     }
   }
 );
-
-    
