@@ -1,4 +1,3 @@
-
 import { z } from 'zod';
 import type { ServerConfig } from '@/config/servers';
 
@@ -24,7 +23,8 @@ export interface Stop {
 }
 
 export interface Booking {
-  id: string;
+  id: string; // Local/React ID
+  bookingApiId?: string; // ID from iCabbi API
   stops: Stop[];
   siteId?: number;
   accountId?: number;
@@ -37,7 +37,8 @@ export interface Account {
 }
 
 export interface Journey {
-  id: string;
+  id: string; // Local/React ID
+  journeyApiId?: string; // ID from iCabbi API
   bookings: Booking[];
   status: 'Draft' | 'Scheduled' | 'Completed' | 'Cancelled';
 }
@@ -88,6 +89,7 @@ const StopSchema = z.object({
 
 export const BookingSchema = z.object({
   id: z.string(),
+  bookingApiId: z.string().optional(),
   stops: z.array(StopSchema),
   siteId: z.number().optional(),
   accountId: z.number().optional(),
@@ -110,8 +112,8 @@ export type JourneyInput = z.infer<typeof JourneyInputSchema>;
 
 
 export const JourneyOutputSchema = z.object({
-  journeyId: z.string(),
-  bookings: z.array(BookingSchema), // Return the created bookings with their new IDs
+  journeyApiId: z.string(),
+  bookings: z.array(BookingSchema), // Return bookings with original local ID and new bookingApiId
   status: z.string(),
   message: z.string(),
 });

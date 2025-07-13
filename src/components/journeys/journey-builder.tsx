@@ -49,6 +49,7 @@ export default function JourneyBuilder({
     if (!data || !data.bookings) return [];
     // Deep copy to prevent mutation of the source
     return JSON.parse(JSON.stringify(data.bookings)).map((b: any) => ({
+      ...b,
       id: b.id || new Date().toISOString() + Math.random(),
       stops: b.stops.map((s: any) => ({
         ...s,
@@ -63,11 +64,17 @@ export default function JourneyBuilder({
   const [currentJourney, setCurrentJourney] = useState<Journey | null>(null);
   
   useEffect(() => {
-    setBookings(getInitialBookings(initialData));
-    setTemplateName(initialData?.name || '');
+    // This effect runs when the page loads with initialData or a journeyId
     if (journeyId) {
         const foundJourney = journeys.find(j => j.id === journeyId);
-        setCurrentJourney(foundJourney || null);
+        if (foundJourney) {
+          setCurrentJourney(foundJourney);
+          setBookings(getInitialBookings({ bookings: foundJourney.bookings }));
+        }
+    } else {
+        setBookings(getInitialBookings(initialData));
+        setTemplateName(initialData?.name || '');
+        setCurrentJourney(null); // Reset current journey if creating new
     }
   }, [initialData, journeyId, journeys]);
 
@@ -100,11 +107,11 @@ export default function JourneyBuilder({
       return;
     }
 
-    if (isEditingJourney && onUpdateJourney && journeyId) {
+    if (currentJourney && onUpdateJourney) {
       const updatedJourney: Journey = {
-        id: journeyId,
+        ...currentJourney,
+        bookings: bookings,
         status: 'Draft',
-        bookings: bookings
       };
       onUpdateJourney(updatedJourney);
       toast({
@@ -200,15 +207,16 @@ export default function JourneyBuilder({
     try {
         const result = await saveJourney({ bookings: journeyToPublish.bookings, server, siteId: selectedSiteId, accountId: selectedAccount.id });
         
+        // Update the existing journey with the API IDs instead of creating a new one.
         const publishedJourney: Journey = {
-            id: result.journeyId, // Use real ID from iCabbi
+            ...journeyToPublish,
+            journeyApiId: result.journeyApiId,
             status: 'Scheduled',
-            bookings: result.bookings, // Use the returned bookings with their new API IDs
+            bookings: result.bookings, // This now contains both local `id` and `bookingApiId`
         };
         
-        // Remove the old draft journey and add the new published one
-        const updatedJourneys = journeys.filter(j => j.id !== journeyToPublish.id);
-        setJourneys([publishedJourney, ...updatedJourneys]);
+        const updatedJourneys = journeys.map(j => j.id === journeyToPublish.id ? publishedJourney : j);
+        setJourneys(updatedJourneys);
 
         toast({
           title: 'Journey Published!',
