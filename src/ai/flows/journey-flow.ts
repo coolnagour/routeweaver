@@ -117,29 +117,49 @@ const saveJourneyFlow = ai.defineFlow(
       }
     }
 
-    // Step 2: Create a flat, chronologically ordered list of all stops
-    const allStops = createdBookings.flatMap(b => b.stops.map(s => ({...s, parentBooking: b })));
-    
-    // Sort all stops primarily by their effective pickup time, then by booking ID as a tie-breaker.
-    allStops.sort((a, b) => {
+    // Step 2: Complex stop ordering logic
+    const allStopsWithParent = createdBookings.flatMap(b => b.stops.map(s => ({...s, parentBooking: b })));
+
+    // Separate pickups and drop-offs
+    const pickups = allStopsWithParent.filter(s => s.stopType === 'pickup');
+    const dropoffs = allStopsWithParent.filter(s => s.stopType === 'dropoff');
+
+    // Sort pickups by date
+    pickups.sort((a, b) => {
         const timeA = a.dateTime ? new Date(a.dateTime).getTime() : Infinity;
         const timeB = b.dateTime ? new Date(b.dateTime).getTime() : Infinity;
         if (timeA !== timeB) return timeA - timeB;
         return (a.parentBooking.id > b.parentBooking.id) ? 1 : -1; // Consistent tie-breaking
     });
+
+    if (pickups.length === 0) {
+      throw new Error("Cannot create a journey with no pickup stops.");
+    }
+    const lastPickupLocation = pickups[pickups.length - 1].location;
+
+    // Sort drop-offs by distance from the LAST pickup
+    dropoffs.sort((a, b) => {
+      const distA = getDistanceFromLatLonInMeters(lastPickupLocation.lat, lastPickupLocation.lng, a.location.lat, a.location.lng);
+      const distB = getDistanceFromLatLonInMeters(lastPickupLocation.lat, lastPickupLocation.lng, b.location.lat, b.location.lng);
+      if (distA !== distB) return distA - distB;
+      return (a.parentBooking.id > b.parentBooking.id) ? 1 : -1; // Consistent tie-breaking
+    });
+
+    // Combine into final ordered list
+    const orderedStops = [...pickups, ...dropoffs];
     
-    // Step 3: Build the journey payload with corrected distance logic
+    // Step 3: Build the journey payload with corrected distance and date logic
     const journeyBookingsPayload = [];
     const pickupMap = new Map<string, Stop>();
-    createdBookings.flatMap(b => b.stops).filter(s => s.stopType === 'pickup').forEach(s => pickupMap.set(s.id, s));
+    pickups.forEach(s => pickupMap.set(s.id, s));
 
-    for (let i = 0; i < allStops.length; i++) {
-        const stop = allStops[i];
+    for (let i = 0; i < orderedStops.length; i++) {
+        const stop = orderedStops[i];
         
         // Calculate distance to the NEXT stop. The last stop will have a distance of 0.
         let distance = 0;
-        if (i < allStops.length - 1) {
-            const nextStop = allStops[i + 1];
+        if (i < orderedStops.length - 1) {
+            const nextStop = orderedStops[i + 1];
             distance = getDistanceFromLatLonInMeters(
                 stop.location.lat, stop.location.lng,
                 nextStop.location.lat, nextStop.location.lng
