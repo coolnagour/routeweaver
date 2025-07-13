@@ -3,3 +3,4 @@
 import './flows/journey-flow';
 import './flows/template-suggestion-flow';
 import './flows/suggestion-flow';
+import './flows/journey-payload-preview-flow';

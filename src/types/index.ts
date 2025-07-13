@@ -73,6 +73,12 @@ export type AITemplateSuggestion = {
   }[];
 }
 
+// Type for journey payload preview
+export type JourneyPayloadPreview = {
+  originalBookings: Booking[];
+  journeyPayload: any;
+}
+
 
 // Schemas for Genkit Flow
 const LocationSchema = z.object({
