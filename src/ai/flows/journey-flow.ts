@@ -55,9 +55,18 @@ const saveJourneyFlow = ai.defineFlow(
       throw new Error('No bookings provided to create a journey.');
     }
 
+    // Ensure all dateTime properties are Date objects
+    const sanitizedBookings = bookings.map(b => ({
+      ...b,
+      stops: b.stops.map(s => ({
+        ...s,
+        dateTime: s.dateTime && typeof s.dateTime === 'string' ? new Date(s.dateTime) : s.dateTime,
+      }))
+    }));
+
     // Step 1: Create each booking individually and process their segments
     const createdBookings: Booking[] = [];
-    for (const booking of bookings as Booking[]) {
+    for (const booking of sanitizedBookings) {
       try {
         const bookingWithContext = { ...booking, siteId, accountId };
         console.log(`[Journey Flow] Creating booking for passenger: ${booking.stops.find(s=>s.stopType === 'pickup')?.name}`);
