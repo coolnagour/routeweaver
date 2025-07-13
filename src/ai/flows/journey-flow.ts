@@ -10,7 +10,7 @@ import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { JourneyInputSchema, JourneyOutputSchema, ServerConfigSchema } from '@/types';
 import { createBooking, createJourney } from '@/services/icabbi';
-import type { Booking, JourneyOutput } from '@/types';
+import type { Booking, JourneyOutput, Stop } from '@/types';
 import { generateJourneyPayload } from './journey-payload-flow';
 
 // Extend the input schema to include server config, siteId, and accountId
@@ -77,25 +77,36 @@ const saveJourneyFlow = ai.defineFlow(
           
           // Map server booking segments back to our local stops.
           if (result.bookingsegments.length > 0) {
-            // The first segment represents the main journey (pickup to destination)
-            const mainSegmentId = parseInt(result.bookingsegments[0].id, 10);
-            // Assign this ID to the first and last stop of our local booking
-            if (bookingWithServerIds.stops.length > 0) {
-              bookingWithServerIds.stops[0].bookingSegmentId = mainSegmentId;
-              if (bookingWithServerIds.stops.length > 1) {
-                  bookingWithServerIds.stops[bookingWithServerIds.stops.length - 1].bookingSegmentId = mainSegmentId;
-              }
-            }
+              const serverSegments = result.bookingsegments; // [{id, ...}, {id, ...}]
+              
+              // The API returns segments for each leg. 
+              // Pickup -> Via1, Via1 -> Via2, Via2 -> Dropoff
+              // We need to map these to our stops.
+              // A simple booking (1 pickup, 1 dropoff) has 1 segment.
+              // A booking with 1 via stop has 2 segments.
+              // A booking with 2 via stops has 3 segments.
+              // The number of segments is stops.length - 1
 
-            // The rest of the segments correspond to the via stops in order
-            const viaSegments = result.bookingsegments.slice(1);
-            const localViaStops = bookingWithServerIds.stops.slice(1, -1);
-            
-            for (let i = 0; i < viaSegments.length; i++) {
-              if (localViaStops[i]) {
-                localViaStops[i].bookingSegmentId = parseInt(viaSegments[i].id, 10);
+              for (let i = 0; i < bookingWithServerIds.stops.length; i++) {
+                // The first stop (pickup) uses the first segment ID.
+                // Subsequent stops (vias) also use the first segment ID corresponding to their leg.
+                // The API structure is such that segment[0] is pickup->next, segment[1] is next->next, etc.
+                // A single stop can be part of two segments (e.g. a via is a dropoff for one leg and pickup for another).
+                // However, for journey purposes, each stop needs one segment ID.
+                // We'll assign the segment ID for the leg *departing* from the stop.
+                
+                if (i < serverSegments.length) {
+                    bookingWithServerIds.stops[i].bookingSegmentId = parseInt(serverSegments[i].id, 10);
+                }
+
+                // The last stop doesn't depart anywhere, but for consistency in the journey payload,
+                // it's often associated with the last segment.
+                if (i === bookingWithServerIds.stops.length - 1 && serverSegments.length > 0) {
+                     // The last stop of the booking should also get the segment id of the final leg.
+                     const lastSegmentIndex = serverSegments.length - 1;
+                     bookingWithServerIds.stops[i].bookingSegmentId = parseInt(serverSegments[lastSegmentIndex].id, 10);
+                }
               }
-            }
           }
           
           processedBookings.push(bookingWithServerIds);
