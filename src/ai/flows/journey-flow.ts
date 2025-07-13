@@ -10,7 +10,7 @@ import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { JourneyInputSchema, JourneyOutputSchema, ServerConfigSchema } from '@/types';
 import { createBooking, createJourney } from '@/services/icabbi';
-import type { Booking, JourneyOutput, Stop } from '@/types';
+import type { Booking, JourneyOutput, Stop, Location } from '@/types';
 
 // Extend the input schema to include server config, siteId, and accountId
 const SaveJourneyInputSchema = JourneyInputSchema.extend({
@@ -117,39 +117,35 @@ const saveJourneyFlow = ai.defineFlow(
       }
     }
 
-    // Step 2: Group all stops from all created bookings by location and order them
+    // Step 2: Create a flat, chronologically ordered list of all stops
     const allStops = createdBookings.flatMap(b => b.stops.map(s => ({...s, parentBooking: b })));
     
-    const stopsByLocation = new Map<string, (Stop & { parentBooking: Booking })[]>();
-    allStops.forEach(stop => {
-      const address = stop.location.address;
-      if (!stopsByLocation.has(address)) {
-        stopsByLocation.set(address, []);
-      }
-      stopsByLocation.get(address)!.push(stop);
+    // Sort all stops primarily by their effective pickup time, then by booking ID as a tie-breaker.
+    allStops.sort((a, b) => {
+        const timeA = a.dateTime ? new Date(a.dateTime).getTime() : Infinity;
+        const timeB = b.dateTime ? new Date(b.dateTime).getTime() : Infinity;
+        if (timeA !== timeB) return timeA - timeB;
+        return (a.parentBooking.id > b.parentBooking.id) ? 1 : -1; // Consistent tie-breaking
     });
-
-    const orderedLocations = Array.from(stopsByLocation.entries()).sort(([_, stopsA], [__, stopsB]) => {
-      const firstPickupTimeA = Math.min(...stopsA.filter(s => s.stopType === 'pickup' && s.dateTime).map(s => new Date(s.dateTime!).getTime()));
-      const firstPickupTimeB = Math.min(...stopsB.filter(s => s.stopType === 'pickup' && s.dateTime).map(s => new Date(s.dateTime!).getTime()));
-      return firstPickupTimeA - firstPickupTimeB;
-    });
-
-    // Step 3: Build the journey payload with calculated distances and correct identifiers
+    
+    // Step 3: Build the journey payload with corrected distance logic
     const journeyBookingsPayload = [];
-    let lastLocation: { lat: number; lng: number } | null = null;
     const pickupMap = new Map<string, Stop>();
     createdBookings.flatMap(b => b.stops).filter(s => s.stopType === 'pickup').forEach(s => pickupMap.set(s.id, s));
 
-    for (const [_, stops] of orderedLocations) {
-      let distance = 0;
-      const currentLocation = stops[0].location;
+    for (let i = 0; i < allStops.length; i++) {
+        const stop = allStops[i];
+        
+        // Calculate distance to the NEXT stop. The last stop will have a distance of 0.
+        let distance = 0;
+        if (i < allStops.length - 1) {
+            const nextStop = allStops[i + 1];
+            distance = getDistanceFromLatLonInMeters(
+                stop.location.lat, stop.location.lng,
+                nextStop.location.lat, nextStop.location.lng
+            );
+        }
 
-      if (lastLocation) {
-        distance = getDistanceFromLatLonInMeters(lastLocation.lat, lastLocation.lng, currentLocation.lat, currentLocation.lng);
-      }
-      
-      for (const stop of stops) {
         const isFinalStopOfBooking = stop.id === stop.parentBooking.stops[stop.parentBooking.stops.length - 1].id;
         
         const idToUse = isFinalStopOfBooking ? stop.parentBooking.requestId : stop.bookingSegmentId;
@@ -168,23 +164,20 @@ const saveJourneyFlow = ai.defineFlow(
             plannedDate = new Date(correspondingPickup.dateTime).toISOString();
           }
         }
-        // Fallback for any stops without a date (should not happen for pickups in valid bookings)
+        
         if (!plannedDate) {
-          plannedDate = new Date().toISOString();
-          console.warn(`[Journey Flow] Stop for address ${stop.location.address} did not have a resolvable planned_date. Using current time.`);
+          // Fallback for safety, should ideally not be hit with valid bookings
+          const firstPickup = stop.parentBooking.stops.find(s => s.stopType === 'pickup' && s.dateTime);
+          plannedDate = firstPickup?.dateTime ? new Date(firstPickup.dateTime).toISOString() : new Date().toISOString();
+          console.warn(`[Journey Flow] Stop for address ${stop.location.address} did not have a resolvable planned_date. Using parent booking pickup time or current time.`);
         }
 
         journeyBookingsPayload.push({
           [idType]: idToUse,
           is_destination: isFinalStopOfBooking ? "true" : "false",
           planned_date: plannedDate,
-          distance: journeyBookingsPayload.length === 0 ? 0 : distance,
+          distance: distance,
         });
-        
-        distance = 0; // Only apply distance to the first stop at a location
-      }
-
-      lastLocation = currentLocation;
     }
     
     const journeyPayload = {
