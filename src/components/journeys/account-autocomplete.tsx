@@ -41,6 +41,11 @@ export default function AccountAutocomplete({ onAccountSelect, initialAccount }:
   const { server } = useServer();
   const { toast } = useToast();
   
+  useEffect(() => {
+    setSelectedAccount(initialAccount || null);
+    setSearchTerm(initialAccount?.name || '');
+  }, [initialAccount]);
+
   const handleSearch = useCallback(async (query: string) => {
     if (!server || !query) {
       setResults([]);
