@@ -124,7 +124,7 @@ export default function RecentJourneys() {
         return firstPickup?.dateTime ? new Date(firstPickup.dateTime) : null;
     }).filter((d): d is Date => d !== null);
 
-    if (dates.length === 0) return 'N/A';
+    if (dates.length === 0) return 'ASAP';
 
     const minDate = new Date(Math.min(...dates.map(d => d.getTime())));
     const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
