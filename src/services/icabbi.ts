@@ -46,12 +46,10 @@ const formatBookingForIcabbi = (booking: Booking, server: ServerConfig) => {
     if (!formattedPhone) {
         try {
             const countryCallingCode = getCountryCallingCode(defaultCountry);
-            // Create a placeholder number that is syntactically valid E.164
-            formattedPhone = `+${countryCallingCode}000000000`;
+            formattedPhone = `+${countryCallingCode}`;
         } catch (e) {
-            // Fallback for an invalid country code, though this shouldn't happen with valid config
             console.error(`Could not get calling code for country: ${defaultCountry}`);
-            formattedPhone = "+10000000000"; // Default to a generic placeholder
+            formattedPhone = "+1"; // Default to a generic placeholder
         }
     }
 
