@@ -127,26 +127,32 @@ const saveJourneyFlow = ai.defineFlow(
     }
 
     // Step 2: Intelligent stop ordering using a "nearest neighbor" approach
-    const allStopsWithParent = processedBookings.flatMap(b => b.stops.map(s => ({...s, parentBooking: b })));
+    const allStopsWithParent = processedBookings.flatMap((b, bookingIndex) => b.stops.map(s => ({...s, parentBooking: b, originalBookingIndex: bookingIndex })));
     
     let unvisitedStops = [...allStopsWithParent];
-    const orderedStops: (Stop & { parentBooking: Booking })[] = [];
+    const orderedStops: (Stop & { parentBooking: Booking; originalBookingIndex: number })[] = [];
     const passengersInVehicle = new Set<string>();
 
-    // Find the starting stop (earliest pickup time, or first if all ASAP)
-    unvisitedStops.sort((a, b) => {
-        const timeA = a.dateTime ? new Date(a.dateTime).getTime() : Infinity;
-        const timeB = b.dateTime ? new Date(b.dateTime).getTime() : Infinity;
-        if (timeA !== Infinity || timeB !== Infinity) {
-          if (timeA !== timeB) return timeA - timeB;
-        }
-        return (a.parentBooking.id > b.parentBooking.id) ? 1 : -1;
-    });
+    // Find the starting stop (earliest pickup time, then by user booking order)
+    const pickupStops = unvisitedStops.filter(s => s.stopType === 'pickup');
 
-    let currentStop = unvisitedStops.find(s => s.stopType === 'pickup');
-    if (!currentStop) {
+    if (pickupStops.length === 0) {
       throw new Error("Cannot create a journey with no pickup stops.");
     }
+
+    pickupStops.sort((a, b) => {
+        const timeA = a.dateTime ? new Date(a.dateTime).getTime() : Infinity;
+        const timeB = b.dateTime ? new Date(b.dateTime).getTime() : Infinity;
+        
+        if (timeA !== timeB) {
+            return timeA - timeB;
+        }
+
+        // If times are the same (or both are ASAP), sort by original booking order
+        return a.originalBookingIndex - b.originalBookingIndex;
+    });
+    
+    const currentStop = pickupStops[0];
 
     // Initialize the route
     orderedStops.push(currentStop);
@@ -199,8 +205,8 @@ const saveJourneyFlow = ai.defineFlow(
       }
       
       // Add the next stop to our ordered list and update state
+      orderedStops.push(nextStop);
       currentStop = nextStop;
-      orderedStops.push(currentStop);
       unvisitedStops = unvisitedStops.filter(s => s.id !== currentStop.id);
 
       if (currentStop.stopType === 'pickup') {
@@ -294,7 +300,7 @@ const saveJourneyFlow = ai.defineFlow(
           return {
             ...rest,
             stops: stops.map(s => {
-              const { parentBooking, ...stopRest } = s;
+              const { parentBooking, ...stopRest } = s as any;
               return {
                   ...stopRest,
                   dateTime: stopRest.dateTime?.toISOString()
