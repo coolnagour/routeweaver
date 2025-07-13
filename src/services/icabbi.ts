@@ -33,15 +33,16 @@ const formatBookingForIcabbi = (booking: Booking, server: ServerConfig) => {
     const lastStop = booking.stops[booking.stops.length - 1];
     const viaStops = booking.stops.slice(1, -1);
 
-    let formattedPhone = '';
+    let formattedPhone = 'N/A';
     if (pickupStop.phone) {
-        const cleanedPhone = pickupStop.phone.replace(/\D/g, '');
+        // libphonenumber-js can handle various formats, including those with hyphens
         const defaultCountry = server.countryCodes?.[0]?.toUpperCase() as any;
-        const phoneNumber = parsePhoneNumberFromString(cleanedPhone, defaultCountry);
+        const phoneNumber = parsePhoneNumberFromString(pickupStop.phone, defaultCountry);
+        
+        // Only use the number if the library considers it valid
         if (phoneNumber && phoneNumber.isValid()) {
-            formattedPhone = phoneNumber.number.toString(); 
-        } else {
-            formattedPhone = cleanedPhone;
+            // .number property already gives the E.164 formatted string (e.g., "+353...")
+            formattedPhone = phoneNumber.number;
         }
     }
 
@@ -50,7 +51,7 @@ const formatBookingForIcabbi = (booking: Booking, server: ServerConfig) => {
         date: pickupStop.dateTime?.toISOString() || new Date().toISOString(),
         source: "DISPATCH",
         name: pickupStop.name || 'N/A',
-        phone: formattedPhone || 'N/A',
+        phone: formattedPhone,
         address: {
             lat: firstStop.location.lat.toString(),
             lng: firstStop.location.lng.toString(),
