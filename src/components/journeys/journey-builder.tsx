@@ -212,7 +212,7 @@ export default function JourneyBuilder({
             ...journeyToPublish,
             journeyServerId: result.journeyServerId,
             status: 'Scheduled',
-            bookings: result.bookings, // This now contains both local `id` and `bookingServerId`
+            bookings: result.bookings, // This now contains local `id`, `bookingServerId`, and `requestId`
         };
         
         const updatedJourneys = journeys.map(j => j.id === journeyToPublish.id ? publishedJourney : j);

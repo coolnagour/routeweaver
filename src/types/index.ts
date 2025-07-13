@@ -25,6 +25,7 @@ export interface Stop {
 export interface Booking {
   id: string; // Local/React ID
   bookingServerId?: number; // ID from iCabbi API
+  requestId?: number; // Request ID from iCabbi API, used for journey creation
   stops: Stop[];
   siteId?: number;
   accountId?: number;
@@ -44,7 +45,7 @@ export interface Journey {
 }
 
 // Stored template has string dates
-export type TemplateBooking = Omit<Booking, 'stops' | 'siteId' | 'accountId' | 'bookingServerId'> & { stops: (Omit<Stop, 'dateTime'> & { dateTime?: string })[] };
+export type TemplateBooking = Omit<Booking, 'stops' | 'siteId' | 'accountId' | 'bookingServerId' | 'requestId'> & { stops: (Omit<Stop, 'dateTime'> & { dateTime?: string })[] };
 
 export interface JourneyTemplate {
   id: string;
@@ -90,6 +91,7 @@ const StopSchema = z.object({
 export const BookingSchema = z.object({
   id: z.string(),
   bookingServerId: z.number().optional(),
+  requestId: z.number().optional(),
   stops: z.array(StopSchema),
   siteId: z.number().optional(),
   accountId: z.number().optional(),
