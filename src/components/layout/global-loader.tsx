@@ -20,9 +20,10 @@ export default function GlobalLoader() {
     const handleStart = (url: string) => {
       // Create a URL object to easily compare paths, ignoring the domain.
       const currentPath = window.location.pathname + window.location.search;
+      // The `url` from pushState might be a relative path, so resolve it against the current origin.
       const targetUrl = new URL(url, window.location.origin);
       const targetPath = targetUrl.pathname + targetUrl.search;
-
+      
       if (targetPath !== currentPath) {
         // Defer state update to next tick to avoid React warning.
         setTimeout(() => setLoading(true), 0);
