@@ -79,27 +79,23 @@ const saveJourneyFlow = ai.defineFlow(
           if (result.bookingsegments.length > 0) {
               const serverSegments = result.bookingsegments; // [{id, ...}, {id, ...}]
               
-              // The API returns segments for each leg.
-              // A simple booking (1 pickup, 1 dropoff) has 1 segment.
-              // A booking with 1 via stop has 2 segments.
-              // The number of segments is stops.length - 1
-
-              for (let i = 0; i < bookingWithServerIds.stops.length; i++) {
-                // The first stop (pickup) uses the first segment ID.
-                // Subsequent stops (vias) also use the first segment ID corresponding to their leg.
-                
-                if (i < serverSegments.length) {
-                    bookingWithServerIds.stops[i].bookingSegmentId = parseInt(serverSegments[i].id, 10);
-                }
-
-                // The last stop doesn't depart anywhere, but for consistency in the journey payload,
-                // it's often associated with the last segment.
-                if (i === bookingWithServerIds.stops.length - 1 && serverSegments.length > 0) {
-                     // The last stop of the booking should also get the segment id of the final leg.
-                     const lastSegmentIndex = serverSegments.length - 1;
-                     bookingWithServerIds.stops[i].bookingSegmentId = parseInt(serverSegments[lastSegmentIndex].id, 10);
+              // A simple booking has 1 pickup and 1 dropoff, which is one segment.
+              // A booking with 1 via stop has 2 segments (P -> V, V -> D).
+              // Number of segments = number of stops - 1.
+              // The API returns the segments in order.
+              
+              // We assign the segment ID to the *origin* stop of that leg.
+              for (let i = 0; i < serverSegments.length; i++) {
+                const segmentId = parseInt(serverSegments[i].id, 10);
+                // The stop at index `i` is the origin of the leg represented by `serverSegments[i]`.
+                if (bookingWithServerIds.stops[i]) {
+                    bookingWithServerIds.stops[i].bookingSegmentId = segmentId;
                 }
               }
+              
+              // The final stop (destination) of the booking doesn't start a new segment,
+              // but for the journey payload, it's often linked to the last segment's ID.
+              // We handle this logic in the journey-payload-flow itself.
           }
           
           processedBookings.push(bookingWithServerIds);

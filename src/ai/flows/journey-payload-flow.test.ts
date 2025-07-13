@@ -18,7 +18,7 @@ function createStop(id: string, type: 'pickup' | 'dropoff', address: string, lat
         // Only dropoffs should have a pickupStopId
         pickupStopId: type === 'dropoff' ? pickupId : undefined,
         // Assign arbitrary but unique segment IDs for testing purposes
-        bookingSegmentId: parseInt(id.replace('s', ''), 10) + 1000, 
+        bookingSegmentId: parseInt(id.replace('s', ''), 10) + 1000,
     };
 }
 
@@ -60,23 +60,12 @@ async function runTest() {
     console.log("Booking 1 (Robert):", booking1.stops.map(s => `${s.stopType} at ${s.location.address}`));
     console.log("Booking 2 (John):", booking2.stops.map(s => `${s.stopType} at ${s.location.address}`));
     
-    // The flow expects dateTime properties to be Date objects.
-    const sanitizedInput = {
-        ...input,
-        bookings: input.bookings.map(b => ({
-            ...b,
-            stops: b.stops.map((s: any) => ({
-                ...s,
-                dateTime: s.dateTime ? new Date(s.dateTime) : (s.stopType === 'pickup' ? new Date() : undefined)
-            }))
-        }))
-    };
-
+    
     try {
         // Convert the Date object back to an ISO string for the schema validation
         const inputForFlow = {
-            ...sanitizedInput,
-            bookings: sanitizedInput.bookings.map(b => ({
+            ...input,
+            bookings: input.bookings.map(b => ({
                 ...b,
                 stops: b.stops.map((s: any) => ({
                     ...s,

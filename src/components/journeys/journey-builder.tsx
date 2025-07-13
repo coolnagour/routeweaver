@@ -102,14 +102,15 @@ export default function JourneyBuilder({
   const debouncedFetchPreview = useCallback(debounce(fetchPreview, 500), [fetchPreview]);
 
   useEffect(() => {
+    let placeholderIdCounter = 1000;
     // A simplified booking object is created for the debug view, as server IDs are not yet available.
     // This provides a structural preview but won't have the final IDs.
-    const tempBookingsForPreview = bookings.map(b => ({
+    const tempBookingsForPreview = bookings.map((b, bookingIndex) => ({
       ...b,
-      requestId: b.requestId || Date.now(), // Use a temp ID for preview
+      requestId: b.requestId || (9000 + bookingIndex), // Use a temp ID for preview
       stops: b.stops.map(s => ({
         ...s,
-        bookingSegmentId: s.bookingSegmentId || Date.now()
+        bookingSegmentId: s.bookingSegmentId || placeholderIdCounter++ // Use unique placeholder IDs
       }))
     }));
     debouncedFetchPreview(tempBookingsForPreview, currentJourney);
