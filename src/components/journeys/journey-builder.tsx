@@ -16,6 +16,7 @@ import { useServer } from '@/context/server-context';
 import { useRouter } from 'next/navigation';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import AccountAutocomplete from './account-autocomplete';
+import { v4 as uuidv4 } from 'uuid';
 
 interface JourneyBuilderProps {
   initialData?: Partial<JourneyTemplate> | null;
@@ -50,10 +51,10 @@ export default function JourneyBuilder({
     // Deep copy to prevent mutation of the source
     return JSON.parse(JSON.stringify(data.bookings)).map((b: any) => ({
       ...b,
-      id: b.id || new Date().toISOString() + Math.random(),
+      id: b.id || uuidv4(),
       stops: b.stops.map((s: any) => ({
         ...s,
-        id: s.id || new Date().toISOString() + Math.random(),
+        id: s.id || uuidv4(),
         dateTime: s.dateTime ? new Date(s.dateTime) : undefined
       }))
     }));
@@ -124,7 +125,7 @@ export default function JourneyBuilder({
       setCurrentJourney(updatedJourneyData);
     } else {
         const newJourney: Journey = {
-            id: `local_${new Date().toISOString()}`,
+            id: uuidv4(),
             status: 'Draft',
             bookings: bookings,
             siteId: selectedSiteId,
@@ -177,7 +178,7 @@ export default function JourneyBuilder({
       router.push('/templates');
     } else {
       const newTemplate: JourneyTemplate = {
-        id: new Date().toISOString(),
+        id: uuidv4(),
         ...templateData,
       };
       setTemplates([...templates, newTemplate]);

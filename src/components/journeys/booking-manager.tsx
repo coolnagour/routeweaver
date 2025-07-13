@@ -8,6 +8,7 @@ import type { Booking, Stop } from '@/types';
 import JourneyForm from './journey-form';
 import { Edit, MapPin, Package, Trash2, UserPlus, Users, Phone, Clock, MessageSquare } from 'lucide-react';
 import { format } from 'date-fns';
+import { v4 as uuidv4 } from 'uuid';
 
 const getPassengersFromStops = (stops: Stop[]) => {
     return stops.filter(s => s.stopType === 'pickup');
@@ -29,10 +30,10 @@ export default function BookingManager({ bookings, setBookings }: BookingManager
 
   const handleAddNewBooking = () => {
     setEditingBooking({
-      id: new Date().toISOString() + Math.random(),
+      id: uuidv4(),
       stops: [
-        { id: new Date().toISOString() + Math.random(), location: emptyLocation, stopType: 'pickup', name: '', phone: '', dateTime: new Date() },
-        { id: new Date().toISOString() + Math.random(), location: emptyLocation, stopType: 'dropoff' }
+        { id: uuidv4(), location: emptyLocation, stopType: 'pickup', name: '', phone: '', dateTime: new Date() },
+        { id: uuidv4(), location: emptyLocation, stopType: 'dropoff' }
       ]
     });
   };

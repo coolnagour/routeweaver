@@ -20,6 +20,7 @@ import type { Stop, SuggestionInput } from '@/types';
 import { cn } from '@/lib/utils';
 import { format, setHours, setMinutes } from 'date-fns';
 import AddressAutocomplete from './address-autocomplete';
+import { v4 as uuidv4 } from 'uuid';
 
 interface ViaStopProps {
   control: any;

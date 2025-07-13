@@ -11,6 +11,7 @@ import AiTemplateModal from './ai-template-modal';
 import { useToast } from '@/hooks/use-toast';
 import { useServer } from '@/context/server-context';
 import { useRouter } from 'next/navigation';
+import { v4 as uuidv4 } from 'uuid';
 
 interface TemplateManagerProps {
   onLoadTemplate: (template: JourneyTemplate) => void;
@@ -38,7 +39,7 @@ export default function TemplateManager({ onLoadTemplate }: TemplateManagerProps
 
   const handleAiTemplateCreate = (templateData: Omit<JourneyTemplate, 'id' | 'name'> & { name: string }) => {
     const newTemplate = {
-        id: new Date().toISOString(),
+        id: uuidv4(),
         ...templateData,
     };
     if (!newTemplate.name) {

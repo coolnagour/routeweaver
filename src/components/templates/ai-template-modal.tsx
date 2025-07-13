@@ -17,6 +17,7 @@ import { Bot, Loader2, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { AITemplateSuggestion, JourneyTemplate } from '@/types';
 import { suggestTemplates } from '@/ai/flows/template-suggestion-flow';
+import { v4 as uuidv4 } from 'uuid';
 
 interface AiTemplateModalProps {
   isOpen: boolean;
@@ -54,10 +55,10 @@ export default function AiTemplateModal({ isOpen, onOpenChange, onTemplateCreate
      const templateToCreate: Omit<JourneyTemplate, 'id'> = {
       name: suggestion.name,
       bookings: suggestion.bookings.map(b => ({
-        id: `booking_${Math.random()}`,
+        id: uuidv4(),
         stops: b.stops.map(s => ({
           ...s,
-          id: `stop_${Math.random()}`,
+          id: uuidv4(),
           // The AI provides a string address, which is what we need.
           // Lat/Lng will be populated when the user confirms the address in the builder.
           location: { address: s.location.address, lat: 0, lng: 0 },
