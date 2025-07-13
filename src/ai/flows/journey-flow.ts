@@ -137,8 +137,9 @@ const saveJourneyFlow = ai.defineFlow(
 
     // Step 3: Build the journey payload with calculated distances and correct identifiers
     const journeyBookingsPayload = [];
-    let plannedDate = Math.floor(new Date().getTime() / 100); // Initial planned date
     let lastLocation: { lat: number; lng: number } | null = null;
+    const pickupMap = new Map<string, Stop>();
+    createdBookings.flatMap(b => b.stops).filter(s => s.stopType === 'pickup').forEach(s => pickupMap.set(s.id, s));
 
     for (const [_, stops] of orderedLocations) {
       let distance = 0;
@@ -157,6 +158,21 @@ const saveJourneyFlow = ai.defineFlow(
         if (!idToUse) {
             throw new Error(`Missing identifier for stop. StopType: ${stop.stopType}, isFinal: ${isFinalStopOfBooking}, Address: ${stop.location.address}`);
         }
+        
+        let plannedDate: string | undefined;
+        if (stop.stopType === 'pickup' && stop.dateTime) {
+          plannedDate = new Date(stop.dateTime).toISOString();
+        } else if (stop.stopType === 'dropoff' && stop.pickupStopId) {
+          const correspondingPickup = pickupMap.get(stop.pickupStopId);
+          if (correspondingPickup?.dateTime) {
+            plannedDate = new Date(correspondingPickup.dateTime).toISOString();
+          }
+        }
+        // Fallback for any stops without a date (should not happen for pickups in valid bookings)
+        if (!plannedDate) {
+          plannedDate = new Date().toISOString();
+          console.warn(`[Journey Flow] Stop for address ${stop.location.address} did not have a resolvable planned_date. Using current time.`);
+        }
 
         journeyBookingsPayload.push({
           [idType]: idToUse,
@@ -165,12 +181,10 @@ const saveJourneyFlow = ai.defineFlow(
           distance: journeyBookingsPayload.length === 0 ? 0 : distance,
         });
         
-        distance = 0;
-        plannedDate += 60;
+        distance = 0; // Only apply distance to the first stop at a location
       }
 
       lastLocation = currentLocation;
-      plannedDate += 600;
     }
     
     const journeyPayload = {
