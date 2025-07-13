@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview Manages journey-related operations using the iCabbi API.
@@ -68,21 +67,20 @@ const saveJourneyFlow = ai.defineFlow(
           throw new Error(`Invalid response from createBooking. Response: ${JSON.stringify(result)}`);
         }
 
-        const bookingWithServerIds: Booking = { ...booking, bookingServerId: result.id, requestId: result.request_id, stops: [] };
+        const bookingWithServerIds: Booking = { 
+            ...booking, 
+            bookingServerId: result.id, 
+            requestId: result.request_id, 
+            stops: [...booking.stops] // Important: work with a copy
+        };
 
-        // Match server booking segments back to our local stops to get segment IDs
-        const localStops = [...booking.stops];
+        // Match server booking segments back to our local stops using pickup_order
         for (const segment of result.bookingsegments) {
-            // Find the corresponding local stop. A more robust solution might match on lat/lng.
-            // For now, we assume segment order matches stop order for a given booking.
-            const stopType = segment.type.toLowerCase();
-            const matchingStopIndex = localStops.findIndex(s => s.stopType === stopType && !s.bookingSegmentId);
-            
-            if (matchingStopIndex > -1) {
-                const matchingStop = localStops[matchingStopIndex];
-                matchingStop.bookingSegmentId = segment.id.toString();
-                bookingWithServerIds.stops.push(matchingStop);
-                localStops.splice(matchingStopIndex, 1); // Remove from pool
+            const stopIndex = parseInt(segment.pickup_order, 10) - 1;
+            if (stopIndex >= 0 && stopIndex < bookingWithServerIds.stops.length) {
+                bookingWithServerIds.stops[stopIndex].bookingSegmentId = segment.id.toString();
+            } else {
+                console.warn(`[Journey Flow] Could not match booking segment with pickup_order: ${segment.pickup_order}`);
             }
         }
         
@@ -116,7 +114,7 @@ const saveJourneyFlow = ai.defineFlow(
 
     // Step 3: Build the journey payload with calculated distances and correct identifiers
     const journeyBookingsPayload = [];
-    let plannedDate = Math.floor(new Date().getTime() / 1000); // Initial planned date
+    let plannedDate = Math.floor(new Date().getTime() / 100); // Initial planned date
     let lastLocation: { lat: number; lng: number } | null = null;
 
     for (const [_, stops] of orderedLocations) {
@@ -128,13 +126,13 @@ const saveJourneyFlow = ai.defineFlow(
       }
       
       for (const stop of stops) {
-        const isFinalStopOfBooking = stop.stopType === 'dropoff' && !stop.parentBooking.stops.some(s => s.stopType === 'dropoff' && s.id !== stop.id);
+        const isFinalStopOfBooking = stop.id === stop.parentBooking.stops[stop.parentBooking.stops.length - 1].id;
         
         const idToUse = isFinalStopOfBooking ? stop.parentBooking.requestId : stop.bookingSegmentId;
         const idType = isFinalStopOfBooking ? 'request_id' : 'bookingsegment_id';
 
         if (!idToUse) {
-            throw new Error(`Missing identifier for stop. StopType: ${stop.stopType}, isFinal: ${isFinalStopOfBooking}`);
+            throw new Error(`Missing identifier for stop. StopType: ${stop.stopType}, isFinal: ${isFinalStopOfBooking}, Address: ${stop.location.address}`);
         }
 
         journeyBookingsPayload.push({

@@ -12,12 +12,12 @@ interface IcabbiApiCallOptions {
 }
 
 const formatBookingForIcabbi = (booking: Booking, server: ServerConfig) => {
+    if (booking.stops.length < 2) {
+        throw new Error("Booking must have at least a pickup and a dropoff stop.");
+    }
     const pickupStop = booking.stops.find(s => s.stopType === 'pickup');
-    // In this new model, we assume a simple 1 pickup, 1 dropoff booking.
-    const dropoffStop = booking.stops.find(s => s.stopType === 'dropoff');
-
-    if (!pickupStop || !dropoffStop) {
-        throw new Error("Booking must have at least one pickup and one dropoff stop.");
+    if (!pickupStop) {
+        throw new Error("Booking must contain at least one pickup stop.");
     }
     
     if (!booking.siteId) {
@@ -28,6 +28,11 @@ const formatBookingForIcabbi = (booking: Booking, server: ServerConfig) => {
         throw new Error("Account ID is required for booking.");
     }
 
+    const firstStop = booking.stops[0];
+    const lastStop = booking.stops[booking.stops.length - 1];
+    const viaStops = booking.stops.slice(1, -1);
+
+
     return {
         date: pickupStop.dateTime?.toISOString() || new Date().toISOString(),
         source: "DISPATCH",
@@ -35,17 +40,23 @@ const formatBookingForIcabbi = (booking: Booking, server: ServerConfig) => {
         phone: pickupStop.phone || 'N/A',
         customer_id: "123", // Example customer_id
         address: {
-            lat: pickupStop.location.lat.toString(),
-            lng: pickupStop.location.lng.toString(),
-            formatted: pickupStop.location.address,
-            driver_instructions: pickupStop.instructions || "",
+            lat: firstStop.location.lat.toString(),
+            lng: firstStop.location.lng.toString(),
+            formatted: firstStop.location.address,
+            driver_instructions: firstStop.instructions || "",
         },
         destination: {
-            lat: dropoffStop.location.lat.toString(),
-            lng: dropoffStop.location.lng.toString(),
-            formatted: dropoffStop.location.address,
-            driver_instructions: dropoffStop.instructions || "",
+            lat: lastStop.location.lat.toString(),
+            lng: lastStop.location.lng.toString(),
+            formatted: lastStop.location.address,
+            driver_instructions: lastStop.instructions || "",
         },
+        vias: viaStops.map(stop => ({
+            lat: stop.location.lat.toString(),
+            lng: stop.location.lng.toString(),
+            formatted: stop.location.address,
+            driver_instructions: stop.instructions || "",
+        })),
         account_id: booking.accountId,
         site_id: booking.siteId,
         with_bookingsegments: true,
@@ -169,7 +180,7 @@ export async function getSites(server: ServerConfig): Promise<{ id: number, name
  * Searches for accounts by name.
  */
 export async function searchAccountsByName(server: ServerConfig, query: string, options: { limit?: number, offset?: number } = {}): Promise<Account[]> {
-  const { limit = 50, offset = 0 } = options;
+  const { limit = 25, offset = 0 } = options;
   const params = new URLSearchParams({
     name: query,
     limit: limit.toString(),
