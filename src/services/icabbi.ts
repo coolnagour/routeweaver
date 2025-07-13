@@ -3,6 +3,7 @@
 
 import type { ServerConfig } from "@/config/servers";
 import type { Booking, Account } from "@/types";
+import parsePhoneNumberFromString from 'libphonenumber-js';
 
 interface IcabbiApiCallOptions {
     server: ServerConfig;
@@ -32,14 +33,22 @@ const formatBookingForIcabbi = (booking: Booking, server: ServerConfig) => {
     const lastStop = booking.stops[booking.stops.length - 1];
     const viaStops = booking.stops.slice(1, -1);
 
-    // Sanitize phone number to remove non-digit characters
-    const cleanedPhone = (pickupStop.phone || '').replace(/\D/g, '');
+    let formattedPhone = (pickupStop.phone || '').replace(/\D/g, '');
+    if (pickupStop.phone) {
+        // Use the first country code from server config as default for parsing
+        const defaultCountry = server.countryCodes?.[0]?.toUpperCase() as any;
+        const phoneNumber = parsePhoneNumberFromString(pickupStop.phone, defaultCountry);
+        if (phoneNumber && phoneNumber.isValid()) {
+            formattedPhone = phoneNumber.number.toString(); // E.164 format
+        }
+    }
+
 
     return {
         date: pickupStop.dateTime?.toISOString() || new Date().toISOString(),
         source: "DISPATCH",
         name: pickupStop.name || 'N/A',
-        phone: cleanedPhone || 'N/A',
+        phone: formattedPhone || 'N/A',
         customer_id: "123", // Example customer_id
         address: {
             lat: firstStop.location.lat.toString(),
