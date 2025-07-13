@@ -15,7 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import type { Journey, Booking, Stop } from '@/types';
 import { format } from 'date-fns';
 import useLocalStorage from '@/hooks/use-local-storage';
-import { Users, MapPin, Clock, MessageSquare, Edit, Send, Loader2, Info, ChevronDown } from 'lucide-react';
+import { Users, MapPin, Clock, MessageSquare, Edit, Send, Loader2, Info, ChevronDown, Trash2 } from 'lucide-react';
 import { useServer } from '@/context/server-context';
 import { Button } from '../ui/button';
 import { useRouter } from 'next/navigation';
@@ -58,6 +58,15 @@ export default function RecentJourneys() {
 
   const handleEditJourney = (id: string) => {
     router.push(`/journeys/${id}/edit`);
+  };
+
+  const handleDeleteJourney = (id: string) => {
+    setJourneys(journeys.filter(j => j.id !== id));
+    toast({
+        title: 'Journey Deleted',
+        description: 'The journey has been removed from your local list.',
+        variant: 'destructive'
+    });
   };
 
   const handlePublishJourney = async (journey: Journey) => {
@@ -172,6 +181,9 @@ export default function RecentJourneys() {
                           )}
                           <Button variant="ghost" size="icon" onClick={() => handleEditJourney(journey.id)}>
                               <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteJourney(journey.id)}>
+                              <Trash2 className="h-4 w-4" />
                           </Button>
                           <Button variant="ghost" size="icon" onClick={() => handleToggleExpand(journey.id)}>
                               <ChevronDown className={cn("h-4 w-4 transition-transform", expandedJourneyId === journey.id && "rotate-180")} />
