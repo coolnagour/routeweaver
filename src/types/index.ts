@@ -113,6 +113,7 @@ export const ServerConfigSchema = z.object({
 
 export const JourneyInputSchema = z.object({
   bookings: z.array(BookingSchema),
+  journeyServerId: z.number().optional(),
 });
 export type JourneyInput = z.infer<typeof JourneyInputSchema>;
 

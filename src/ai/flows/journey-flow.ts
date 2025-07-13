@@ -17,6 +17,7 @@ const SaveJourneyInputSchema = JourneyInputSchema.extend({
   server: ServerConfigSchema,
   siteId: z.number(),
   accountId: z.number(),
+  journeyServerId: z.number().optional(), // Add optional journeyServerId for updates
 });
 type SaveJourneyInput = z.infer<typeof SaveJourneyInputSchema>;
 
@@ -49,11 +50,11 @@ const saveJourneyFlow = ai.defineFlow(
     inputSchema: SaveJourneyInputSchema,
     outputSchema: JourneyOutputSchema,
   },
-  async ({ bookings, server, siteId, accountId }) => {
-    console.log(`[Journey Flow] Starting journey creation with ${bookings.length} booking(s) for site ID: ${siteId} and account ID: ${accountId}`);
+  async ({ bookings, server, siteId, accountId, journeyServerId }) => {
+    console.log(`[Journey Flow] Starting journey processing with ${bookings.length} booking(s) for site ID: ${siteId}, account ID: ${accountId}, and journey ID: ${journeyServerId || 'new'}`);
 
     if (bookings.length === 0) {
-      throw new Error('No bookings provided to create a journey.');
+      throw new Error('No bookings provided to create or update a journey.');
     }
 
     // Ensure all dateTime properties are Date objects for processing
@@ -213,20 +214,23 @@ const saveJourneyFlow = ai.defineFlow(
         delete_outstanding_journeys: "false",
         keyless_response: true,
         journeys: [{
-            id: null,
+            id: journeyServerId || null, // Use existing journeyId if provided
             bookings: journeyBookingsPayload,
         }],
     };
     
-    console.log(`[Journey Flow] Creating journey with payload:`, JSON.stringify(journeyPayload, null, 2));
+    console.log(`[Journey Flow] Creating/updating journey with payload:`, JSON.stringify(journeyPayload, null, 2));
 
     // Step 4: Create the journey
     try {
         const journeyResult = await createJourney(server, journeyPayload);
-        console.log('[Journey Flow] Journey creation successful:', journeyResult);
+        console.log('[Journey Flow] Journey creation/update successful:', journeyResult);
 
-        const journeyServerId = journeyResult?.journeys?.[0]?.[0]?.journey_id;
-        if (!journeyServerId) {
+        // The journey_id can be in a nested array. Let's find it safely.
+        const returnedJourneyId = journeyResult?.journeys?.[0]?.[0]?.journey_id;
+        const finalJourneyServerId = journeyServerId || (returnedJourneyId ? parseInt(returnedJourneyId, 10) : undefined);
+
+        if (!finalJourneyServerId) {
           throw new Error('Journey server ID was not returned from the server.');
         }
 
@@ -246,13 +250,13 @@ const saveJourneyFlow = ai.defineFlow(
         });
 
         return {
-            journeyServerId: parseInt(journeyServerId, 10),
+            journeyServerId: finalJourneyServerId,
             bookings: finalBookings,
             status: 'Scheduled',
-            message: `Journey with ${finalBookings.length} booking(s) was successfully scheduled.`,
+            message: `Journey with ${finalBookings.length} booking(s) was successfully ${journeyServerId ? 'updated' : 'scheduled'}.`,
         };
     } catch (error) {
-        console.error('[Journey Flow] Failed to create journey:', error);
+        console.error('[Journey Flow] Failed to create/update journey:', error);
         throw new Error(`Failed to link bookings into a journey. Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }

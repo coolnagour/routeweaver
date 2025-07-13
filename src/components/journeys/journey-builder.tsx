@@ -113,7 +113,7 @@ export default function JourneyBuilder({
       const updatedJourneyData: Journey = {
         ...currentJourney,
         bookings: bookings,
-        status: currentJourney.status === 'Scheduled' ? 'Scheduled' : 'Draft',
+        status: currentJourney.status, // Keep existing status on local save
         siteId: selectedSiteId,
         account: selectedAccount,
       };
@@ -215,7 +215,13 @@ export default function JourneyBuilder({
 
     setIsSubmitting(true);
     try {
-        const result = await saveJourney({ bookings: journeyToPublish.bookings, server, siteId: selectedSiteId, accountId: selectedAccount.id });
+        const result = await saveJourney({ 
+          bookings: journeyToPublish.bookings, 
+          server, 
+          siteId: selectedSiteId, 
+          accountId: selectedAccount.id,
+          journeyServerId: journeyToPublish.journeyServerId, // Pass existing journey ID
+        });
         
         const publishedJourney: Journey = {
             ...journeyToPublish,
@@ -260,6 +266,7 @@ export default function JourneyBuilder({
   };
   
   const title = getTitle();
+  const publishButtonText = currentJourney?.status === 'Scheduled' ? 'Update Journey' : 'Publish';
 
   return (
     <div className="space-y-6 py-8">
@@ -327,9 +334,9 @@ export default function JourneyBuilder({
                     <Save className="mr-2 h-4 w-4" /> {isEditingJourney ? 'Update Journey' : 'Save Journey'}
                 </Button>
                 
-                <Button onClick={handlePublishJourney} disabled={isSubmitting || !currentJourney || currentJourney.status === 'Scheduled' || bookings.length === 0 || !selectedSiteId || !selectedAccount}>
+                <Button onClick={handlePublishJourney} disabled={isSubmitting || !currentJourney || bookings.length === 0 || !selectedSiteId || !selectedAccount}>
                     {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                    Publish
+                    {publishButtonText}
                 </Button>
               </div>
           </CardFooter>
