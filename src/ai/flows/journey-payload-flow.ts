@@ -95,25 +95,21 @@ export async function generateJourneyPayload(input: JourneyPayloadInput): Promis
         break; 
       }
       
-      // Find the closest valid stop by manually iterating.
-      let nextStop = candidateStops[0];
-      let minDistance = getDistanceFromLatLonInMeters(
-          currentStop.location.lat, currentStop.location.lng,
-          nextStop.location.lat, nextStop.location.lng
-      );
-
-      for (let i = 1; i < candidateStops.length; i++) {
-          const candidate = candidateStops[i];
-          const distance = getDistanceFromLatLonInMeters(
+      const nextStop = candidateStops.reduce((closest, candidate) => {
+          const closestDistance = getDistanceFromLatLonInMeters(
+              currentStop.location.lat, currentStop.location.lng,
+              closest.location.lat, closest.location.lng
+          );
+          const candidateDistance = getDistanceFromLatLonInMeters(
               currentStop.location.lat, currentStop.location.lng,
               candidate.location.lat, candidate.location.lng
           );
-          
-          if (distance < minDistance) {
-              minDistance = distance;
-              nextStop = candidate;
+
+          if (candidateDistance < closestDistance) {
+              return candidate;
           }
-      }
+          return closest;
+      });
       
       currentStop = nextStop; // The next stop becomes our new current stop
       orderedStops.push(currentStop);
