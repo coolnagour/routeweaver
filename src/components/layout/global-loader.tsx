@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -19,7 +18,8 @@ export default function GlobalLoader() {
     const handleStart = (url: string) => {
       const currentUrl = `${pathname}${searchParams.toString()}`;
       if (url !== currentUrl) {
-        setLoading(true);
+        // Defer the state update to the next tick to avoid the React error.
+        setTimeout(() => setLoading(true), 0);
       }
     };
 
