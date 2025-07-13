@@ -10,7 +10,7 @@ import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { JourneyInputSchema, JourneyOutputSchema, ServerConfigSchema } from '@/types';
 import { createBooking, createJourney } from '@/services/icabbi';
-import type { Booking, JourneyOutput, Stop, Location } from '@/types';
+import type { Booking, JourneyOutput, Stop } from '@/types';
 
 // Extend the input schema to include server config, siteId, and accountId
 const SaveJourneyInputSchema = JourneyInputSchema.extend({
@@ -176,6 +176,7 @@ const saveJourneyFlow = ai.defineFlow(
         }
         
         let plannedDate: string | undefined;
+        // The planned_date for all stops in the journey should be the time of that stop's specific pickup
         if (stop.stopType === 'pickup' && stop.dateTime) {
           plannedDate = new Date(stop.dateTime).toISOString();
         } else if (stop.stopType === 'dropoff' && stop.pickupStopId) {
@@ -246,3 +247,5 @@ const saveJourneyFlow = ai.defineFlow(
     }
   }
 );
+
+    
