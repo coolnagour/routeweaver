@@ -227,7 +227,10 @@ export default function JourneyBuilder({
         }],
     };
 
-    return journeyPayload;
+    return {
+      originalBookings: bookings,
+      journeyPayload,
+    };
   }, [bookings, currentJourney]);
   
   useEffect(() => {
