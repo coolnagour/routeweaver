@@ -15,7 +15,7 @@ import type { Journey, Booking, Stop } from '@/types';
 import { format } from 'date-fns';
 import useLocalStorage from '@/hooks/use-local-storage';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Users, MapPin, Clock, MessageSquare, Edit, Send, Loader2 } from 'lucide-react';
+import { Users, MapPin, Clock, MessageSquare, Edit, Send, Loader2, Info } from 'lucide-react';
 import { useServer } from '@/context/server-context';
 import { Button } from '../ui/button';
 import { useRouter } from 'next/navigation';
@@ -175,7 +175,14 @@ export default function RecentJourneys() {
                             <TableCell colSpan={5} className="p-0">
                                 <AccordionContent>
                                     <div className="p-4 bg-muted/50">
-                                        <h4 className="font-semibold mb-2">Bookings in this Journey:</h4>
+                                        <div className="flex justify-between items-center mb-2">
+                                            <h4 className="font-semibold">Bookings in this Journey:</h4>
+                                            {journey.journeyServerId && (
+                                                <div className="text-xs font-mono text-muted-foreground bg-background border p-1 rounded-md">
+                                                    Journey Server ID: {journey.journeyServerId}
+                                                </div>
+                                            )}
+                                        </div>
                                         <div className="grid gap-4 md:grid-cols-2">
                                         {journey.bookings.map(booking => {
                                             const bookingDateTime = getBookingDateTime(booking);
@@ -183,10 +190,20 @@ export default function RecentJourneys() {
                                             return (
                                             <Card key={booking.id} className="bg-background">
                                                 <CardHeader className="p-3">
-                                                    <CardTitle className="text-md">
-                                                        {bookingDateTime ? format(new Date(bookingDateTime), "PPP p") : 'Booking'}
-                                                    </CardTitle>
-                                                    <CardDescription>{pickups.length} passenger(s)</CardDescription>
+                                                    <div className="flex justify-between items-start">
+                                                        <div>
+                                                            <CardTitle className="text-md">
+                                                                {bookingDateTime ? format(new Date(bookingDateTime), "PPP p") : 'Booking'}
+                                                            </CardTitle>
+                                                            <CardDescription>{pickups.length} passenger(s)</CardDescription>
+                                                        </div>
+                                                        {(booking.bookingServerId || booking.requestId) && (
+                                                            <div className="text-right text-[10px] font-mono text-muted-foreground space-y-0.5">
+                                                                {booking.bookingServerId && <div>Booking ID: {booking.bookingServerId}</div>}
+                                                                {booking.requestId && <div>Request ID: {booking.requestId}</div>}
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </CardHeader>
                                                 <CardContent className="p-3 pt-0 space-y-2 text-sm">
                                                     <div className="space-y-1">
@@ -212,6 +229,11 @@ export default function RecentJourneys() {
                                                                         </div>
                                                                     )}
                                                                 </div>
+                                                                {stop.bookingSegmentId && (
+                                                                    <div className="text-[10px] font-mono text-muted-foreground">
+                                                                        SegID: {stop.bookingSegmentId}
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         ))}
                                                     </div>
@@ -239,5 +261,3 @@ export default function RecentJourneys() {
     </div>
   );
 }
-
-    

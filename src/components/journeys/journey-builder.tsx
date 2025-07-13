@@ -112,7 +112,7 @@ export default function JourneyBuilder({
       const updatedJourneyData: Journey = {
         ...currentJourney,
         bookings: bookings,
-        status: 'Draft',
+        status: currentJourney.status === 'Scheduled' ? 'Scheduled' : 'Draft',
         siteId: selectedSiteId,
         account: selectedAccount,
       };
@@ -136,7 +136,6 @@ export default function JourneyBuilder({
             description: 'Your journey has been saved as a draft.',
         });
         
-        // If we are not already on an edit page, redirect to the new one
         if (!isEditingJourney) {
              router.push(`/journeys/${newJourney.id}/edit`);
         } else {
@@ -249,7 +248,12 @@ export default function JourneyBuilder({
   
   const getTitle = () => {
     if (isEditingTemplate) return `Editing Template: ${initialData?.name}`;
-    if (isEditingJourney && currentJourney) return `Editing Journey`;
+    if (isEditingJourney && currentJourney) {
+      if (currentJourney.journeyServerId) {
+        return `Editing Journey (ID: ${currentJourney.journeyServerId})`;
+      }
+      return 'Editing Journey';
+    }
     if (initialData?.name) return `New Journey from: ${initialData.name}`;
     return 'Create a New Journey';
   };
@@ -322,7 +326,7 @@ export default function JourneyBuilder({
                     <Save className="mr-2 h-4 w-4" /> {isEditingJourney ? 'Update Journey' : 'Save Journey'}
                 </Button>
                 
-                <Button onClick={handlePublishJourney} disabled={isSubmitting || !currentJourney || bookings.length === 0 || !selectedSiteId || !selectedAccount}>
+                <Button onClick={handlePublishJourney} disabled={isSubmitting || !currentJourney || currentJourney.status === 'Scheduled' || bookings.length === 0 || !selectedSiteId || !selectedAccount}>
                     {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
                     Publish
                 </Button>
@@ -332,5 +336,3 @@ export default function JourneyBuilder({
     </div>
   );
 }
-
-    
