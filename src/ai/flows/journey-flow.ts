@@ -77,7 +77,7 @@ const saveJourneyFlow = ai.defineFlow(
         // Map server booking segments back to our local stops.
         if (result.bookingsegments.length > 0) {
           // The first segment represents the main journey (pickup to destination)
-          const mainSegmentId = result.bookingsegments[0].id.toString();
+          const mainSegmentId = parseInt(result.bookingsegments[0].id, 10);
           // Assign this ID to the first and last stop of our local booking
           if (bookingWithServerIds.stops.length > 0) {
             bookingWithServerIds.stops[0].bookingSegmentId = mainSegmentId;
@@ -90,7 +90,7 @@ const saveJourneyFlow = ai.defineFlow(
           
           for (let i = 0; i < viaSegments.length; i++) {
             if (localViaStops[i]) {
-              localViaStops[i].bookingSegmentId = viaSegments[i].id.toString();
+              localViaStops[i].bookingSegmentId = parseInt(viaSegments[i].id, 10);
             }
           }
         }
