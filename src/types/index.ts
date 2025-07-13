@@ -39,7 +39,7 @@ export interface Account {
 export interface Journey {
   id: string;
   bookings: Booking[];
-  status: 'Scheduled' | 'Completed' | 'Cancelled';
+  status: 'Draft' | 'Scheduled' | 'Completed' | 'Cancelled';
 }
 
 // Stored template has string dates

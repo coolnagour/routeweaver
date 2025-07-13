@@ -10,7 +10,7 @@ import useLocalStorage from '@/hooks/use-local-storage';
 import { saveJourney } from '@/ai/flows/journey-flow';
 import { getSites } from '@/services/icabbi';
 import type { Booking, Journey, JourneyTemplate, Account } from '@/types';
-import { Save, Building, Loader2 } from 'lucide-react';
+import { Save, Building, Loader2, Send } from 'lucide-react';
 import BookingManager from './booking-manager';
 import { useServer } from '@/context/server-context';
 import { useRouter } from 'next/navigation';
@@ -60,11 +60,16 @@ export default function JourneyBuilder({
 
   const [bookings, setBookings] = useState<Booking[]>(() => getInitialBookings(initialData));
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentJourney, setCurrentJourney] = useState<Journey | null>(null);
   
   useEffect(() => {
     setBookings(getInitialBookings(initialData));
     setTemplateName(initialData?.name || '');
-  }, [initialData]);
+    if (journeyId) {
+        const foundJourney = journeys.find(j => j.id === journeyId);
+        setCurrentJourney(foundJourney || null);
+    }
+  }, [initialData, journeyId, journeys]);
 
   useEffect(() => {
     async function fetchSites() {
@@ -85,6 +90,43 @@ export default function JourneyBuilder({
     fetchSites();
   }, [server, toast]);
 
+  const handleSaveJourneyLocally = () => {
+    if (bookings.length === 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Cannot save empty journey',
+        description: 'Please add at least one booking to the journey.',
+      });
+      return;
+    }
+
+    if (isEditingJourney && onUpdateJourney && journeyId) {
+      const updatedJourney: Journey = {
+        id: journeyId,
+        status: 'Draft',
+        bookings: bookings
+      };
+      onUpdateJourney(updatedJourney);
+      toast({
+        title: 'Journey Updated!',
+        description: `Your journey has been successfully updated locally.`,
+      });
+      setCurrentJourney(updatedJourney);
+    } else {
+        const newJourney: Journey = {
+            id: `local_${new Date().toISOString()}`,
+            status: 'Draft',
+            bookings: bookings
+        };
+        setJourneys([newJourney, ...journeys]);
+        toast({
+            title: 'Journey Saved!',
+            description: 'Your journey has been saved as a draft.',
+        });
+        setCurrentJourney(newJourney);
+        router.push(`/journeys/${newJourney.id}/edit`);
+    }
+  }
 
   const handleSaveTemplate = () => {
     if (!templateName) {
@@ -131,14 +173,11 @@ export default function JourneyBuilder({
     }
   };
 
-  async function handleBookOrUpdateJourney() {
-    if (bookings.length === 0) {
-      toast({
-        variant: 'destructive',
-        title: 'Cannot process empty journey',
-        description: 'Please add at least one booking to the journey.',
-      });
-      return;
+  async function handlePublishJourney() {
+    const journeyToPublish = currentJourney;
+    if (!journeyToPublish) {
+        toast({ variant: 'destructive', title: 'No journey selected', description: 'Please save a journey before publishing.' });
+        return;
     }
 
     if (!selectedSiteId) {
@@ -152,57 +191,40 @@ export default function JourneyBuilder({
     }
     
     if (!server) {
-      toast({
-        variant: 'destructive',
-        title: 'No Server Selected',
-        description: 'Please select a server before booking a journey.',
-      });
+      toast({ variant: 'destructive', title: 'No Server Selected' });
       router.push('/');
       return;
     }
 
     setIsSubmitting(true);
-    if (isEditingJourney && onUpdateJourney && journeyId) {
-      // NOTE: Updating a journey via API is not implemented in this example.
-      // We are just updating it in local storage.
-      const updatedJourney: Journey = {
-        id: journeyId,
-        status: 'Scheduled', // Or keep original status if needed
-        bookings: bookings
-      };
-      onUpdateJourney(updatedJourney);
-      toast({
-        title: 'Journey Updated!',
-        description: `Your journey has been successfully updated locally.`,
-      });
-    } else {
-      try {
-        const result = await saveJourney({ bookings, server, siteId: selectedSiteId, accountId: selectedAccount.id });
+    try {
+        const result = await saveJourney({ bookings: journeyToPublish.bookings, server, siteId: selectedSiteId, accountId: selectedAccount.id });
         
-        const newJourney: Journey = {
-          id: result.journeyId,
-          status: 'Scheduled',
-          bookings: bookings
+        const publishedJourney: Journey = {
+            ...journeyToPublish,
+            id: result.journeyId, // Replace local ID with real ID from iCabbi
+            status: 'Scheduled',
         };
-        setJourneys([newJourney, ...journeys]);
+        
+        // Remove the old draft journey and add the new published one
+        const updatedJourneys = journeys.filter(j => j.id !== journeyToPublish.id);
+        setJourneys([publishedJourney, ...updatedJourneys]);
 
         toast({
-          title: 'Journey Booked!',
+          title: 'Journey Published!',
           description: result.message,
         });
         
-        if (onNewJourneyClick) {
-          onNewJourneyClick();
-        }
+        router.push('/journeys');
+
       } catch (error) {
-        console.error("Failed to save journey:", error);
+        console.error("Failed to publish journey:", error);
         toast({
           variant: "destructive",
           title: "Error",
-          description: error instanceof Error ? error.message : "Could not save the journey. Please try again.",
+          description: error instanceof Error ? error.message : "Could not publish the journey. Please try again.",
         });
       }
-    }
     setIsSubmitting(false);
   }
   
@@ -257,22 +279,26 @@ export default function JourneyBuilder({
       
       <Card>
           <CardFooter className="flex justify-between items-center bg-muted/50 p-4 rounded-b-lg flex-wrap gap-4">
-              <div className="flex-1 min-w-[250px]">
+              <div className="flex-1 min-w-[250px] flex gap-2">
                     <Input
                       type="text"
                       placeholder="Enter name to save as template..."
                       value={templateName}
                       onChange={(e) => setTemplateName(e.target.value)}
-                      className="border p-2 rounded-md mr-2 bg-background"
+                      className="border p-2 rounded-md bg-background"
                   />
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={handleSaveTemplate} disabled={bookings.length === 0 || !templateName}>
+                  <Button variant="outline" onClick={handleSaveTemplate} disabled={bookings.length === 0 || !templateName}>
                     <Save className="mr-2 h-4 w-4" /> {isEditingTemplate ? 'Update Template' : 'Save as Template'}
                 </Button>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={handleSaveJourneyLocally} disabled={bookings.length === 0}>
+                    <Save className="mr-2 h-4 w-4" /> {isEditingJourney ? 'Update Journey' : 'Save Journey'}
+                </Button>
                 
-                <Button onClick={handleBookOrUpdateJourney} disabled={isSubmitting || bookings.length === 0 || !selectedSiteId || !selectedAccount}>
-                    {isSubmitting ? 'Submitting...' : (isEditingJourney ? 'Update Journey' : 'Book Journey')}
+                <Button onClick={handlePublishJourney} disabled={isSubmitting || !currentJourney || bookings.length === 0 || !selectedSiteId || !selectedAccount}>
+                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                    Publish
                 </Button>
               </div>
           </CardFooter>

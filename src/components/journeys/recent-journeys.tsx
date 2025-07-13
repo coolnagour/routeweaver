@@ -15,10 +15,13 @@ import type { Journey, Booking, Stop } from '@/types';
 import { format } from 'date-fns';
 import useLocalStorage from '@/hooks/use-local-storage';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Users, MapPin, Clock, MessageSquare, Edit } from 'lucide-react';
+import { Users, MapPin, Clock, MessageSquare, Edit, Send, Loader2 } from 'lucide-react';
 import { useServer } from '@/context/server-context';
 import { Button } from '../ui/button';
 import { useRouter } from 'next/navigation';
+import { saveJourney } from '@/ai/flows/journey-flow';
+import { useToast } from '@/hooks/use-toast';
+import { useState } from 'react';
 
 const getStatusVariant = (status: Journey['status']) => {
   switch (status) {
@@ -28,6 +31,8 @@ const getStatusVariant = (status: Journey['status']) => {
       return 'default';
     case 'Cancelled':
       return 'destructive';
+    case 'Draft':
+        return 'outline'
     default:
       return 'outline';
   }
@@ -40,11 +45,28 @@ const getPassengersFromStops = (stops: Stop[]) => {
 export default function RecentJourneys() {
   const { server } = useServer();
   const router = useRouter();
+  const { toast } = useToast();
   const [journeys, setJourneys] = useLocalStorage<Journey[]>('recent-journeys', [], server?.companyId);
+  const [publishingId, setPublishingId] = useState<string | null>(null);
 
   const handleEditJourney = (id: string) => {
     router.push(`/journeys/${id}/edit`);
   };
+
+  const handlePublishJourney = async (journey: Journey) => {
+     if (!server) {
+      toast({ variant: 'destructive', title: 'No Server Selected' });
+      router.push('/');
+      return;
+    }
+    // A real app would prompt for site/account if not saved on the journey
+    // For now, we prevent publishing if they are missing.
+    toast({
+        variant: 'destructive',
+        title: 'Publishing Not Available',
+        description: 'Please open the journey in the editor to select a Site and Account before publishing.'
+    });
+  }
 
   const getJourneyDateRange = (bookings: Booking[]) => {
     if (bookings.length === 0) return 'N/A';
@@ -90,7 +112,7 @@ export default function RecentJourneys() {
                 <TableHead>Bookings</TableHead>
                 <TableHead className="text-center">Total Passengers</TableHead>
                 <TableHead className="text-right">Status</TableHead>
-                <TableHead className="w-[100px] text-right">Actions</TableHead>
+                <TableHead className="w-[150px] text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -105,7 +127,12 @@ export default function RecentJourneys() {
                             <TableCell className="text-right">
                                 <Badge variant={getStatusVariant(journey.status)}>{journey.status}</Badge>
                             </TableCell>
-                            <TableCell className="text-right">
+                            <TableCell className="text-right space-x-0">
+                                {journey.status === 'Draft' && (
+                                     <Button variant="ghost" size="icon" onClick={() => handlePublishJourney(journey)} disabled={publishingId === journey.id}>
+                                        {publishingId === journey.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                                    </Button>
+                                )}
                                 <Button variant="ghost" size="icon" onClick={() => handleEditJourney(journey.id)}>
                                     <Edit className="h-4 w-4" />
                                 </Button>
