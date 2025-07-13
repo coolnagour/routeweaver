@@ -9,7 +9,7 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { JourneyInputSchema, JourneyOutputSchema, ServerConfigSchema } from '@/types';
-import { createBooking, createJourney } from '@/services/icabbi';
+import { createBooking, updateBooking, createJourney } from '@/services/icabbi';
 import type { Booking, JourneyOutput, Stop } from '@/types';
 
 // Extend the input schema to include server config, siteId, and accountId
@@ -65,18 +65,25 @@ const saveJourneyFlow = ai.defineFlow(
       }))
     }));
 
-    // Step 1: Create each booking individually and process their segments
+    // Step 1: Create or update each booking individually and process their segments
     const createdBookings: Booking[] = [];
     for (const booking of sanitizedBookings) {
       try {
         const bookingWithContext = { ...booking, siteId, accountId };
-        console.log(`[Journey Flow] Creating booking for passenger: ${booking.stops.find(s=>s.stopType === 'pickup')?.name}`);
-        const result = await createBooking(server, bookingWithContext);
+        
+        let result;
+        if (booking.bookingServerId) {
+          console.log(`[Journey Flow] Updating existing booking with server ID: ${booking.bookingServerId}`);
+          result = await updateBooking(server, bookingWithContext);
+        } else {
+          console.log(`[Journey Flow] Creating new booking for passenger: ${booking.stops.find(s=>s.stopType === 'pickup')?.name}`);
+          result = await createBooking(server, bookingWithContext);
+        }
         
         const bookingRequestId = result?.bookingsegments?.[0]?.request_id;
         
         if (!result || !result.id || !bookingRequestId || !result.bookingsegments) {
-          throw new Error(`Invalid response from createBooking. Response: ${JSON.stringify(result)}`);
+          throw new Error(`Invalid response from ${booking.bookingServerId ? 'updateBooking' : 'createBooking'}. Response: ${JSON.stringify(result)}`);
         }
 
         const bookingWithServerIds: Booking = { 
@@ -112,8 +119,8 @@ const saveJourneyFlow = ai.defineFlow(
 
       } catch (error) {
         const passengerName = booking.stops.find(s => s.stopType === 'pickup')?.name || 'Unknown';
-        console.error(`[Journey Flow] Failed to create booking for passenger: ${passengerName}`, error);
-        throw new Error(`Failed to create a booking. Halting journey creation. Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        console.error(`[Journey Flow] Failed to create or update booking for passenger: ${passengerName}`, error);
+        throw new Error(`Failed to process a booking. Halting journey creation. Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     }
 

@@ -12,7 +12,7 @@ interface IcabbiApiCallOptions {
     body?: any;
 }
 
-const formatBookingForIcabbi = (booking: Booking, server: ServerConfig) => {
+const formatBookingForIcabbi = (booking: Booking, server: ServerConfig, forUpdate = false) => {
     if (booking.stops.length < 2) {
         throw new Error("Booking must have at least a pickup and a dropoff stop.");
     }
@@ -34,31 +34,11 @@ const formatBookingForIcabbi = (booking: Booking, server: ServerConfig) => {
     const viaStops = booking.stops.slice(1, -1);
     
     const defaultCountry = server.countryCodes?.[0]?.toUpperCase() as any;
-
-    let formattedPhone = '';
-    if (pickupStop.phone) {
-        const phoneNumber = parsePhoneNumberFromString(pickupStop.phone, defaultCountry);
-        if (phoneNumber && phoneNumber.isValid()) {
-            formattedPhone = phoneNumber.number;
-        }
-    }
-
-    if (!formattedPhone) {
-        try {
-            const countryCallingCode = getCountryCallingCode(defaultCountry);
-            formattedPhone = `+${countryCallingCode}`;
-        } catch (e) {
-            console.error(`Could not get calling code for country: ${defaultCountry}`);
-            formattedPhone = "+1"; // Default to a generic placeholder
-        }
-    }
-
-
+    
     const payload: any = {
         date: pickupStop.dateTime?.toISOString() || new Date().toISOString(),
         source: "DISPATCH",
         name: pickupStop.name || 'N/A',
-        phone: formattedPhone,
         address: {
             lat: firstStop.location.lat.toString(),
             lng: firstStop.location.lng.toString(),
@@ -82,6 +62,27 @@ const formatBookingForIcabbi = (booking: Booking, server: ServerConfig) => {
         with_bookingsegments: true,
     };
     
+    if (pickupStop.phone) {
+        const cleanedPhone = pickupStop.phone.replace(/\D/g, '');
+        const phoneNumber = parsePhoneNumberFromString(cleanedPhone, defaultCountry);
+        if (phoneNumber && phoneNumber.isValid()) {
+            payload.phone = phoneNumber.number;
+        }
+    }
+    
+    if (!payload.phone) {
+        try {
+            const countryCallingCode = getCountryCallingCode(defaultCountry);
+            payload.phone = `+${countryCallingCode}`;
+        } catch (e) {
+             console.warn(`Could not get calling code for country: ${defaultCountry}. Omitting phone field.`);
+        }
+    }
+
+    if (forUpdate && booking.bookingServerId) {
+        payload.id = booking.bookingServerId;
+    }
+
     return payload;
 };
 
@@ -147,12 +148,28 @@ export async function callIcabbiApi({ server, method, endpoint, body }: IcabbiAp
 }
 
 export async function createBooking(server: ServerConfig, booking: Booking) {
-    const payload = formatBookingForIcabbi(booking, server);
+    const payload = formatBookingForIcabbi(booking, server, false);
 
     const response = await callIcabbiApi({
         server,
         method: 'POST',
         endpoint: 'bookings/add',
+        body: payload,
+    });
+    
+    return response.body.booking;
+}
+
+export async function updateBooking(server: ServerConfig, booking: Booking) {
+    if (!booking.bookingServerId) {
+        throw new Error("Cannot update booking without a bookingServerId.");
+    }
+    const payload = formatBookingForIcabbi(booking, server, true);
+
+    const response = await callIcabbiApi({
+        server,
+        method: 'PUT',
+        endpoint: 'bookings/update',
         body: payload,
     });
     
