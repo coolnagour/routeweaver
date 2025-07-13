@@ -8,7 +8,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import { BookingSchema, JourneyInputSchema, JourneyOutputSchema, ServerConfigSchema } from '@/types';
+import { JourneyInputSchema, JourneyOutputSchema, ServerConfigSchema } from '@/types';
 import { createBooking, createJourney } from '@/services/icabbi';
 import type { Booking, JourneyOutput, Stop } from '@/types';
 
@@ -56,42 +56,50 @@ const saveJourneyFlow = ai.defineFlow(
       throw new Error('No bookings provided to create a journey.');
     }
 
-    // Step 1: Create each booking individually to get their API IDs and Request IDs
+    // Step 1: Create each booking individually and process their segments
     const createdBookings: Booking[] = [];
     for (const booking of bookings as Booking[]) {
       try {
         const bookingWithContext = { ...booking, siteId, accountId };
-        console.log(`[Journey Flow] Creating booking for passenger: ${booking.stops[0]?.name}`);
+        console.log(`[Journey Flow] Creating booking for passenger: ${booking.stops.find(s=>s.stopType === 'pickup')?.name}`);
         const result = await createBooking(server, bookingWithContext);
         
-        if (result && result.id && result.request_id) {
-          const bookingWithServerIds: Booking = {
-            ...booking,
-            bookingServerId: result.id,
-            requestId: result.request_id,
-          };
-          createdBookings.push(bookingWithServerIds);
-          console.log(`[Journey Flow] Successfully created booking with local ID ${booking.id}, API ID: ${result.id}, and Request ID: ${result.request_id}`);
-        } else {
-          throw new Error(`Invalid response from createBooking. Missing id or request_id. Response: ${JSON.stringify(result)}`);
+        if (!result || !result.id || !result.request_id || !result.bookingsegments) {
+          throw new Error(`Invalid response from createBooking. Response: ${JSON.stringify(result)}`);
         }
+
+        const bookingWithServerIds: Booking = { ...booking, bookingServerId: result.id, requestId: result.request_id, stops: [] };
+
+        // Match server booking segments back to our local stops to get segment IDs
+        const localStops = [...booking.stops];
+        for (const segment of result.bookingsegments) {
+            // Find the corresponding local stop. A more robust solution might match on lat/lng.
+            // For now, we assume segment order matches stop order for a given booking.
+            const stopType = segment.type.toLowerCase();
+            const matchingStopIndex = localStops.findIndex(s => s.stopType === stopType && !s.bookingSegmentId);
+            
+            if (matchingStopIndex > -1) {
+                const matchingStop = localStops[matchingStopIndex];
+                matchingStop.bookingSegmentId = segment.id.toString();
+                bookingWithServerIds.stops.push(matchingStop);
+                localStops.splice(matchingStopIndex, 1); // Remove from pool
+            }
+        }
+        
+        createdBookings.push(bookingWithServerIds);
+        console.log(`[Journey Flow] Successfully processed booking with API ID: ${result.id} and Request ID: ${result.request_id}`);
+
       } catch (error) {
-        console.error(`[Journey Flow] Failed to create booking for passenger: ${booking.stops[0]?.name}`, error);
+        const passengerName = booking.stops.find(s => s.stopType === 'pickup')?.name || 'Unknown';
+        console.error(`[Journey Flow] Failed to create booking for passenger: ${passengerName}`, error);
         throw new Error(`Failed to create a booking. Halting journey creation. Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     }
 
-    // Step 2: Group stops by location and order them to build the journey payload
-    const allStops = createdBookings.flatMap(b => {
-      // Find the requestId for the booking this stop belongs to
-      const bookingRequestId = b.requestId;
-      if (!bookingRequestId) {
-        throw new Error(`Booking with local ID ${b.id} is missing a request ID after creation.`);
-      }
-      return b.stops.map(s => ({ ...s, requestId: bookingRequestId }));
-    });
+    // Step 2: Group all stops from all created bookings by location and order them
+    const allStops = createdBookings.flatMap(b => b.stops.map(s => ({...s, parentBooking: b })));
     
-    const stopsByLocation = new Map<string, (Stop & { requestId: number })[]>();
+    const stopsByLocation = new Map<string, (Stop & { parentBooking: Booking })[]>();
     allStops.forEach(stop => {
       const address = stop.location.address;
       if (!stopsByLocation.has(address)) {
@@ -106,7 +114,7 @@ const saveJourneyFlow = ai.defineFlow(
       return firstPickupTimeA - firstPickupTimeB;
     });
 
-    // Step 3: Build the journey payload with calculated distances
+    // Step 3: Build the journey payload with calculated distances and correct identifiers
     const journeyBookingsPayload = [];
     let plannedDate = Math.floor(new Date().getTime() / 1000); // Initial planned date
     let lastLocation: { lat: number; lng: number } | null = null;
@@ -120,20 +128,28 @@ const saveJourneyFlow = ai.defineFlow(
       }
       
       for (const stop of stops) {
+        const isFinalStopOfBooking = stop.stopType === 'dropoff' && !stop.parentBooking.stops.some(s => s.stopType === 'dropoff' && s.id !== stop.id);
+        
+        const idToUse = isFinalStopOfBooking ? stop.parentBooking.requestId : stop.bookingSegmentId;
+        const idType = isFinalStopOfBooking ? 'request_id' : 'bookingsegment_id';
+
+        if (!idToUse) {
+            throw new Error(`Missing identifier for stop. StopType: ${stop.stopType}, isFinal: ${isFinalStopOfBooking}`);
+        }
+
         journeyBookingsPayload.push({
-          request_id: stop.requestId,
-          is_destination: stop.stopType === 'dropoff' ? "true" : "false",
+          [idType]: idToUse,
+          is_destination: isFinalStopOfBooking ? "true" : "false",
           planned_date: plannedDate,
-          distance: journeyBookingsPayload.length === 0 ? 0 : distance, // First leg has 0 distance
+          distance: journeyBookingsPayload.length === 0 ? 0 : distance,
         });
         
-        // After the first stop at a new location, subsequent stops at the same location have 0 distance.
         distance = 0;
-        plannedDate += 60; // Increment time slightly for each stop at the same location
+        plannedDate += 60;
       }
 
       lastLocation = currentLocation;
-      plannedDate += 600; // Increment time for travel to next location
+      plannedDate += 600;
     }
     
     const journeyPayload = {
@@ -158,11 +174,23 @@ const saveJourneyFlow = ai.defineFlow(
           throw new Error('Journey server ID was not returned from the server.');
         }
 
+        // Clean parentBooking before returning
+        const finalBookings = createdBookings.map(b => {
+          const { stops, ...rest } = b;
+          return {
+            ...rest,
+            stops: stops.map(s => {
+              const { parentBooking, ...stopRest } = s;
+              return stopRest;
+            })
+          };
+        });
+
         return {
             journeyServerId: journeyServerId,
-            bookings: createdBookings,
+            bookings: finalBookings,
             status: 'Scheduled',
-            message: `Journey with ${createdBookings.length} booking(s) was successfully scheduled.`,
+            message: `Journey with ${finalBookings.length} booking(s) was successfully scheduled.`,
         };
     } catch (error) {
         console.error('[Journey Flow] Failed to create journey:', error);
