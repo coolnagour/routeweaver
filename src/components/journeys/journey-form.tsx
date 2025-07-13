@@ -29,6 +29,7 @@ import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { v4 as uuidv4 } from 'uuid';
 import { Switch } from '../ui/switch';
+import { Label } from '../ui/label';
 
 const locationSchema = z.object({
     address: z.string().min(2, { message: 'Address is required.' }),
@@ -60,10 +61,10 @@ const formSchema = z.object({
   id: z.string().optional(),
   stops: z.array(stopSchema).min(2, 'At least two stops are required.')
 }).refine(data => {
-    const firstPickupTime = data.stops[0]?.dateTime?.getTime();
+    const firstPickupTime = data.stops.find(s => s.stopType === 'pickup')?.dateTime?.getTime();
     if (!firstPickupTime) return true; // ASAP booking, validation passes
 
-    const subsequentPickups = data.stops.filter((s, index) => s.stopType === 'pickup' && index > 0);
+    const subsequentPickups = data.stops.filter((s, index) => s.stopType === 'pickup' && s.dateTime);
     return subsequentPickups.every(p => !p.dateTime || p.dateTime.getTime() >= firstPickupTime);
 }, {
     message: "Subsequent pickup times must not be before the first pickup.",
@@ -83,7 +84,7 @@ const emptyLocation = { address: '', lat: 0, lng: 0 };
 export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFormProps) {
   const { toast } = useToast();
   const [generatingFields, setGeneratingFields] = useState<Record<string, boolean>>({});
-  const [isScheduled, setIsScheduled] = useState(!!initialData?.stops?.[0]?.dateTime);
+  const [isScheduled, setIsScheduled] = useState(!!initialData?.stops?.find(s => s.stopType === 'pickup')?.dateTime);
 
   const form = useForm<BookingFormData>({
     resolver: zodResolver(formSchema),
@@ -147,19 +148,35 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
 
 
   function onSubmit(values: BookingFormData) {
-    // If not scheduled, ensure dateTime is undefined before saving.
-    if (!isScheduled) {
-        values.stops[0].dateTime = undefined;
-    }
-    onSave(values as Booking);
+    const bookingToSave: Booking = { ...values, stops: [] };
+    
+    // Find the primary pickup (the first one) to determine the booking's schedule status
+    const primaryPickup = values.stops.find(s => s.stopType === 'pickup');
+
+    bookingToSave.stops = values.stops.map(stop => {
+      // If the booking is not scheduled (ASAP), ensure no pickup stops have a time.
+      if (!isScheduled && stop.stopType === 'pickup') {
+        return { ...stop, dateTime: undefined };
+      }
+      return stop;
+    }) as Stop[];
+
+
+    onSave(bookingToSave);
   }
   
   const handleScheduledToggle = (checked: boolean) => {
     setIsScheduled(checked);
-    if (checked) {
-        form.setValue('stops.0.dateTime', new Date());
-    } else {
-        form.setValue('stops.0.dateTime', undefined);
+    
+    // Find first pickup stop to update its date
+    const firstPickupIndex = form.getValues('stops').findIndex(s => s.stopType === 'pickup');
+
+    if (firstPickupIndex !== -1) {
+        if (checked) {
+            form.setValue(`stops.${firstPickupIndex}.dateTime`, new Date());
+        } else {
+            form.setValue(`stops.${firstPickupIndex}.dateTime`, undefined);
+        }
     }
   }
 
@@ -167,6 +184,7 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
   const firstStop = stopFields[0];
   const lastStop = stopFields[stopFields.length - 1];
   const viaStops = stopFields.slice(1, -1);
+  const firstPickupIndex = stopFields.findIndex(s => s.stopType === 'pickup');
 
   return (
       <Card>
@@ -194,10 +212,10 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
                         </div>
                     </div>
                    
-                    {isScheduled && (
+                    {isScheduled && firstPickupIndex !== -1 && (
                         <FormField
                             control={form.control}
-                            name={`stops.0.dateTime`}
+                            name={`stops.${firstPickupIndex}.dateTime`}
                             render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Pickup Date & Time</FormLabel>
@@ -260,7 +278,7 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
                                         placeholder="Pickup location"
                                      />
                                 </FormControl>
-                                <FormMessage>{fieldState.error?.message}</FormMessage>
+                                 <FormMessage>{fieldState.error?.address?.message}</FormMessage>
                             </FormItem>
                         )}
                     />
@@ -375,3 +393,5 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
       </Card>
   );
 }
+
+    
