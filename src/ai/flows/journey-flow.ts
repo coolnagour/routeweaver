@@ -9,7 +9,7 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { JourneyInputSchema, JourneyOutputSchema, ServerConfigSchema } from '@/types';
-import { createBooking, updateBooking, createJourney } from '@/services/icabbi';
+import { createBooking } from '@/services/icabbi';
 import type { Booking, JourneyOutput, Stop } from '@/types';
 
 // Extend the input schema to include server config, siteId, and accountId
@@ -66,57 +66,58 @@ const saveJourneyFlow = ai.defineFlow(
       }))
     }));
 
-    // Step 1: Create or update each booking individually and process their segments
-    const createdBookings: Booking[] = [];
+    // Step 1: Create new bookings and gather all existing and new bookings for journey creation.
+    const processedBookings: Booking[] = [];
     for (const booking of sanitizedBookings) {
       try {
-        const bookingWithContext = { ...booking, siteId, accountId };
-        
-        let result;
         if (booking.bookingServerId) {
-          console.log(`[Journey Flow] Updating existing booking with server ID: ${booking.bookingServerId}`);
-          result = await updateBooking(server, bookingWithContext);
+          // This booking already exists on the server, do not update it.
+          // Just add it to the list for journey creation.
+          console.log(`[Journey Flow] Skipping update for existing booking with server ID: ${booking.bookingServerId}`);
+          processedBookings.push(booking);
         } else {
+          // This is a new booking, create it on the server.
           console.log(`[Journey Flow] Creating new booking for passenger: ${booking.stops.find(s=>s.stopType === 'pickup')?.name}`);
-          result = await createBooking(server, bookingWithContext);
-        }
-        
-        const bookingRequestId = result?.bookingsegments?.[0]?.request_id;
-        
-        if (!result || !result.id || !bookingRequestId || !result.bookingsegments) {
-          throw new Error(`Invalid response from ${booking.bookingServerId ? 'updateBooking' : 'createBooking'}. Response: ${JSON.stringify(result)}`);
-        }
-
-        const bookingWithServerIds: Booking = { 
-            ...booking, 
-            bookingServerId: result.id, 
-            requestId: parseInt(bookingRequestId, 10),
-            stops: [...booking.stops] // Important: work with a copy
-        };
-        
-        // Map server booking segments back to our local stops.
-        if (result.bookingsegments.length > 0) {
-          // The first segment represents the main journey (pickup to destination)
-          const mainSegmentId = parseInt(result.bookingsegments[0].id, 10);
-          // Assign this ID to the first and last stop of our local booking
-          if (bookingWithServerIds.stops.length > 0) {
-            bookingWithServerIds.stops[0].bookingSegmentId = mainSegmentId;
-            bookingWithServerIds.stops[bookingWithServerIds.stops.length - 1].bookingSegmentId = mainSegmentId;
+          const bookingWithContext = { ...booking, siteId, accountId };
+          const result = await createBooking(server, bookingWithContext);
+          
+          const bookingRequestId = result?.bookingsegments?.[0]?.request_id;
+          
+          if (!result || !result.id || !bookingRequestId || !result.bookingsegments) {
+            throw new Error(`Invalid response from createBooking. Response: ${JSON.stringify(result)}`);
           }
 
-          // The rest of the segments correspond to the via stops in order
-          const viaSegments = result.bookingsegments.slice(1);
-          const localViaStops = bookingWithServerIds.stops.slice(1, -1);
+          const bookingWithServerIds: Booking = { 
+              ...booking, 
+              bookingServerId: result.id, 
+              requestId: parseInt(bookingRequestId, 10),
+              stops: [...booking.stops] // Important: work with a copy
+          };
           
-          for (let i = 0; i < viaSegments.length; i++) {
-            if (localViaStops[i]) {
-              localViaStops[i].bookingSegmentId = parseInt(viaSegments[i].id, 10);
+          // Map server booking segments back to our local stops.
+          if (result.bookingsegments.length > 0) {
+            // The first segment represents the main journey (pickup to destination)
+            const mainSegmentId = parseInt(result.bookingsegments[0].id, 10);
+            // Assign this ID to the first and last stop of our local booking
+            if (bookingWithServerIds.stops.length > 0) {
+              bookingWithServerIds.stops[0].bookingSegmentId = mainSegmentId;
+              bookingWithServerIds.stops[bookingWithServerIds.stops.length - 1].bookingSegmentId = mainSegmentId;
+            }
+
+            // The rest of the segments correspond to the via stops in order
+            const viaSegments = result.bookingsegments.slice(1);
+            const localViaStops = bookingWithServerIds.stops.slice(1, -1);
+            
+            for (let i = 0; i < viaSegments.length; i++) {
+              if (localViaStops[i]) {
+                localViaStops[i].bookingSegmentId = parseInt(viaSegments[i].id, 10);
+              }
             }
           }
+          
+          processedBookings.push(bookingWithServerIds);
+          console.log(`[Journey Flow] Successfully processed booking with API ID: ${result.id} and Request ID: ${bookingRequestId}`);
         }
-        
-        createdBookings.push(bookingWithServerIds);
-        console.log(`[Journey Flow] Successfully processed booking with API ID: ${result.id} and Request ID: ${bookingRequestId}`);
 
       } catch (error) {
         const passengerName = booking.stops.find(s => s.stopType === 'pickup')?.name || 'Unknown';
@@ -126,7 +127,7 @@ const saveJourneyFlow = ai.defineFlow(
     }
 
     // Step 2: Complex stop ordering logic
-    const allStopsWithParent = createdBookings.flatMap(b => b.stops.map(s => ({...s, parentBooking: b })));
+    const allStopsWithParent = processedBookings.flatMap(b => b.stops.map(s => ({...s, parentBooking: b })));
 
     // Separate pickups and drop-offs
     const pickups = allStopsWithParent.filter(s => s.stopType === 'pickup');
@@ -235,7 +236,7 @@ const saveJourneyFlow = ai.defineFlow(
         }
 
         // Clean parentBooking and stringify dates before returning
-        const finalBookings = createdBookings.map(b => {
+        const finalBookings = processedBookings.map(b => {
           const { stops, ...rest } = b;
           return {
             ...rest,

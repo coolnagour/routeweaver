@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import type { Booking, Stop } from '@/types';
 import JourneyForm from './journey-form';
-import { Edit, MapPin, Package, Trash2, UserPlus, Users, Phone, Clock, MessageSquare } from 'lucide-react';
+import { Edit, MapPin, Package, Trash2, UserPlus, Users, Phone, Clock, MessageSquare, Lock } from 'lucide-react';
 import { format } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -96,6 +96,7 @@ export default function BookingManager({ bookings, setBookings }: BookingManager
           bookings.map(booking => {
               const pickups = getPassengersFromStops(booking.stops);
               const bookingDateTime = getBookingDateTime(booking);
+              const isLocked = !!booking.bookingServerId;
               return (
                   <Card key={booking.id} className="p-3">
                       <div className="flex justify-between items-start">
@@ -138,11 +139,17 @@ export default function BookingManager({ bookings, setBookings }: BookingManager
                           })}
                       </div>
                       <div className="flex items-center">
-                          <Button variant="ghost" size="icon" onClick={() => handleEditBooking(booking)}>
-                          <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleRemoveBooking(booking.id)}>
-                          <Trash2 className="h-4 w-4" />
+                          {isLocked ? (
+                              <Button variant="ghost" size="icon" disabled>
+                                <Lock className="h-4 w-4" />
+                              </Button>
+                          ) : (
+                              <Button variant="ghost" size="icon" onClick={() => handleEditBooking(booking)}>
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                          )}
+                          <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleRemoveBooking(booking.id)} disabled={isLocked}>
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                       </div>
                       </div>

@@ -156,22 +156,6 @@ export async function createBooking(server: ServerConfig, booking: Booking) {
     return response.body.booking;
 }
 
-export async function updateBooking(server: ServerConfig, booking: Booking) {
-    if (!booking.bookingServerId) {
-        throw new Error("Cannot update booking without a bookingServerId.");
-    }
-    const payload = formatBookingForIcabbi(booking, server);
-
-    const response = await callIcabbiApi({
-        server,
-        method: 'PUT',
-        endpoint: `bookings/update/${booking.bookingServerId}`,
-        body: payload,
-    });
-    
-    return response.body.booking;
-}
-
 export async function createJourney(server: ServerConfig, journeyPayload: any) {
     const response = await callIcabbiApi({
         server,
