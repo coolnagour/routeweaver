@@ -79,21 +79,14 @@ const saveJourneyFlow = ai.defineFlow(
           if (result.bookingsegments.length > 0) {
               const serverSegments = result.bookingsegments; // [{id, ...}, {id, ...}]
               
-              // The API returns segments for each leg. 
-              // Pickup -> Via1, Via1 -> Via2, Via2 -> Dropoff
-              // We need to map these to our stops.
+              // The API returns segments for each leg.
               // A simple booking (1 pickup, 1 dropoff) has 1 segment.
               // A booking with 1 via stop has 2 segments.
-              // A booking with 2 via stops has 3 segments.
               // The number of segments is stops.length - 1
 
               for (let i = 0; i < bookingWithServerIds.stops.length; i++) {
                 // The first stop (pickup) uses the first segment ID.
                 // Subsequent stops (vias) also use the first segment ID corresponding to their leg.
-                // The API structure is such that segment[0] is pickup->next, segment[1] is next->next, etc.
-                // A single stop can be part of two segments (e.g. a via is a dropoff for one leg and pickup for another).
-                // However, for journey purposes, each stop needs one segment ID.
-                // We'll assign the segment ID for the leg *departing* from the stop.
                 
                 if (i < serverSegments.length) {
                     bookingWithServerIds.stops[i].bookingSegmentId = parseInt(serverSegments[i].id, 10);
@@ -121,6 +114,7 @@ const saveJourneyFlow = ai.defineFlow(
     }
     
     // Step 2: Use the centralized logic to generate the payload and ordered stops
+    // Call generateJourneyPayload as a regular function
     const { journeyPayload, orderedStops } = await generateJourneyPayload({
       bookings: processedBookings, 
       journeyServerId,

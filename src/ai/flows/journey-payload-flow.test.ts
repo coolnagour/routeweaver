@@ -62,7 +62,7 @@ async function runTest() {
         ...input,
         bookings: input.bookings.map(b => ({
             ...b,
-            stops: b.stops.map(s => ({
+            stops: b.stops.map((s: any) => ({
                 ...s,
                 dateTime: s.dateTime ? new Date(s.dateTime) : (s.stopType === 'pickup' ? new Date() : undefined)
             }))
@@ -70,7 +70,18 @@ async function runTest() {
     };
 
     try {
-        const result = await generateJourneyPayload(sanitizedInput);
+        // Convert the Date object back to an ISO string for the schema validation
+        const inputForFlow = {
+            ...sanitizedInput,
+            bookings: sanitizedInput.bookings.map(b => ({
+                ...b,
+                stops: b.stops.map((s: any) => ({
+                    ...s,
+                    dateTime: s.dateTime ? s.dateTime.toISOString() : undefined
+                }))
+            }))
+        };
+        const result = await generateJourneyPayload(inputForFlow);
         const orderedStopIds = result.orderedStops.map(s => s.id);
 
         // Expected order: P1 -> P2 -> D1 -> D2. D1 and D2 are at the same location.

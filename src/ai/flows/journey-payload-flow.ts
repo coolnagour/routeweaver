@@ -1,12 +1,11 @@
 
 'use server';
 /**
- * @fileOverview A flow to generate the journey API payload.
+ * @fileOverview A utility to generate the journey API payload.
  *
  * - generateJourneyPayload: A function that generates the journey payload.
  */
 
-import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { BookingSchema, StopSchema } from '@/types';
 import type { Booking, Stop, JourneyPayloadOutput } from '@/types';
@@ -33,26 +32,11 @@ const JourneyPayloadInputSchema = z.object({
   bookings: z.array(BookingSchema),
   journeyServerId: z.number().optional(),
 });
-type JourneyPayloadInput = z.infer<typeof JourneyPayloadInputSchema>;
+export type JourneyPayloadInput = z.infer<typeof JourneyPayloadInputSchema>;
 
-// Using z.any() for the journeyPayload as the structure is complex and for preview only.
-const JourneyPayloadOutputSchema = z.object({
-    journeyPayload: z.any(),
-    orderedStops: z.array(StopSchema),
-});
-
-
+// This is no longer a Genkit Flow, but a regular async function.
 export async function generateJourneyPayload(input: JourneyPayloadInput): Promise<JourneyPayloadOutput & { orderedStops: Stop[] }> {
-  return generateJourneyPayloadFlow(input);
-}
-
-const generateJourneyPayloadFlow = ai.defineFlow(
-  {
-    name: 'generateJourneyPayloadFlow',
-    inputSchema: JourneyPayloadInputSchema,
-    outputSchema: JourneyPayloadOutputSchema,
-  },
-  async ({ bookings, journeyServerId }) => {
+    const { bookings, journeyServerId } = input;
     
     const sanitizedBookings = bookings.map(b => ({
       ...b,
@@ -103,6 +87,8 @@ const generateJourneyPayloadFlow = ai.defineFlow(
       });
 
       if (candidateStops.length === 0) {
+        // If no valid candidates, it implies an issue like a stranded passenger.
+        // As a fallback, just add remaining stops sorted by distance to avoid an infinite loop.
         const remainingStops = unvisitedStops.sort((a, b) => 
             getDistanceFromLatLonInMeters(currentStop!.location.lat, currentStop!.location.lng, a.location.lat, a.location.lng) -
             getDistanceFromLatLonInMeters(currentStop!.location.lat, currentStop!.location.lng, b.location.lat, b.location.lng)
@@ -206,5 +192,4 @@ const generateJourneyPayloadFlow = ai.defineFlow(
         journeyPayload,
         orderedStops: finalOrderedStops
     }
-  }
-);
+}
