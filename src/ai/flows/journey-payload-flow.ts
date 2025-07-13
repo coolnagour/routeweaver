@@ -62,9 +62,8 @@ const generateJourneyPayloadFlow = ai.defineFlow(
       }))
     }));
     
-    // Step 1: Intelligent stop ordering using a "nearest neighbor" approach
-    const allStopsWithParent = sanitizedBookings.flatMap((booking, bookingIndex) => 
-        booking.stops.map(stop => ({...stop, parentBooking: booking, originalBookingIndex: bookingIndex }))
+    const allStopsWithParent = sanitizedBookings.flatMap(booking =>
+        booking.stops.map(stop => ({ ...stop, parentBooking: booking }))
     );
     
     let unvisitedStops = [...allStopsWithParent];
@@ -75,14 +74,11 @@ const generateJourneyPayloadFlow = ai.defineFlow(
         return { journeyPayload: { error: 'No stops to process.' }, orderedStops: [] };
     }
 
-    // Find the starting stop (earliest pickup time)
     const pickupStops = unvisitedStops.filter(s => s.stopType === 'pickup');
-
     if (pickupStops.length === 0) {
       throw new Error("Cannot create a journey with no pickup stops.");
     }
 
-    // Sort pickups by time to find the absolute earliest start for the entire journey.
     pickupStops.sort((a, b) => {
         const timeA = a.dateTime ? new Date(a.dateTime).getTime() : Infinity;
         const timeB = b.dateTime ? new Date(b.dateTime).getTime() : Infinity;
@@ -90,21 +86,13 @@ const generateJourneyPayloadFlow = ai.defineFlow(
     });
     
     let currentStop = pickupStops[0];
-
-    // Initialize the route
     orderedStops.push(currentStop);
     unvisitedStops = unvisitedStops.filter(s => s.id !== currentStop.id);
-    if (currentStop.stopType === 'pickup') {
-      passengersInVehicle.add(currentStop.id);
-    }
+    passengersInVehicle.add(currentStop.id);
     
-    // Iteratively find the next closest stop
     while (unvisitedStops.length > 0) {
-      // Get a list of candidates for the next stop
       const candidateStops = unvisitedStops.filter(s => {
-        // A pickup is always a valid candidate
         if (s.stopType === 'pickup') return true;
-        // A dropoff is only valid if its corresponding passenger is in the vehicle
         if (s.stopType === 'dropoff' && s.pickupStopId) {
           return passengersInVehicle.has(s.pickupStopId);
         }
@@ -112,14 +100,14 @@ const generateJourneyPayloadFlow = ai.defineFlow(
       });
 
       if (candidateStops.length === 0) {
-        const remainingDropoffs = unvisitedStops.filter(s => s.stopType === 'dropoff');
-        remainingDropoffs.sort((a, b) =>
+        // If no valid candidates, it means we only have drop-offs left for passengers not in vehicle, which is an error state.
+        // Or all passengers have been dropped off. Let's just add remaining stops by distance.
+        const remainingStops = unvisitedStops.sort((a, b) => 
             getDistanceFromLatLonInMeters(currentStop!.location.lat, currentStop!.location.lng, a.location.lat, a.location.lng) -
             getDistanceFromLatLonInMeters(currentStop!.location.lat, currentStop!.location.lng, b.location.lat, b.location.lng)
         );
-        orderedStops.push(...remainingDropoffs);
-        unvisitedStops = [];
-        continue;
+        orderedStops.push(...remainingStops);
+        break; // Exit loop
       }
       
       let nextStop = candidateStops[0];
@@ -137,14 +125,12 @@ const generateJourneyPayloadFlow = ai.defineFlow(
           minDistance = distance;
           nextStop = candidateStops[i];
         } else if (distance === minDistance) {
-            // Tie-breaker: if distances are identical (e.g., same location), prefer pickups
             if (nextStop.stopType === 'dropoff' && candidateStops[i].stopType === 'pickup') {
                 nextStop = candidateStops[i];
             }
         }
       }
       
-      // Add the next stop to our ordered list and update state
       orderedStops.push(nextStop);
       currentStop = nextStop;
       unvisitedStops = unvisitedStops.filter(s => s.id !== currentStop.id);
@@ -156,14 +142,21 @@ const generateJourneyPayloadFlow = ai.defineFlow(
       }
     }
     
-    // Step 2: Build the journey payload with corrected distance and date logic
     const journeyBookingsPayload = [];
-    const pickupMap = new Map<string, Stop>();
-    orderedStops.filter(s => s.stopType === 'pickup').forEach(s => pickupMap.set(s.id, s));
+    const stopMap = new Map(allStopsWithParent.map(s => [s.id, s]));
 
     for (let i = 0; i < orderedStops.length; i++) {
         const stop = orderedStops[i];
+        const originalStop = stopMap.get(stop.id);
+
+        if (!originalStop) {
+          throw new Error(`Could not find original stop for ID: ${stop.id}`);
+        }
         
+        const parentBooking = originalStop.parentBooking;
+        const lastStopOfOriginalBooking = parentBooking.stops[parentBooking.stops.length - 1];
+        const isFinalStopOfBooking = stop.id === lastStopOfOriginalBooking.id;
+
         let distance = 0;
         if (i < orderedStops.length - 1) {
             const nextStop = orderedStops[i + 1];
@@ -173,31 +166,15 @@ const generateJourneyPayloadFlow = ai.defineFlow(
             );
         }
 
-        const originalBookingStops = stop.parentBooking.stops;
-        const lastStopOfOriginalBooking = originalBookingStops[originalBookingStops.length - 1];
-        const isFinalStopOfBooking = stop.id === lastStopOfOriginalBooking.id;
-        
-        const idToUse = isFinalStopOfBooking ? stop.parentBooking.requestId : stop.bookingSegmentId;
+        const idToUse = isFinalStopOfBooking ? parentBooking.requestId : stop.bookingSegmentId;
         const idType = isFinalStopOfBooking ? 'request_id' : 'bookingsegment_id';
 
         if (!idToUse) {
             throw new Error(`Missing identifier for stop. StopType: ${stop.stopType}, isFinal: ${isFinalStopOfBooking}, Address: ${stop.location.address}`);
         }
         
-        let plannedDate: string | undefined;
-        if (stop.stopType === 'pickup' && stop.dateTime) {
-          plannedDate = new Date(stop.dateTime).toISOString();
-        } else if (stop.stopType === 'dropoff' && stop.pickupStopId) {
-          const correspondingPickup = pickupMap.get(stop.pickupStopId);
-          if (correspondingPickup?.dateTime) {
-            plannedDate = new Date(correspondingPickup.dateTime).toISOString();
-          }
-        }
-        
-        if (!plannedDate) {
-          const firstPickup = stop.parentBooking.stops.find(s => s.stopType === 'pickup' && s.dateTime);
-          plannedDate = firstPickup?.dateTime ? new Date(firstPickup.dateTime).toISOString() : new Date().toISOString();
-        }
+        const firstPickupOfBooking = parentBooking.stops.find(s => s.stopType === 'pickup');
+        const plannedDate = firstPickupOfBooking?.dateTime ? new Date(firstPickupOfBooking.dateTime).toISOString() : new Date().toISOString();
 
         journeyBookingsPayload.push({
           [idType]: idToUse,
@@ -218,7 +195,7 @@ const generateJourneyPayloadFlow = ai.defineFlow(
     };
 
     const finalOrderedStops = orderedStops.map(s => {
-        const { parentBooking, originalBookingIndex, ...stopRest } = s as any;
+        const { parentBooking, ...stopRest } = s as any;
         return stopRest;
     });
 
