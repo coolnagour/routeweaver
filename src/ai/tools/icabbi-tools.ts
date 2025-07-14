@@ -14,9 +14,9 @@ import { AccountSchema, ServerConfigSchema, SiteSchema } from '@/types';
 export const getAccountTool = ai.defineTool(
   {
     name: 'getAccount',
-    description: 'Find a specific customer account by their name. Use this if the user mentions a specific account to use for the template.',
+    description: 'Find a specific customer account by its name. Use this if the user prompt mentions a specific account, like "for the Marian account".',
     inputSchema: z.object({
-      name: z.string().describe('The name of the account to search for.'),
+      name: z.string().describe('The name of the account to search for. For example, if the prompt is "for the Marian account", you should use "Marian".'),
       server: ServerConfigSchema.describe("The server configuration to use for the API call. This is provided by the system."),
     }),
     outputSchema: AccountSchema.optional(),
@@ -44,9 +44,9 @@ export const getAccountTool = ai.defineTool(
 export const getSiteTool = ai.defineTool(
   {
     name: 'getSite',
-    description: 'Find a specific site by its name. Use this if the user mentions a specific site to use for the template.',
+    description: 'Find a specific site by its name. Use this if the user prompt mentions a specific site, like "for the Dublin site".',
     inputSchema: z.object({
-      name: z.string().describe('The name of the site to search for.'),
+      name: z.string().describe('The name of the site to search for. For example, if the prompt is "for the Dublin site", you should use "Dublin".'),
       server: ServerConfigSchema.describe("The server configuration to use for the API call. This is provided by the system."),
     }),
     outputSchema: SiteSchema.optional(),

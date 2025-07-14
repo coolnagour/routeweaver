@@ -67,18 +67,18 @@ const suggestTemplatesPrompt = ai.definePrompt({
     prompt: `You are an assistant that helps transportation dispatchers create journey templates.
 Based on the user's description, generate 3 plausible journey template suggestions.
 
-First, check if the user's prompt mentions a specific account name (e.g., "for the Marian account") or a site name (e.g., "for the Dublin site").
-- If a site name is mentioned, you MUST use the 'getSite' tool to find it.
-- If an account name is mentioned, you MUST use the 'getAccount' tool to find it.
+First, analyze the user's prompt for specific site or account names.
+- If the prompt mentions a site (e.g., "for the Dublin site"), you MUST use the 'getSite' tool to find it.
+- If the prompt mentions an account (e.g., "for the Marian account"), you MUST use the 'getAccount' tool to find it.
+- When you call a tool, only provide the 'name' parameter. The system will handle the server configuration.
 
-When you call the tools, you only need to provide the 'name'; the system will handle the server configuration.
+After using the tools, you MUST handle the results as follows:
+- If a tool returns a full object (e.g., it finds the site or account), you MUST include that entire object in the corresponding 'site' or 'account' field of your JSON response.
+- If a tool does not find an item (returns nothing), or if no site/account was mentioned in the prompt, you MUST set the corresponding 'site' or 'account' field to null. Do NOT use an empty object {}.
 
-- If a tool returns a full object, you MUST include the entire object in the 'site' or 'account' field of your response for that suggestion.
-- If a tool does not find an item (returns nothing) or if no site/account is mentioned in the prompt, you MUST set the corresponding 'site' or 'account' field to null in your response. Do not use an empty object {}.
-
-Then, generate the journey details:
+Then, generate the journey details based on the user's request (e.g., 'two bookings', 'airport run').
 - All generated addresses MUST be within the following country: {{{countryName}}}.
-- Each template must contain one or more bookings, according to the user's request.
+- Each template must contain one or more bookings.
 - Each booking must contain at least one pickup and one dropoff.
 - For each stop, you must generate a unique 'id' (e.g., 'stop-1').
 - For each 'pickup' stop, provide a realistic-sounding but fake address, name, and phone number.

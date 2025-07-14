@@ -77,34 +77,36 @@ export default function AiTemplateModal({ isOpen, onOpenChange, onTemplateCreate
 
     setIsFinalizing(true);
     try {
-        let finalAccount: Account | undefined | null = suggestion.account;
         let finalSite: Site | undefined | null = suggestion.site;
-        
-        // Fallback for Site
+        let finalAccount: Account | undefined | null = suggestion.account;
+
+        // Fallback for Site if not provided by AI
         if (!finalSite) {
             console.log("No site provided by AI, fetching random site...");
             const sites = await getSites(server);
-            if (sites.length === 0) {
+            if (sites.length > 0) {
+                finalSite = sites[Math.floor(Math.random() * sites.length)];
+            } else {
                 toast({ title: "No sites found on server", description: "Cannot auto-assign a site for the template.", variant: "destructive" });
                 setIsFinalizing(false);
                 return;
             }
-            finalSite = sites[Math.floor(Math.random() * sites.length)];
         }
 
-        // Fallback for Account
+        // Fallback for Account if not provided by AI
         if (!finalAccount) {
             console.log("No account provided by AI, fetching random account...");
             const accounts = await searchAccountsByName(server, undefined, { limit: 50 });
-            if (accounts.length === 0) {
+            if (accounts.length > 0) {
+                finalAccount = accounts[Math.floor(Math.random() * accounts.length)];
+            } else {
                 toast({ title: "No accounts found on server", description: "Cannot auto-assign an account for the template.", variant: "destructive" });
                 setIsFinalizing(false);
                 return;
             }
-            finalAccount = accounts[Math.floor(Math.random() * accounts.length)];
         }
         
-        // This is the final check. If we still don't have these, we can't proceed.
+        // Final check. If we still don't have these, we can't proceed.
         if (!finalSite || !finalAccount) {
             toast({ title: "Error creating template", description: "Could not finalize site or account information.", variant: "destructive" });
             setIsFinalizing(false);
@@ -136,10 +138,7 @@ export default function AiTemplateModal({ isOpen, onOpenChange, onTemplateCreate
             description: toastDescription,
         });
 
-        onOpenChange(false);
-        setSuggestions([]);
-        setPrompt('');
-
+        onOpenChange(false); // Close the dialog after successful creation
     } catch (error) {
         console.error("Failed to finalize template:", error);
         toast({ title: "Error creating template", description: `Could not fetch required site/account data. ${error instanceof Error ? error.message : ''}`, variant: "destructive" });
