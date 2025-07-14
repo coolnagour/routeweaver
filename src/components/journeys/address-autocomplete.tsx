@@ -4,9 +4,10 @@
 import { Autocomplete, useLoadScript } from "@react-google-maps/api";
 import { Input } from "@/components/ui/input";
 import { MapPin } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { Location } from "@/types";
 import { useServer } from "@/context/server-context";
+import { useTheme } from "next-themes";
 
 interface AddressAutocompleteProps {
   value: string;
@@ -17,8 +18,34 @@ interface AddressAutocompleteProps {
 
 const libraries: ("places")[] = ["places"];
 
+// Styles for the Google Places Autocomplete dropdown
+const darkThemeStyles = `
+  .pac-container {
+    background-color: hsl(var(--popover));
+    border-color: hsl(var(--border));
+    border-radius: var(--radius);
+  }
+  .pac-item {
+    color: hsl(var(--popover-foreground));
+    border-top: 1px solid hsl(var(--border));
+  }
+  .pac-item:first-child {
+    border-top: none;
+  }
+  .pac-item-query {
+    color: hsl(var(--popover-foreground));
+  }
+  .pac-item:hover {
+    background-color: hsl(var(--accent));
+  }
+  .pac-matched {
+    color: hsl(var(--primary));
+  }
+`;
+
 export default function AddressAutocomplete({ value, onChange, placeholder, className }: AddressAutocompleteProps) {
   const { server } = useServer();
+  const { theme } = useTheme();
   const { isLoaded } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
     libraries: libraries,
@@ -26,6 +53,25 @@ export default function AddressAutocomplete({ value, onChange, placeholder, clas
 
   const [autocomplete, setAutocomplete] = useState<google.maps.places.Autocomplete | null>(null);
   const [inputValue, setInputValue] = useState(value);
+  
+  useEffect(() => {
+    const styleTagId = 'google-maps-dark-theme';
+    let styleTag = document.getElementById(styleTagId) as HTMLStyleElement | null;
+
+    if (theme === 'dark') {
+      if (!styleTag) {
+        styleTag = document.createElement('style');
+        styleTag.id = styleTagId;
+        styleTag.type = 'text/css';
+        document.head.appendChild(styleTag);
+      }
+      styleTag.innerHTML = darkThemeStyles;
+    } else {
+      if (styleTag) {
+        styleTag.innerHTML = '';
+      }
+    }
+  }, [theme]);
 
   const onLoad = (autocompleteInstance: google.maps.places.Autocomplete) => {
     setAutocomplete(autocompleteInstance);
