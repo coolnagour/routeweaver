@@ -55,11 +55,11 @@ export default function AiTemplateModal({ isOpen, onOpenChange, onTemplateCreate
      const templateToCreate: Omit<JourneyTemplate, 'id'> = {
       name: suggestion.name,
       bookings: suggestion.bookings.map(b => ({
-        id: uuidv4(),
+        id: uuidv4(), // Generate a unique ID for the booking itself
         stops: b.stops.map(s => ({
           ...s,
-          id: uuidv4(),
-          // The AI provides a string address, which is what we need.
+          // Use the ID from the AI suggestion to maintain links
+          id: s.id || uuidv4(),
           // Lat/Lng will be populated when the user confirms the address in the builder.
           location: { address: s.location.address, lat: 0, lng: 0 },
           dateTime: s.dateTime ? new Date(s.dateTime) : undefined

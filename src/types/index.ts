@@ -63,13 +63,14 @@ export type AITemplateSuggestion = {
   name:string;
   bookings: {
     stops: {
+      id: string; // The AI now provides this
       location: { address: string };
       stopType: StopType;
       dateTime?: string;
       instructions?: string;
       name?: string;
       phone?: string;
-      pickupStopId?: string;
+      pickupStopId?: string; // The AI now provides this
     }[];
   }[];
 }
