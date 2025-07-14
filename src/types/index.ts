@@ -57,12 +57,13 @@ export interface JourneyTemplate {
   name: string;
   bookings: TemplateBooking[];
   siteId?: number; // Added for Quick Start
-  account?: Account; // Added for Quick Start
+  account?: Account | null; // Added for Quick Start
 }
 
 // Type for AI-generated template suggestions before they are fully structured
 export type AITemplateSuggestion = {
   name:string;
+  account?: Account; // The AI can now return a specific account
   bookings: {
     stops: {
       id: string; // The AI now provides this

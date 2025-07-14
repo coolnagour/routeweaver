@@ -15,7 +15,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Bot, Loader2, Sparkles, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import type { AITemplateSuggestion, JourneyTemplate } from '@/types';
+import type { AITemplateSuggestion, JourneyTemplate, Account } from '@/types';
 import { suggestTemplates } from '@/ai/flows/template-suggestion-flow';
 import { v4 as uuidv4 } from 'uuid';
 import { useServer } from '@/context/server-context';
@@ -77,31 +77,34 @@ export default function AiTemplateModal({ isOpen, onOpenChange, onTemplateCreate
 
     setIsFinalizing(true);
     try {
-        // Fetch sites and accounts in parallel
-        const [sites, accounts] = await Promise.all([
-            getSites(server),
-            searchAccountsByName(server, undefined, { limit: 50 }) // Get a decent pool of accounts
-        ]);
-
+        let finalAccount: Account | undefined = suggestion.account;
+        
+        // Fetch sites (always needed)
+        const sites = await getSites(server);
         if (sites.length === 0) {
             toast({ title: "No sites found on server", description: "Cannot auto-assign a site for the template.", variant: "destructive" });
             setIsFinalizing(false);
             return;
         }
-        if (accounts.length === 0) {
-            toast({ title: "No accounts found on server", description: "Cannot auto-assign an account for the template.", variant: "destructive" });
-            setIsFinalizing(false);
-            return;
+        const randomSite = sites[Math.floor(Math.random() * sites.length)];
+
+        // If AI didn't find a specific account, get a random one
+        if (!finalAccount) {
+            console.log("No account provided by AI, fetching random account...");
+            const accounts = await searchAccountsByName(server, undefined, { limit: 50 });
+            if (accounts.length === 0) {
+                toast({ title: "No accounts found on server", description: "Cannot auto-assign an account for the template.", variant: "destructive" });
+                setIsFinalizing(false);
+                return;
+            }
+            finalAccount = accounts[Math.floor(Math.random() * accounts.length)];
         }
 
-        // Randomly select one of each
-        const randomSite = sites[Math.floor(Math.random() * sites.length)];
-        const randomAccount = accounts[Math.floor(Math.random() * accounts.length)];
 
         const templateToCreate: Omit<JourneyTemplate, 'id'> = {
             name: suggestion.name,
             siteId: randomSite.id,
-            account: randomAccount,
+            account: finalAccount,
             bookings: suggestion.bookings.map(b => ({
                 id: uuidv4(),
                 stops: b.stops.map(s => ({
@@ -114,10 +117,16 @@ export default function AiTemplateModal({ isOpen, onOpenChange, onTemplateCreate
         };
         
         onTemplateCreate(templateToCreate);
+        
+        const toastDescription = suggestion.account 
+            ? `"${suggestion.name}" is ready and assigned to the ${suggestion.account.name} account.`
+            : `"${suggestion.name}" is ready with a site and account pre-selected.`;
+        
         toast({
             title: 'Template Added!',
-            description: `"${suggestion.name}" is ready with a site and account pre-selected.`
+            description: toastDescription,
         });
+
         onOpenChange(false);
         setSuggestions([]);
         setPrompt('');
@@ -146,7 +155,7 @@ export default function AiTemplateModal({ isOpen, onOpenChange, onTemplateCreate
             <Bot /> Create Template with AI
           </DialogTitle>
           <DialogDescription>
-            Describe a journey, and we'll suggest a template with a pre-selected site and account.
+            Describe a journey, including a specific account if needed (e.g., "for the Marian account"). We'll suggest a template.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -154,7 +163,7 @@ export default function AiTemplateModal({ isOpen, onOpenChange, onTemplateCreate
             <Label htmlFor="prompt">Your Journey Description</Label>
             <Textarea
               id="prompt"
-              placeholder="e.g., 'A frequent trip to the airport for business travel.'"
+              placeholder="e.g., 'A frequent trip to the airport for business travel for the Marian account.'"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
             />
@@ -174,7 +183,7 @@ export default function AiTemplateModal({ isOpen, onOpenChange, onTemplateCreate
                <Alert>
                   <AlertTriangle className="h-4 w-4" />
                   <AlertDescription>
-                    Using a suggestion will randomly assign a valid Site and Account to the template.
+                    If an account isn't specified or found, a random Site and Account will be assigned.
                   </AlertDescription>
                 </Alert>
               <div className="grid gap-2">
@@ -185,6 +194,11 @@ export default function AiTemplateModal({ isOpen, onOpenChange, onTemplateCreate
                       <p className="text-sm text-muted-foreground">
                         {s.bookings?.[0]?.stops?.[0]?.location.address} to {s.bookings?.[0]?.stops?.[1]?.location.address}
                       </p>
+                       {s.account && (
+                          <p className="text-xs text-primary font-medium">
+                            Account: {s.account.name}
+                          </p>
+                        )}
                     </div>
                     <Button variant="outline" size="sm" onClick={() => handleCreate(s)} disabled={isFinalizing}>
                       {isFinalizing ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}

@@ -11,6 +11,7 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import type { AITemplateSuggestion } from '@/types';
+import { getAccount, AccountSchema } from '@/ai/tools/icabbi-tools';
 
 const LocationSchema = z.object({
   address: z.string().describe("A plausible-sounding street address, city, and state."),
@@ -34,6 +35,7 @@ const BookingSchema = z.object({
 const AITemplateSuggestionSchema = z.object({
   name: z.string().describe("A descriptive name for the journey template, e.g., 'Daily Work Commute'."),
   bookings: z.array(BookingSchema),
+  account: AccountSchema.optional().describe("The specific account to be associated with this template, if found using the provided tools."),
 });
 
 const SuggestTemplatesInputSchema = z.object({
@@ -56,16 +58,21 @@ const prompt = ai.definePrompt({
   name: 'suggestTemplatesPrompt',
   input: { schema: SuggestTemplatesInputSchema },
   output: { schema: SuggestTemplatesOutputSchema },
+  tools: [getAccount],
   prompt: `You are an assistant that helps transportation dispatchers create journey templates.
 Based on the user's description, generate 3 plausible journey template suggestions.
-All generated addresses MUST be within the following country: {{{countryName}}}.
-Each template must contain one or more bookings.
-Each booking must contain at least one pickup and one dropoff.
-For each stop, you must generate a unique 'id' (e.g., 'stop-1').
-For each 'pickup' stop, provide a realistic-sounding but fake address, name, and phone number.
-For each 'dropoff' stop, you MUST set the 'pickupStopId' field to the 'id' of the corresponding pickup stop from the same booking.
-Do not use real people's names or addresses.
-Ensure the output is a valid JSON object matching the requested schema.
+
+First, check if the user's prompt mentions a specific account name (e.g., "for the Marian account"). If it does, you MUST use the 'getAccount' tool to find that account. If the tool returns an account, include the full account object in the 'account' field of your response. If the tool does not find an account or no account is mentioned, leave the 'account' field empty.
+
+Then, generate the journey details:
+- All generated addresses MUST be within the following country: {{{countryName}}}.
+- Each template must contain one or more bookings.
+- Each booking must contain at least one pickup and one dropoff.
+- For each stop, you must generate a unique 'id' (e.g., 'stop-1').
+- For each 'pickup' stop, provide a realistic-sounding but fake address, name, and phone number.
+- For each 'dropoff' stop, you MUST set the 'pickupStopId' field to the 'id' of the corresponding pickup stop from the same booking.
+- Do not use real people's names or addresses.
+- Ensure the output is a valid JSON object matching the requested schema.
 
 User's Journey Description:
 {{{prompt}}}
