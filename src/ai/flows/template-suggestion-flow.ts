@@ -96,17 +96,20 @@ ${input.prompt}
     // The tool's input requires the server. We need to define a custom tool resolver
     // to inject the server from our flow's input into the tool's input.
     const { output } = await prompt(
-        {},
+        { prompt: input.prompt },
         {
-          tools: {
-            getAccount: async (toolInput) => {
-              // The LLM provides the `name` (toolInput). We add the `server`.
-              return getAccountTool.run({
-                ...toolInput,
-                server: input.server,
-              });
+          tools: [
+            {
+              tool: getAccountTool,
+              handler: async (toolInput) => {
+                // The LLM provides the `name` (toolInput). We add the `server`.
+                return getAccountTool.run({
+                  ...toolInput,
+                  server: input.server,
+                });
+              },
             },
-          },
+          ],
         }
     );
     
