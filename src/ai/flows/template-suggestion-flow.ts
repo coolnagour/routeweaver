@@ -37,7 +37,7 @@ const BookingSchema = z.object({
 const AITemplateSuggestionSchema = z.object({
   name: z.string().describe("A descriptive name for the journey template, e.g., 'Daily Work Commute'."),
   bookings: z.array(BookingSchema),
-  account: AccountSchema.optional().describe("The specific account to be associated with this template, if found using the provided tools."),
+  account: AccountSchema.nullable().optional().describe("The specific account to be associated with this template, if found. If no account is found or mentioned, this field should be null."),
 });
 
 const SuggestTemplatesInputSchema = z.object({
@@ -68,7 +68,8 @@ Based on the user's description, generate 3 plausible journey template suggestio
 
 First, check if the user's prompt mentions a specific account name (e.g., "for the Marian account"). If it does, you MUST use the 'getAccount' tool to find that account. When you call the tool, you only need to provide the 'name' of the account; the system will handle the server configuration.
 
-If the tool returns an account, include the full account object in the 'account' field of your response for the relevant suggestion. If the tool does not find an account or no account is mentioned, leave the 'account' field empty.
+- If the tool returns an account, include the full account object in the 'account' field of your response for the relevant suggestion.
+- If the tool does not find an account or if no account is mentioned in the prompt, you MUST set the 'account' field to null. Do not use an empty object.
 
 Then, generate the journey details:
 - All generated addresses MUST be within the following country: {{{countryName}}}.
