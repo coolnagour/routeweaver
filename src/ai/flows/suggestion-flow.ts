@@ -24,6 +24,13 @@ Do not use real people's names or data.
 
 Requested data type: {{{type}}}
 
+{{#if existingValues}}
+The following values are already in use, so please generate a different one:
+{{#each existingValues}}
+- {{this}}
+{{/each}}
+{{/if}}
+
 Example for 'name': Jane Doe
 Example for 'phone': 555-123-4567
 Example for 'instructions': Gate code is #1234, leave at front desk.

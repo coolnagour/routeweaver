@@ -30,7 +30,8 @@ interface ViaStopProps {
   isDestination?: boolean;
   onGenerateField: (
     fieldType: SuggestionInput['type'],
-    fieldNameToUpdate: `stops.${number}.${'name' | 'phone' | 'instructions'}`
+    fieldNameToUpdate: `stops.${number}.${'name' | 'phone' | 'instructions'}`,
+    fieldIndex: number,
   ) => void;
   generatingFields: Record<string, boolean>;
 }
@@ -129,7 +130,7 @@ export default function ViaStop({
                          <div className="relative flex items-center">
                              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                              <Input placeholder="e.g. John Smith" {...field} className="pl-10 pr-10 bg-background" />
-                             <Button type="button" variant="ghost" size="icon" className="absolute right-1 h-8 w-8 text-primary" onClick={() => onGenerateField('name', `stops.${index}.name`)} disabled={generatingFields[`stops.${index}.name-name`]}>
+                             <Button type="button" variant="ghost" size="icon" className="absolute right-1 h-8 w-8 text-primary" onClick={() => onGenerateField('name', `stops.${index}.name`, index)} disabled={generatingFields[`stops.${index}.name-name`]}>
                                 {generatingFields[`stops.${index}.name-name`] ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                             </Button>
                          </div>
@@ -148,7 +149,7 @@ export default function ViaStop({
                          <div className="relative flex items-center">
                              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                              <Input placeholder="e.g. 555-5678" {...field} className="pl-10 pr-10 bg-background" />
-                             <Button type="button" variant="ghost" size="icon" className="absolute right-1 h-8 w-8 text-primary" onClick={() => onGenerateField('phone', `stops.${index}.phone`)} disabled={generatingFields[`stops.${index}.phone-phone`]}>
+                             <Button type="button" variant="ghost" size="icon" className="absolute right-1 h-8 w-8 text-primary" onClick={() => onGenerateField('phone', `stops.${index}.phone`, index)} disabled={generatingFields[`stops.${index}.phone-phone`]}>
                                 {generatingFields[`stops.${index}.phone-phone`] ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                              </Button>
                          </div>
@@ -262,7 +263,7 @@ export default function ViaStop({
                                  <div className="relative flex items-center">
                                      <MessageSquare className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                      <Input placeholder="e.g., Gate code #1234" {...field} className="pl-10 pr-10 bg-background"/>
-                                     <Button type="button" variant="ghost" size="icon" className="absolute right-1 h-8 w-8 text-primary" onClick={() => onGenerateField('instructions', `stops.${index}.instructions`)} disabled={generatingFields[`stops.${index}.instructions-instructions`]}>
+                                     <Button type="button" variant="ghost" size="icon" className="absolute right-1 h-8 w-8 text-primary" onClick={() => onGenerateField('instructions', `stops.${index}.instructions`, index)} disabled={generatingFields[`stops.${index}.instructions-instructions`]}>
                                         {generatingFields[`stops.${index}.instructions-instructions`] ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                                      </Button>
                                  </div>

@@ -138,6 +138,7 @@ export type JourneyOutput = z.infer<typeof JourneyOutputSchema>;
 // Schemas for Suggestion Flow
 export const SuggestionInputSchema = z.object({
   type: z.enum(['name', 'phone', 'instructions']),
+  existingValues: z.array(z.string()).optional().describe("A list of existing values to avoid generating duplicates."),
 });
 export type SuggestionInput = z.infer<typeof SuggestionInputSchema>;
 
