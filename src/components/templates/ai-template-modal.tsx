@@ -56,6 +56,7 @@ export default function AiTemplateModal({ isOpen, onOpenChange, onTemplateCreate
 
     try {
       const result = await suggestTemplates({ prompt, countryName, server });
+      console.log('AI Suggestions:', JSON.stringify(result.suggestions, null, 2));
       setSuggestions(result.suggestions);
     } catch (error) {
       console.error("AI suggestion failed:", error);
