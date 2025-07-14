@@ -10,8 +10,10 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import type { AITemplateSuggestion } from '@/types';
-import { getAccount, AccountSchema } from '@/ai/tools/icabbi-tools';
+import type { AITemplateSuggestion, ServerConfig } from '@/types';
+import { createGetAccountTool } from '@/ai/tools/icabbi-tools';
+import { AccountSchema, ServerConfigSchema } from '@/types';
+
 
 const LocationSchema = z.object({
   address: z.string().describe("A plausible-sounding street address, city, and state."),
@@ -41,6 +43,7 @@ const AITemplateSuggestionSchema = z.object({
 const SuggestTemplatesInputSchema = z.object({
   prompt: z.string(),
   countryName: z.string().describe("The country within which all addresses should be generated."),
+  server: ServerConfigSchema.describe("The server configuration to use for API calls within tools."),
 });
 export type SuggestTemplatesInput = z.infer<typeof SuggestTemplatesInputSchema>;
 
@@ -54,12 +57,22 @@ export async function suggestTemplates(input: SuggestTemplatesInput): Promise<Su
   return suggestTemplatesFlow(input);
 }
 
-const prompt = ai.definePrompt({
-  name: 'suggestTemplatesPrompt',
-  input: { schema: SuggestTemplatesInputSchema },
-  output: { schema: SuggestTemplatesOutputSchema },
-  tools: [getAccount],
-  prompt: `You are an assistant that helps transportation dispatchers create journey templates.
+const suggestTemplatesFlow = ai.defineFlow(
+  {
+    name: 'suggestTemplatesFlow',
+    inputSchema: SuggestTemplatesInputSchema,
+    outputSchema: SuggestTemplatesOutputSchema,
+  },
+  async (input) => {
+    
+    const getAccountTool = createGetAccountTool(input.server);
+    
+    const prompt = ai.definePrompt({
+        name: 'suggestTemplatesPrompt',
+        input: { schema: SuggestTemplatesInputSchema },
+        output: { schema: SuggestTemplatesOutputSchema },
+        tools: [getAccountTool],
+        prompt: `You are an assistant that helps transportation dispatchers create journey templates.
 Based on the user's description, generate 3 plausible journey template suggestions.
 
 First, check if the user's prompt mentions a specific account name (e.g., "for the Marian account"). If it does, you MUST use the 'getAccount' tool to find that account. If the tool returns an account, include the full account object in the 'account' field of your response. If the tool does not find an account or no account is mentioned, leave the 'account' field empty.
@@ -77,15 +90,8 @@ Then, generate the journey details:
 User's Journey Description:
 {{{prompt}}}
 `,
-});
-
-const suggestTemplatesFlow = ai.defineFlow(
-  {
-    name: 'suggestTemplatesFlow',
-    inputSchema: SuggestTemplatesInputSchema,
-    outputSchema: SuggestTemplatesOutputSchema,
-  },
-  async (input) => {
+    });
+    
     const { output } = await prompt(input);
     if (!output) {
       throw new Error("The AI model did not return any output.");

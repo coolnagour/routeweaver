@@ -1,6 +1,7 @@
 
 import { z } from 'zod';
-import type { ServerConfig } from '@/config/servers';
+import type { ServerConfig as ServerConfigType } from '@/config/servers';
+export type ServerConfig = ServerConfigType;
 
 export type StopType = 'pickup' | 'dropoff';
 
@@ -111,6 +112,12 @@ export const BookingSchema = z.object({
   stops: z.array(StopSchema),
   siteId: z.number().optional(),
   accountId: z.number().optional(),
+});
+
+export const AccountSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  ref: z.string(),
 });
 
 export const ServerConfigSchema = z.object({

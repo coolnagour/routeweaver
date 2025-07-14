@@ -15,7 +15,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Bot, Loader2, Sparkles, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import type { AITemplateSuggestion, JourneyTemplate, Account } from '@/types';
+import type { AITemplateSuggestion, JourneyTemplate, Account, ServerConfig } from '@/types';
 import { suggestTemplates } from '@/ai/flows/template-suggestion-flow';
 import { v4 as uuidv4 } from 'uuid';
 import { useServer } from '@/context/server-context';
@@ -55,7 +55,7 @@ export default function AiTemplateModal({ isOpen, onOpenChange, onTemplateCreate
     const countryName = server.countryCodes?.[0] ? getCountryName(server.countryCodes[0]) : "Ireland";
 
     try {
-      const result = await suggestTemplates({ prompt, countryName });
+      const result = await suggestTemplates({ prompt, countryName, server });
       setSuggestions(result.suggestions);
     } catch (error) {
       console.error("AI suggestion failed:", error);
