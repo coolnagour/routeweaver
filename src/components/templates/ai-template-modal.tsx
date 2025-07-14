@@ -80,6 +80,7 @@ export default function AiTemplateModal({ isOpen, onOpenChange, onTemplateCreate
         let finalAccount: Account | undefined | null = suggestion.account;
         let finalSite: Site | undefined | null = suggestion.site;
         
+        // If AI didn't find a site, fetch a random one.
         if (!finalSite) {
             console.log("No site provided by AI, fetching random site...");
             const sites = await getSites(server);
@@ -91,8 +92,10 @@ export default function AiTemplateModal({ isOpen, onOpenChange, onTemplateCreate
             finalSite = sites[Math.floor(Math.random() * sites.length)];
         }
 
+        // If AI didn't find an account, fetch a random one.
         if (!finalAccount) {
             console.log("No account provided by AI, fetching random account...");
+            // Fetch a few accounts to get a random one.
             const accounts = await searchAccountsByName(server, undefined, { limit: 50 });
             if (accounts.length === 0) {
                 toast({ title: "No accounts found on server", description: "Cannot auto-assign an account for the template.", variant: "destructive" });
@@ -102,12 +105,14 @@ export default function AiTemplateModal({ isOpen, onOpenChange, onTemplateCreate
             finalAccount = accounts[Math.floor(Math.random() * accounts.length)];
         }
         
+        // This is the final check. If we still don't have these, we can't proceed.
         if (!finalSite || !finalAccount) {
             toast({ title: "Error creating template", description: "Could not finalize site or account information.", variant: "destructive" });
             setIsFinalizing(false);
             return;
         }
 
+        // Assemble the complete template object before creating it.
         const templateToCreate: Omit<JourneyTemplate, 'id'> = {
             name: suggestion.name,
             siteId: finalSite.id,
