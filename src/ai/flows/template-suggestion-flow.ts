@@ -131,8 +131,10 @@ User's Journey Description: ${input.prompt}`,
           }
         }),
       );
-      generateOptions.messages = llmResponse.messages;
-      generateOptions.prompt = toolResponses;
+      // Append the tool responses to the message history for the next turn.
+      generateOptions.messages = [...llmResponse.messages, ...toolResponses];
+      // Clear the prompt as it's now part of the history.
+      generateOptions.prompt = [];
     }
     
     if (!llmResponse || !llmResponse.output) {
