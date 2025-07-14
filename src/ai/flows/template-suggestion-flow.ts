@@ -73,8 +73,8 @@ First, check if the user's prompt mentions a specific account name (e.g., "for t
 
 When you call the tools, you only need to provide the 'name'; the system will handle the server configuration.
 
-- If a tool returns an object, include the full object in the 'site' or 'account' field of your response for the relevant suggestion.
-- If a tool does not find an item or if no site/account is mentioned, you MUST set the corresponding field to null. Do not use an empty object.
+- If a tool returns a full object, you MUST include the entire object in the 'site' or 'account' field of your response for that suggestion.
+- If a tool does not find an item (returns nothing) or if no site/account is mentioned in the prompt, you MUST set the corresponding 'site' or 'account' field to null in your response. Do not use an empty object {}.
 
 Then, generate the journey details:
 - All generated addresses MUST be within the following country: {{{countryName}}}.
