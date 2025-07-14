@@ -203,12 +203,12 @@ export default function AiTemplateModal({ isOpen, onOpenChange, onTemplateCreate
                         {s.bookings?.length} booking(s) - {s.bookings?.[0]?.stops?.[0]?.location.address}
                       </p>
                        <div className="flex gap-4">
-                         {s.site && (
+                         {s.site?.name && (
                             <p className="text-xs text-primary font-medium">
                               Site: {s.site.name}
                             </p>
                           )}
-                          {s.account && (
+                          {s.account?.name && (
                             <p className="text-xs text-primary font-medium">
                               Account: {s.account.name}
                             </p>

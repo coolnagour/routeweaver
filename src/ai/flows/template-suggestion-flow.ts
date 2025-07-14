@@ -73,7 +73,7 @@ First, analyze the user's prompt for specific site or account names.
 - When you call a tool, only provide the 'name' parameter. The system will handle the server configuration.
 
 After using the tools, you MUST handle the results as follows:
-- If a tool returns a full object (e.g., it finds the site or account), you MUST include that entire object in the corresponding 'site' or 'account' field of your JSON response.
+- If a tool returns a full object (e.g., it finds the site or account), you MUST include that entire object in the corresponding 'site' or 'account' field of your JSON response for that suggestion.
 - If a tool does not find an item (returns nothing), or if no site/account was mentioned in the prompt, you MUST set the corresponding 'site' or 'account' field to null. Do NOT use an empty object {}.
 
 Then, generate the journey details based on the user's request (e.g., 'two bookings', 'airport run').
