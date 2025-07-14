@@ -57,21 +57,13 @@ export async function suggestTemplates(input: SuggestTemplatesInput): Promise<Su
   return suggestTemplatesFlow(input);
 }
 
-const suggestTemplatesFlow = ai.defineFlow(
-  {
-    name: 'suggestTemplatesFlow',
-    inputSchema: SuggestTemplatesInputSchema,
-    outputSchema: SuggestTemplatesOutputSchema,
-  },
-  async (input) => {
-    
-    // The prompt is defined inside the flow so it can dynamically pass the server config
-    // to the tool's input when the LLM decides to call it.
-    const prompt = ai.definePrompt({
-        name: 'suggestTemplatesPrompt',
-        output: { schema: SuggestTemplatesOutputSchema },
-        tools: [getAccountTool],
-        prompt: `You are an assistant that helps transportation dispatchers create journey templates.
+// The prompt must be defined statically at the top level, not inside the flow.
+const suggestTemplatesPrompt = ai.definePrompt({
+    name: 'suggestTemplatesPrompt',
+    output: { schema: SuggestTemplatesOutputSchema },
+    tools: [getAccountTool],
+    // The prompt is now a template string that receives variables.
+    prompt: `You are an assistant that helps transportation dispatchers create journey templates.
 Based on the user's description, generate 3 plausible journey template suggestions.
 
 First, check if the user's prompt mentions a specific account name (e.g., "for the Marian account"). If it does, you MUST use the 'getAccount' tool to find that account. When you call the tool, you only need to provide the 'name' of the account; the system will handle the server configuration.
@@ -79,7 +71,7 @@ First, check if the user's prompt mentions a specific account name (e.g., "for t
 If the tool returns an account, include the full account object in the 'account' field of your response for the relevant suggestion. If the tool does not find an account or no account is mentioned, leave the 'account' field empty.
 
 Then, generate the journey details:
-- All generated addresses MUST be within the following country: ${input.countryName}.
+- All generated addresses MUST be within the following country: {{{countryName}}}.
 - Each template must contain one or more bookings.
 - Each booking must contain at least one pickup and one dropoff.
 - For each stop, you must generate a unique 'id' (e.g., 'stop-1').
@@ -89,27 +81,35 @@ Then, generate the journey details:
 - Ensure the output is a valid JSON object matching the requested schema.
 
 User's Journey Description:
-${input.prompt}
+{{{prompt}}}
 `,
-    });
+});
+
+const suggestTemplatesFlow = ai.defineFlow(
+  {
+    name: 'suggestTemplatesFlow',
+    inputSchema: SuggestTemplatesInputSchema,
+    outputSchema: SuggestTemplatesOutputSchema,
+  },
+  async (input) => {
     
-    // The tool's input requires the server. We need to define a custom tool resolver
-    // to inject the server from our flow's input into the tool's input.
-    const { output } = await prompt(
-        { prompt: input.prompt },
+    // Call the statically defined prompt, passing the variables it needs.
+    const { output } = await suggestTemplatesPrompt(
+        { 
+            prompt: input.prompt, 
+            countryName: input.countryName 
+        },
         {
-          tools: [
-            {
-              tool: getAccountTool,
-              handler: (toolInput) => {
-                // The LLM provides the `name` (toolInput). We add the `server`.
-                return getAccountTool.run({
-                  ...toolInput,
-                  server: input.server,
-                });
-              },
-            },
-          ],
+          // Use a tool_handler to intercept tool calls and inject runtime data.
+          tool_handler: (toolRequest) => {
+            if (toolRequest.name === 'getAccount') {
+              // The AI provides the 'name', we inject the 'server' from the flow's input.
+              return getAccountTool.run({
+                ...toolRequest.input,
+                server: input.server,
+              });
+            }
+          },
         }
     );
     
