@@ -27,6 +27,8 @@ interface JourneyBuilderProps {
   isEditingJourney?: boolean;
   onUpdateJourney?: (journey: Journey) => void;
   journeyId?: string;
+  initialSiteId?: number; // For loading from template
+  initialAccount?: Account | null; // For loading from template
 }
 
 export default function JourneyBuilder({ 
@@ -35,7 +37,9 @@ export default function JourneyBuilder({
   isEditingTemplate = false,
   isEditingJourney = false,
   onUpdateJourney,
-  journeyId
+  journeyId,
+  initialSiteId,
+  initialAccount
 }: JourneyBuilderProps) {
   const { toast } = useToast();
   const router = useRouter();
@@ -45,8 +49,8 @@ export default function JourneyBuilder({
   const [templateName, setTemplateName] = useState(initialData?.name || '');
   const [sites, setSites] = useState<{id: number, name: string, ref: string}[]>([]);
   const [isFetchingSites, setIsFetchingSites] = useState(false);
-  const [selectedSiteId, setSelectedSiteId] = useState<number | undefined>(undefined);
-  const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
+  const [selectedSiteId, setSelectedSiteId] = useState<number | undefined>(initialSiteId);
+  const [selectedAccount, setSelectedAccount] = useState<Account | null>(initialAccount || null);
   
   const getInitialBookings = (data: Partial<JourneyTemplate | Journey> | null | undefined): Booking[] => {
     if (!data || !data.bookings) return [];
@@ -86,8 +90,20 @@ export default function JourneyBuilder({
     
     setIsPreviewLoading(true);
     try {
+        let placeholderIdCounter = 1000;
+        // A simplified booking object is created for the debug view, as server IDs are not yet available.
+        // This provides a structural preview but won't have the final IDs.
+        const tempBookingsForPreview = currentBookings.map((b, bookingIndex) => ({
+          ...b,
+          requestId: b.requestId || (9000 + bookingIndex), // Use a temp ID for preview
+          stops: b.stops.map(s => ({
+            ...s,
+            bookingSegmentId: s.bookingSegmentId || placeholderIdCounter++ // Use unique placeholder IDs
+          }))
+        }));
+
         const payload = await generateJourneyPayload({ 
-            bookings: currentBookings, 
+            bookings: tempBookingsForPreview, 
             journeyServerId: journey?.journeyServerId 
         });
         setDebugApiPayload(payload);
@@ -102,18 +118,7 @@ export default function JourneyBuilder({
   const debouncedFetchPreview = useCallback(debounce(fetchPreview, 500), [fetchPreview]);
 
   useEffect(() => {
-    let placeholderIdCounter = 1000;
-    // A simplified booking object is created for the debug view, as server IDs are not yet available.
-    // This provides a structural preview but won't have the final IDs.
-    const tempBookingsForPreview = bookings.map((b, bookingIndex) => ({
-      ...b,
-      requestId: b.requestId || (9000 + bookingIndex), // Use a temp ID for preview
-      stops: b.stops.map(s => ({
-        ...s,
-        bookingSegmentId: s.bookingSegmentId || placeholderIdCounter++ // Use unique placeholder IDs
-      }))
-    }));
-    debouncedFetchPreview(tempBookingsForPreview, currentJourney);
+    debouncedFetchPreview(bookings, currentJourney);
   }, [bookings, currentJourney, debouncedFetchPreview]);
   
   useEffect(() => {
@@ -128,9 +133,11 @@ export default function JourneyBuilder({
     } else {
         setBookings(getInitialBookings(initialData));
         setTemplateName(initialData?.name || '');
+        setSelectedSiteId(initialSiteId);
+        setSelectedAccount(initialAccount || null);
         setCurrentJourney(null);
     }
-  }, [initialData, journeyId, journeys]);
+  }, [initialData, journeyId, journeys, initialSiteId, initialAccount]);
 
   useEffect(() => {
     async function fetchSites() {
@@ -219,6 +226,8 @@ export default function JourneyBuilder({
             instructions: s.instructions
         }))
       })),
+      siteId: selectedSiteId,
+      account: selectedAccount,
     };
 
     if (isEditingTemplate && initialData?.id) {

@@ -1,3 +1,4 @@
+
 'use client';
 
 import JourneyBuilder from '@/components/journeys/journey-builder';
@@ -27,5 +28,11 @@ export default function NewJourneyPage() {
     router.refresh(); 
   }
 
-  return <JourneyBuilder key={loadedTemplate ? loadedTemplate.id : 'new'} initialData={loadedTemplate} onNewJourneyClick={handleNewJourney}/>;
+  return <JourneyBuilder 
+    key={loadedTemplate ? loadedTemplate.id : 'new'} 
+    initialData={loadedTemplate} 
+    onNewJourneyClick={handleNewJourney}
+    initialSiteId={loadedTemplate?.siteId}
+    initialAccount={loadedTemplate?.account}
+  />;
 }

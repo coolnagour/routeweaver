@@ -13,12 +13,14 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Bot, Loader2, Sparkles } from 'lucide-react';
+import { Bot, Loader2, Sparkles, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { AITemplateSuggestion, JourneyTemplate } from '@/types';
 import { suggestTemplates } from '@/ai/flows/template-suggestion-flow';
 import { v4 as uuidv4 } from 'uuid';
 import { useServer } from '@/context/server-context';
+import { getSites, searchAccountsByName } from '@/services/icabbi';
+import { Alert, AlertDescription } from '../ui/alert';
 
 interface AiTemplateModalProps {
   isOpen: boolean;
@@ -40,16 +42,17 @@ const getCountryName = (code: string) => {
 export default function AiTemplateModal({ isOpen, onOpenChange, onTemplateCreate }: AiTemplateModalProps) {
   const [prompt, setPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isFinalizing, setIsFinalizing] = useState(false);
   const [suggestions, setSuggestions] = useState<AITemplateSuggestion[]>([]);
   const { toast } = useToast();
   const { server } = useServer();
 
   const handleGenerate = async () => {
-    if (!prompt) return;
+    if (!prompt || !server) return;
     setIsLoading(true);
     setSuggestions([]);
     
-    const countryName = server?.countryCodes?.[0] ? getCountryName(server.countryCodes[0]) : "Ireland";
+    const countryName = server.countryCodes?.[0] ? getCountryName(server.countryCodes[0]) : "Ireland";
 
     try {
       const result = await suggestTemplates({ prompt, countryName });
@@ -66,29 +69,65 @@ export default function AiTemplateModal({ isOpen, onOpenChange, onTemplateCreate
     }
   };
 
-  const handleCreate = (suggestion: AITemplateSuggestion) => {
-     const templateToCreate: Omit<JourneyTemplate, 'id'> = {
-      name: suggestion.name,
-      bookings: suggestion.bookings.map(b => ({
-        id: uuidv4(), // Generate a unique ID for the booking itself
-        stops: b.stops.map(s => ({
-          ...s,
-          // Use the ID from the AI suggestion to maintain links
-          id: s.id || uuidv4(),
-          // Lat/Lng will be populated when the user confirms the address in the builder.
-          location: { address: s.location.address, lat: 0, lng: 0 },
-          dateTime: s.dateTime ? new Date(s.dateTime) : undefined
-        }))
-      }))
-    };
-    onTemplateCreate(templateToCreate);
-    toast({
-      title: 'Template Added!',
-      description: `The "${suggestion.name}" template is ready to be saved.`
-    });
-    onOpenChange(false);
-    setSuggestions([]);
-    setPrompt('');
+  const handleCreate = async (suggestion: AITemplateSuggestion) => {
+    if (!server) {
+      toast({ title: "Server not selected", variant: "destructive" });
+      return;
+    }
+
+    setIsFinalizing(true);
+    try {
+        // Fetch sites and accounts in parallel
+        const [sites, accounts] = await Promise.all([
+            getSites(server),
+            searchAccountsByName(server, undefined, { limit: 50 }) // Get a decent pool of accounts
+        ]);
+
+        if (sites.length === 0) {
+            toast({ title: "No sites found on server", description: "Cannot auto-assign a site for the template.", variant: "destructive" });
+            setIsFinalizing(false);
+            return;
+        }
+        if (accounts.length === 0) {
+            toast({ title: "No accounts found on server", description: "Cannot auto-assign an account for the template.", variant: "destructive" });
+            setIsFinalizing(false);
+            return;
+        }
+
+        // Randomly select one of each
+        const randomSite = sites[Math.floor(Math.random() * sites.length)];
+        const randomAccount = accounts[Math.floor(Math.random() * accounts.length)];
+
+        const templateToCreate: Omit<JourneyTemplate, 'id'> = {
+            name: suggestion.name,
+            siteId: randomSite.id,
+            account: randomAccount,
+            bookings: suggestion.bookings.map(b => ({
+                id: uuidv4(),
+                stops: b.stops.map(s => ({
+                    ...s,
+                    id: s.id || uuidv4(),
+                    location: { address: s.location.address, lat: 0, lng: 0 },
+                    dateTime: s.dateTime ? new Date(s.dateTime) : undefined
+                }))
+            }))
+        };
+        
+        onTemplateCreate(templateToCreate);
+        toast({
+            title: 'Template Added!',
+            description: `"${suggestion.name}" is ready with a site and account pre-selected.`
+        });
+        onOpenChange(false);
+        setSuggestions([]);
+        setPrompt('');
+
+    } catch (error) {
+        console.error("Failed to finalize template:", error);
+        toast({ title: "Error creating template", description: "Could not fetch required site/account data.", variant: "destructive" });
+    } finally {
+        setIsFinalizing(false);
+    }
   };
   
   const handleDialogClose = (open: boolean) => {
@@ -107,8 +146,7 @@ export default function AiTemplateModal({ isOpen, onOpenChange, onTemplateCreate
             <Bot /> Create Template with AI
           </DialogTitle>
           <DialogDescription>
-            Describe your typical journey, and we'll suggest a template for you.
-            For example: "My daily trip to work from home."
+            Describe a journey, and we'll suggest a template with a pre-selected site and account.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -131,8 +169,14 @@ export default function AiTemplateModal({ isOpen, onOpenChange, onTemplateCreate
           </Button>
 
           {suggestions.length > 0 && (
-            <div className="space-y-2">
+            <div className="space-y-4">
               <Label>Suggestions</Label>
+               <Alert>
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    Using a suggestion will randomly assign a valid Site and Account to the template.
+                  </AlertDescription>
+                </Alert>
               <div className="grid gap-2">
                 {suggestions.map((s, i) => (
                   <div key={i} className="flex items-center justify-between rounded-lg border p-3">
@@ -142,7 +186,10 @@ export default function AiTemplateModal({ isOpen, onOpenChange, onTemplateCreate
                         {s.bookings?.[0]?.stops?.[0]?.location.address} to {s.bookings?.[0]?.stops?.[1]?.location.address}
                       </p>
                     </div>
-                    <Button variant="outline" size="sm" onClick={() => handleCreate(s)}>Use</Button>
+                    <Button variant="outline" size="sm" onClick={() => handleCreate(s)} disabled={isFinalizing}>
+                      {isFinalizing ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                      Use
+                    </Button>
                   </div>
                 ))}
               </div>

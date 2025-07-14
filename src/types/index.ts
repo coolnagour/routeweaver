@@ -56,6 +56,8 @@ export interface JourneyTemplate {
   id: string;
   name: string;
   bookings: TemplateBooking[];
+  siteId?: number; // Added for Quick Start
+  account?: Account; // Added for Quick Start
 }
 
 // Type for AI-generated template suggestions before they are fully structured
