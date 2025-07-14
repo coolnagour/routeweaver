@@ -90,6 +90,7 @@ User's Journey Description: ${input.prompt}`,
       output: { schema: SuggestTemplatesOutputSchema },
       returnToolRequests: true,
       toolChoice: 'auto',
+      messages: [], // Initialize messages array
     };
     
     let llmResponse;
@@ -109,10 +110,10 @@ User's Journey Description: ${input.prompt}`,
                 toolResponse: {
                   name: part.toolRequest.name,
                   ref: part.toolRequest.ref,
-                  output: JSON.stringify(await getAccountTool.run({
+                  output: await getAccountTool.run({
                     ...part.toolRequest.input,
                     server: input.server,
-                  })),
+                  }),
                 },
               };
               case 'getSite':
@@ -120,10 +121,10 @@ User's Journey Description: ${input.prompt}`,
                   toolResponse: {
                     name: part.toolRequest.name,
                     ref: part.toolRequest.ref,
-                    output: JSON.stringify(await getSiteTool.run({
+                    output: await getSiteTool.run({
                       ...part.toolRequest.input,
                       server: input.server,
-                    })),
+                    }),
                   },
                 };
             default:
@@ -132,7 +133,7 @@ User's Journey Description: ${input.prompt}`,
         }),
       );
       // Append the tool responses to the message history for the next turn.
-      generateOptions.messages = [...llmResponse.messages, ...toolResponses];
+      generateOptions.messages = [...(llmResponse.messages || []), ...toolResponses];
       // Clear the prompt as it's now part of the history.
       generateOptions.prompt = [];
     }
