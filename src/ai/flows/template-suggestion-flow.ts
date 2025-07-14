@@ -11,8 +11,8 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import type { AITemplateSuggestion } from '@/types';
-import { getAccountTool } from '@/ai/tools/icabbi-tools';
-import { AccountSchema, ServerConfigSchema } from '@/types';
+import { getAccountTool, getSiteTool } from '@/ai/tools/icabbi-tools';
+import { AccountSchema, ServerConfigSchema, SiteSchema } from '@/types';
 
 
 const LocationSchema = z.object({
@@ -37,7 +37,8 @@ const BookingSchema = z.object({
 const AITemplateSuggestionSchema = z.object({
   name: z.string().describe("A descriptive name for the journey template, e.g., 'Daily Work Commute'."),
   bookings: z.array(BookingSchema),
-  account: AccountSchema.nullable().optional().describe("The specific account to be associated with this template, if found. If no account is found or mentioned, this field should be null."),
+  account: AccountSchema.nullable().optional().describe("The specific account to be associated with this template, if found. If no account is found or mentioned, this field MUST be null."),
+  site: SiteSchema.nullable().optional().describe("The specific site to be associated with this template, if found. If no site is found or mentioned, this field MUST be null."),
 });
 
 const SuggestTemplatesInputSchema = z.object({
@@ -62,14 +63,18 @@ const suggestTemplatesPrompt = ai.definePrompt({
     name: 'suggestTemplatesPrompt',
     input: { schema: z.object({ prompt: z.string(), countryName: z.string() }) },
     output: { schema: SuggestTemplatesOutputSchema },
-    tools: [getAccountTool],
+    tools: [getAccountTool, getSiteTool],
     prompt: `You are an assistant that helps transportation dispatchers create journey templates.
 Based on the user's description, generate 3 plausible journey template suggestions.
 
-First, check if the user's prompt mentions a specific account name (e.g., "for the Marian account"). If it does, you MUST use the 'getAccount' tool to find that account. When you call the tool, you only need to provide the 'name' of the account; the system will handle the server configuration.
+First, check if the user's prompt mentions a specific account name (e.g., "for the Marian account") or a site name (e.g., "for the Dublin site").
+- If a site name is mentioned, you MUST use the 'getSite' tool to find it.
+- If an account name is mentioned, you MUST use the 'getAccount' tool to find it.
 
-- If the tool returns an account, include the full account object in the 'account' field of your response for the relevant suggestion.
-- If the tool does not find an account or if no account is mentioned in the prompt, you MUST set the 'account' field to null. Do not use an empty object.
+When you call the tools, you only need to provide the 'name'; the system will handle the server configuration.
+
+- If a tool returns an object, include the full object in the 'site' or 'account' field of your response for the relevant suggestion.
+- If a tool does not find an item or if no site/account is mentioned, you MUST set the corresponding field to null. Do not use an empty object.
 
 Then, generate the journey details:
 - All generated addresses MUST be within the following country: {{{countryName}}}.
@@ -106,6 +111,12 @@ const suggestTemplatesFlow = ai.defineFlow(
             if (toolRequest.name === 'getAccount') {
               // The AI provides the 'name', we inject the 'server' from the flow's input.
               return getAccountTool.run({
+                ...toolRequest.input,
+                server: input.server,
+              });
+            }
+            if (toolRequest.name === 'getSite') {
+              return getSiteTool.run({
                 ...toolRequest.input,
                 server: input.server,
               });

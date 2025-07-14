@@ -15,7 +15,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Bot, Loader2, Sparkles, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import type { AITemplateSuggestion, JourneyTemplate, Account } from '@/types';
+import type { AITemplateSuggestion, JourneyTemplate, Account, Site } from '@/types';
 import { suggestTemplates } from '@/ai/flows/template-suggestion-flow';
 import { v4 as uuidv4 } from 'uuid';
 import { useServer } from '@/context/server-context';
@@ -62,7 +62,7 @@ export default function AiTemplateModal({ isOpen, onOpenChange, onTemplateCreate
       toast({
         variant: "destructive",
         title: "AI Error",
-        description: "Could not generate suggestions. Please try again.",
+        description: `Could not generate suggestions. Please try again. The AI response may have been invalid.`,
       });
     } finally {
       setIsLoading(false);
@@ -78,15 +78,19 @@ export default function AiTemplateModal({ isOpen, onOpenChange, onTemplateCreate
     setIsFinalizing(true);
     try {
         let finalAccount: Account | undefined | null = suggestion.account;
+        let finalSite: Site | undefined | null = suggestion.site;
         
-        // Fetch sites (always needed)
-        const sites = await getSites(server);
-        if (sites.length === 0) {
-            toast({ title: "No sites found on server", description: "Cannot auto-assign a site for the template.", variant: "destructive" });
-            setIsFinalizing(false);
-            return;
+        // If AI didn't find a site, get a random one
+        if (!finalSite) {
+            console.log("No site provided by AI, fetching random site...");
+            const sites = await getSites(server);
+            if (sites.length === 0) {
+                toast({ title: "No sites found on server", description: "Cannot auto-assign a site for the template.", variant: "destructive" });
+                setIsFinalizing(false);
+                return;
+            }
+            finalSite = sites[Math.floor(Math.random() * sites.length)];
         }
-        const randomSite = sites[Math.floor(Math.random() * sites.length)];
 
         // If AI didn't find a specific account, get a random one
         if (!finalAccount) {
@@ -100,10 +104,9 @@ export default function AiTemplateModal({ isOpen, onOpenChange, onTemplateCreate
             finalAccount = accounts[Math.floor(Math.random() * accounts.length)];
         }
 
-
         const templateToCreate: Omit<JourneyTemplate, 'id'> = {
             name: suggestion.name,
-            siteId: randomSite.id,
+            siteId: finalSite.id,
             account: finalAccount,
             bookings: suggestion.bookings.map(b => ({
                 id: uuidv4(),
@@ -118,9 +121,7 @@ export default function AiTemplateModal({ isOpen, onOpenChange, onTemplateCreate
         
         onTemplateCreate(templateToCreate);
         
-        const toastDescription = suggestion.account 
-            ? `"${suggestion.name}" is ready and assigned to the ${suggestion.account.name} account.`
-            : `"${suggestion.name}" is ready with a site and account pre-selected.`;
+        const toastDescription = `"${suggestion.name}" is ready with Site: ${finalSite.name} and Account: ${finalAccount?.name} pre-selected.`;
         
         toast({
             title: 'Template Added!',
@@ -155,7 +156,7 @@ export default function AiTemplateModal({ isOpen, onOpenChange, onTemplateCreate
             <Bot /> Create Template with AI
           </DialogTitle>
           <DialogDescription>
-            Describe a journey, including the number of bookings and a specific account if needed (e.g., "for the Marian account").
+            Describe a journey. Try including a specific site or account (e.g., "...for the Dublin site and Marian account").
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -183,7 +184,7 @@ export default function AiTemplateModal({ isOpen, onOpenChange, onTemplateCreate
                <Alert>
                   <AlertTriangle className="h-4 w-4" />
                   <AlertDescription>
-                    If an account isn't specified or found, a random Site and Account will be assigned.
+                    If a site/account isn't specified or found, a random one will be assigned.
                   </AlertDescription>
                 </Alert>
               <div className="grid gap-2">
@@ -194,11 +195,18 @@ export default function AiTemplateModal({ isOpen, onOpenChange, onTemplateCreate
                       <p className="text-sm text-muted-foreground">
                         {s.bookings?.length} booking(s) - {s.bookings?.[0]?.stops?.[0]?.location.address}
                       </p>
-                       {s.account && (
-                          <p className="text-xs text-primary font-medium">
-                            Account: {s.account.name}
-                          </p>
-                        )}
+                       <div className="flex gap-4">
+                         {s.site && (
+                            <p className="text-xs text-primary font-medium">
+                              Site: {s.site.name}
+                            </p>
+                          )}
+                          {s.account && (
+                            <p className="text-xs text-primary font-medium">
+                              Account: {s.account.name}
+                            </p>
+                          )}
+                       </div>
                     </div>
                     <Button variant="outline" size="sm" onClick={() => handleCreate(s)} disabled={isFinalizing}>
                       {isFinalizing ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}

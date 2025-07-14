@@ -2,7 +2,7 @@
 'use server';
 
 import type { ServerConfig } from "@/config/servers";
-import type { Booking, Account } from "@/types";
+import type { Booking, Account, Site } from "@/types";
 import parsePhoneNumberFromString, { getCountryCallingCode } from 'libphonenumber-js';
 
 interface IcabbiApiCallOptions {
@@ -167,7 +167,7 @@ export async function createJourney(server: ServerConfig, journeyPayload: any) {
     return response.body;
 }
 
-export async function getSites(server: ServerConfig): Promise<{ id: number, name: string, ref: string }[]> {
+export async function getSites(server: ServerConfig): Promise<Site[]> {
     const response = await callIcabbiApi({
         server,
         method: 'GET',
@@ -182,6 +182,24 @@ export async function getSites(server: ServerConfig): Promise<{ id: number, name
         }));
     }
     return [];
+}
+
+export async function searchSitesByName(server: ServerConfig, query?: string, options: { limit?: number, offset?: number } = {}): Promise<Site[]> {
+  const { limit = 25, offset = 0 } = options;
+  // The 'sites' endpoint doesn't support search, so we fetch all and filter locally.
+  const allSites = await getSites(server);
+  
+  if (!query) {
+    return allSites.slice(offset, offset + limit);
+  }
+
+  const lowerCaseQuery = query.toLowerCase();
+  const filteredSites = allSites.filter(site => 
+    site.name.toLowerCase().includes(lowerCaseQuery) || 
+    site.ref.toLowerCase().includes(lowerCaseQuery)
+  );
+
+  return filteredSites.slice(offset, offset + limit);
 }
 
 export async function searchAccountsByName(server: ServerConfig, query?: string, options: { limit?: number, offset?: number } = {}): Promise<Account[]> {

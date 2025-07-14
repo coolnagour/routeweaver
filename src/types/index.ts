@@ -40,6 +40,12 @@ export interface Account {
   ref: string;
 }
 
+export interface Site {
+  id: number;
+  name: string;
+  ref: string;
+}
+
 export interface Journey {
   id: string; // Local/React ID
   journeyServerId?: number; // ID from iCabbi API
@@ -64,7 +70,8 @@ export interface JourneyTemplate {
 // Type for AI-generated template suggestions before they are fully structured
 export type AITemplateSuggestion = {
   name:string;
-  account?: Account; // The AI can now return a specific account
+  account?: Account | null;
+  site?: Site | null;
   bookings: {
     stops: {
       id: string; // The AI now provides this
@@ -115,6 +122,12 @@ export const BookingSchema = z.object({
 });
 
 export const AccountSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  ref: z.string(),
+});
+
+export const SiteSchema = z.object({
   id: z.number(),
   name: z.string(),
   ref: z.string(),

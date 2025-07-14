@@ -4,15 +4,8 @@
  */
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import { searchAccountsByName } from '@/services/icabbi';
-import { ServerConfigSchema } from '@/types';
-
-// Zod schema for the account to be returned by the tool
-export const AccountSchema = z.object({
-  id: z.number(),
-  name: z.string(),
-  ref: z.string(),
-});
+import { searchAccountsByName, searchSitesByName } from '@/services/icabbi';
+import { AccountSchema, ServerConfigSchema, SiteSchema } from '@/types';
 
 /**
  * Defines a Genkit tool for searching customer accounts.
@@ -40,6 +33,36 @@ export const getAccountTool = ai.defineTool(
     }
     
     console.log(`[getAccount Tool] No account found for name: ${name}`);
+    return undefined;
+  }
+);
+
+
+/**
+ * Defines a Genkit tool for searching sites.
+ */
+export const getSiteTool = ai.defineTool(
+  {
+    name: 'getSite',
+    description: 'Find a specific site by its name. Use this if the user mentions a specific site to use for the template.',
+    inputSchema: z.object({
+      name: z.string().describe('The name of the site to search for.'),
+      server: ServerConfigSchema.describe("The server configuration to use for the API call. This is provided by the system."),
+    }),
+    outputSchema: SiteSchema.optional(),
+  },
+  async (input) => {
+    const { name, server } = input;
+    console.log(`[getSite Tool] Searching for site with name: ${name} on server: ${server.name}`);
+    
+    const sites = await searchSitesByName(server, name, { limit: 1 });
+
+    if (sites.length > 0) {
+      console.log(`[getSite Tool] Found site:`, sites[0]);
+      return sites[0];
+    }
+    
+    console.log(`[getSite Tool] No site found for name: ${name}`);
     return undefined;
   }
 );
