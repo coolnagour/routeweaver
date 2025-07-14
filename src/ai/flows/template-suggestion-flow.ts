@@ -109,10 +109,10 @@ User's Journey Description: ${input.prompt}`,
                 toolResponse: {
                   name: part.toolRequest.name,
                   ref: part.toolRequest.ref,
-                  output: await getAccountTool.run({
+                  output: JSON.stringify(await getAccountTool.run({
                     ...part.toolRequest.input,
                     server: input.server,
-                  }),
+                  })),
                 },
               };
               case 'getSite':
@@ -120,10 +120,10 @@ User's Journey Description: ${input.prompt}`,
                   toolResponse: {
                     name: part.toolRequest.name,
                     ref: part.toolRequest.ref,
-                    output: await getSiteTool.run({
+                    output: JSON.stringify(await getSiteTool.run({
                       ...part.toolRequest.input,
                       server: input.server,
-                    }),
+                    })),
                   },
                 };
             default:
