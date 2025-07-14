@@ -15,7 +15,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Bot, Loader2, Sparkles, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import type { AITemplateSuggestion, JourneyTemplate, Account, Site } from '@/types';
+import type { AITemplateSuggestion, JourneyTemplate, Account, Site, Stop } from '@/types';
 import { suggestTemplates } from '@/ai/flows/template-suggestion-flow';
 import { v4 as uuidv4 } from 'uuid';
 import { useServer } from '@/context/server-context';
@@ -80,7 +80,7 @@ export default function AiTemplateModal({ isOpen, onOpenChange, onTemplateCreate
         let finalAccount: Account | undefined | null = suggestion.account;
         let finalSite: Site | undefined | null = suggestion.site;
         
-        // If AI didn't find a site, fetch a random one.
+        // Fallback for Site
         if (!finalSite) {
             console.log("No site provided by AI, fetching random site...");
             const sites = await getSites(server);
@@ -92,10 +92,9 @@ export default function AiTemplateModal({ isOpen, onOpenChange, onTemplateCreate
             finalSite = sites[Math.floor(Math.random() * sites.length)];
         }
 
-        // If AI didn't find an account, fetch a random one.
+        // Fallback for Account
         if (!finalAccount) {
             console.log("No account provided by AI, fetching random account...");
-            // Fetch a few accounts to get a random one.
             const accounts = await searchAccountsByName(server, undefined, { limit: 50 });
             if (accounts.length === 0) {
                 toast({ title: "No accounts found on server", description: "Cannot auto-assign an account for the template.", variant: "destructive" });
@@ -112,10 +111,10 @@ export default function AiTemplateModal({ isOpen, onOpenChange, onTemplateCreate
             return;
         }
 
-        // Assemble the complete template object before creating it.
         const templateToCreate: Omit<JourneyTemplate, 'id'> = {
             name: suggestion.name,
             siteId: finalSite.id,
+            site: finalSite,
             account: finalAccount,
             bookings: suggestion.bookings.map(b => ({
                 id: uuidv4(),
@@ -124,7 +123,7 @@ export default function AiTemplateModal({ isOpen, onOpenChange, onTemplateCreate
                     id: s.id || uuidv4(),
                     location: { address: s.location.address, lat: 0, lng: 0 },
                     dateTime: s.dateTime ? new Date(s.dateTime) : undefined
-                }))
+                })) as Stop[]
             }))
         };
         

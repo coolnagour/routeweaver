@@ -57,14 +57,15 @@ export interface Journey {
 }
 
 // Stored template has string dates
-export type TemplateBooking = Omit<Booking, 'stops' | 'siteId' | 'accountId' | 'bookingServerId' | 'requestId'> & { stops: (Omit<Stop, 'dateTime'> & { dateTime?: string })[] };
+export type TemplateBooking = Omit<Booking, 'stops' | 'siteId' | 'accountId' | 'bookingServerId' | 'requestId'> & { stops: Stop[] };
 
 export interface JourneyTemplate {
   id: string;
   name: string;
   bookings: TemplateBooking[];
-  siteId?: number; // Added for Quick Start
-  account?: Account | null; // Added for Quick Start
+  siteId?: number; 
+  account?: Account | null;
+  site?: Site | null; // Added for Quick Start
 }
 
 // Type for AI-generated template suggestions before they are fully structured

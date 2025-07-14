@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from '@/components/ui/button';
 import useLocalStorage from '@/hooks/use-local-storage';
 import type { JourneyTemplate, Stop } from '@/types';
-import { FileText, Users, Trash2, Bot, Package, Edit } from 'lucide-react';
+import { FileText, Users, Trash2, Bot, Package, Edit, Building, Building2 } from 'lucide-react';
 import AiTemplateModal from './ai-template-modal';
 import { useToast } from '@/hooks/use-toast';
 import { useServer } from '@/context/server-context';
@@ -37,7 +37,7 @@ export default function TemplateManager({ onLoadTemplate }: TemplateManagerProps
     router.push(`/templates/${id}/edit`);
   };
 
-  const handleAiTemplateCreate = (templateData: Omit<JourneyTemplate, 'id' | 'name'> & { name: string }) => {
+  const handleAiTemplateCreate = (templateData: Omit<JourneyTemplate, 'id'>) => {
     const newTemplate = {
         id: uuidv4(),
         ...templateData,
@@ -45,13 +45,13 @@ export default function TemplateManager({ onLoadTemplate }: TemplateManagerProps
     if (!newTemplate.name) {
         newTemplate.name = "AI Generated Template";
     }
-    setTemplates([...templates, newTemplate]);
+    setTemplates(prev => [...prev, newTemplate]);
   }
 
   const getTotalPassengers = (template: JourneyTemplate) => {
     if (!template.bookings) return 0;
     return template.bookings.reduce((total, booking) => {
-        const pickupStops = booking.stops.filter((s: Omit<Stop, 'id'>) => s.stopType === 'pickup');
+        const pickupStops = booking.stops.filter((s: Stop) => s.stopType === 'pickup');
         return total + pickupStops.length;
     }, 0);
   }
@@ -99,7 +99,15 @@ export default function TemplateManager({ onLoadTemplate }: TemplateManagerProps
                 </div>
                 <div className="flex items-center gap-2">
                   <Users className="h-4 w-4 text-muted-foreground" />
-                  <span><strong>Total Passengers:</strong> {getTotalPassengers(template)}</span>
+                  <span><strong>Passengers:</strong> {getTotalPassengers(template)}</span>
+                </div>
+                 <div className="flex items-center gap-2">
+                  <Building className="h-4 w-4 text-muted-foreground" />
+                  <span><strong>Site:</strong> {template.site?.name || 'N/A'}</span>
+                </div>
+                 <div className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                  <span><strong>Account:</strong> {template.account?.name || 'N/A'}</span>
                 </div>
               </CardContent>
               <CardFooter>
