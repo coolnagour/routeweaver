@@ -46,8 +46,8 @@ export default function AccountAutocomplete({ onAccountSelect, initialAccount }:
     setSearchTerm(initialAccount?.name || '');
   }, [initialAccount]);
 
-  const handleSearch = useCallback(async (query: string) => {
-    if (!server || !query) {
+  const handleSearch = useCallback(async (query?: string) => {
+    if (!server) {
       setResults([]);
       return;
     }
@@ -75,10 +75,16 @@ export default function AccountAutocomplete({ onAccountSelect, initialAccount }:
   useEffect(() => {
     if (searchTerm.trim() && searchTerm !== selectedAccount?.name) {
       debouncedSearch(searchTerm);
-    } else {
-      setResults([]);
     }
   }, [searchTerm, debouncedSearch, selectedAccount?.name]);
+
+  const onOpenChange = (isOpen: boolean) => {
+    setOpen(isOpen);
+    if (isOpen && !searchTerm && results.length === 0) {
+        // Fetch initial list when opened without a search term
+        handleSearch();
+    }
+  }
 
 
   const handleSelect = (account: Account) => {
@@ -93,18 +99,18 @@ export default function AccountAutocomplete({ onAccountSelect, initialAccount }:
     if (!value) {
       onAccountSelect(null);
       setSelectedAccount(null);
+      setResults([]);
     }
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
           role="combobox"
           aria-expanded={open}
           className="w-full justify-between"
-          onClick={() => setOpen(!open)}
         >
           <Building2 className="mr-2 h-4 w-4 shrink-0" />
           {selectedAccount
@@ -126,7 +132,7 @@ export default function AccountAutocomplete({ onAccountSelect, initialAccount }:
                  <Loader2 className="h-4 w-4 animate-spin" />
               </div>
             )}
-            {!isLoading && results.length === 0 && searchTerm.length > 0 && (
+            {!isLoading && results.length === 0 && (
                 <CommandEmpty>No account found.</CommandEmpty>
             )}
             {results.map((account) => (

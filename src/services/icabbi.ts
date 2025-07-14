@@ -184,13 +184,16 @@ export async function getSites(server: ServerConfig): Promise<{ id: number, name
     return [];
 }
 
-export async function searchAccountsByName(server: ServerConfig, query: string, options: { limit?: number, offset?: number } = {}): Promise<Account[]> {
+export async function searchAccountsByName(server: ServerConfig, query?: string, options: { limit?: number, offset?: number } = {}): Promise<Account[]> {
   const { limit = 25, offset = 0 } = options;
   const params = new URLSearchParams({
-    name: query,
     limit: limit.toString(),
     offset: offset.toString()
   });
+
+  if (query) {
+    params.append('name', query);
+  }
   
   const endpoint = `accounts?${params.toString()}`;
   
