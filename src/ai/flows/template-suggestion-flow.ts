@@ -13,6 +13,7 @@ import { z } from 'zod';
 import type { AITemplateSuggestion } from '@/types';
 import { getAccountTool, getSiteTool } from '@/ai/tools/icabbi-tools';
 import { AccountSchema, ServerConfigSchema, SiteSchema } from '@/types';
+import { GenerateOptions, ToolResponsePart } from 'genkit';
 
 
 const LocationSchema = z.object({
@@ -64,20 +65,15 @@ const suggestTemplatesFlow = ai.defineFlow(
     outputSchema: SuggestTemplatesOutputSchema,
   },
   async (input) => {
-    
-    const { output } = await ai.generate(
-      {
-        prompt: `You are an assistant that helps transportation dispatchers create journey templates.
+    console.log("Generate templates flow started");
+    const generateOptions: GenerateOptions = {
+      prompt: `You are an assistant that helps transportation dispatchers create journey templates.
 Based on the user's description, generate 3 plausible journey template suggestions.
 
-First, analyze the user's prompt for specific site or account names.
+First, analyze the user's prompt for specific tools.
 - If the prompt mentions a site (e.g., "for the Dublin site"), you MUST use the 'getSite' tool to find it.
 - If the prompt mentions an account (e.g., "for the Marian account"), you MUST use the 'getAccount' tool to find it.
 - When you call a tool, only provide the 'name' parameter. The system will handle the server configuration.
-
-After using the tools, you MUST handle the results as follows:
-- If a tool returns a full object (e.g., it finds the site or account), you MUST include that entire object in the corresponding 'site' or 'account' field of your JSON response for that suggestion.
-- If a tool does not find an item (returns nothing), or if no site/account was mentioned in the prompt, you MUST set the corresponding 'site' or 'account' field to null. Do NOT use an empty object {}.
 
 Then, generate the journey details based on the user's request (e.g., 'two bookings', 'airport run').
 - All generated addresses MUST be within the following country: ${input.countryName}.
@@ -89,33 +85,59 @@ Then, generate the journey details based on the user's request (e.g., 'two booki
 - Do not use real people's names or addresses.
 - Ensure the output is a valid JSON object matching the requested schema.
 
-User's Journey Description:
-${input.prompt}
-`,
-        tools: [getAccountTool, getSiteTool],
-        output: { schema: SuggestTemplatesOutputSchema },
-        tool_handler: (toolRequest) => {
-            console.log(`[Tool Handler] Intercepted call to tool: ${toolRequest.name}`);
-            if (toolRequest.name === 'getAccount') {
-              // The AI provides the 'name', we inject the 'server' from the flow's input.
-              return getAccountTool.run({
-                ...toolRequest.input,
-                server: input.server,
-              });
-            }
-            if (toolRequest.name === 'getSite') {
-              return getSiteTool.run({
-                ...toolRequest.input,
-                server: input.server,
-              });
-            }
-        },
-      }
-    );
+User's Journey Description: ${input.prompt}`,
+      tools: [getAccountTool, getSiteTool],
+      output: { schema: SuggestTemplatesOutputSchema },
+      returnToolRequests: true,
+      toolChoice: 'auto',
+    };
     
-    if (!output) {
+    let llmResponse;
+    while (true) {
+      llmResponse = await ai.generate(generateOptions);
+      const toolRequests = llmResponse.toolRequests;
+      console.log(`[Template Flow] AI requested ${toolRequests.length} tool(s).`);
+
+      if (toolRequests.length < 1) {
+        break;
+      }
+      const toolResponses: ToolResponsePart[] = await Promise.all(
+        toolRequests.map(async (part) => {
+          switch (part.toolRequest.name) {
+            case 'getAccount':
+              return {
+                toolResponse: {
+                  name: part.toolRequest.name,
+                  ref: part.toolRequest.ref,
+                  output: await getAccountTool.run({
+                    ...part.toolRequest.input,
+                    server: input.server,
+                  }),
+                },
+              };
+              case 'getSite':
+                return {
+                  toolResponse: {
+                    name: part.toolRequest.name,
+                    ref: part.toolRequest.ref,
+                    output: await getSiteTool.run({
+                      ...part.toolRequest.input,
+                      server: input.server,
+                    }),
+                  },
+                };
+            default:
+              throw Error('Tool not found');
+          }
+        }),
+      );
+      generateOptions.messages = llmResponse.messages;
+      generateOptions.prompt = toolResponses;
+    }
+    
+    if (!llmResponse || !llmResponse.output) {
       throw new Error("The AI model did not return any output.");
     }
-    return output;
+    return llmResponse.output;
   }
 );
