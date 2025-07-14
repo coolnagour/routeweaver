@@ -58,13 +58,16 @@ export async function suggestTemplates(input: SuggestTemplatesInput): Promise<Su
   return suggestTemplatesFlow(input);
 }
 
-// The prompt must be defined statically at the top level, not inside the flow.
-const suggestTemplatesPrompt = ai.definePrompt({
-    name: 'suggestTemplatesPrompt',
-    input: { schema: z.object({ prompt: z.string(), countryName: z.string() }) },
-    output: { schema: SuggestTemplatesOutputSchema },
-    tools: [getAccountTool, getSiteTool],
-    prompt: `You are an assistant that helps transportation dispatchers create journey templates.
+const suggestTemplatesFlow = ai.defineFlow(
+  {
+    name: 'suggestTemplatesFlow',
+    inputSchema: SuggestTemplatesInputSchema,
+    outputSchema: SuggestTemplatesOutputSchema,
+  },
+  async (input) => {
+    
+    const { output } = await ai.generate({
+        prompt: `You are an assistant that helps transportation dispatchers create journey templates.
 Based on the user's description, generate 3 plausible journey template suggestions.
 
 First, analyze the user's prompt for specific site or account names.
@@ -77,7 +80,7 @@ After using the tools, you MUST handle the results as follows:
 - If a tool does not find an item (returns nothing), or if no site/account was mentioned in the prompt, you MUST set the corresponding 'site' or 'account' field to null. Do NOT use an empty object {}.
 
 Then, generate the journey details based on the user's request (e.g., 'two bookings', 'airport run').
-- All generated addresses MUST be within the following country: {{{countryName}}}.
+- All generated addresses MUST be within the following country: ${input.countryName}.
 - Each template must contain one or more bookings.
 - Each booking must contain at least one pickup and one dropoff.
 - For each stop, you must generate a unique 'id' (e.g., 'stop-1').
@@ -87,27 +90,14 @@ Then, generate the journey details based on the user's request (e.g., 'two booki
 - Ensure the output is a valid JSON object matching the requested schema.
 
 User's Journey Description:
-{{{prompt}}}
+${input.prompt}
 `,
-});
-
-const suggestTemplatesFlow = ai.defineFlow(
-  {
-    name: 'suggestTemplatesFlow',
-    inputSchema: SuggestTemplatesInputSchema,
-    outputSchema: SuggestTemplatesOutputSchema,
-  },
-  async (input) => {
-    
-    // Call the statically defined prompt, passing the variables it needs.
-    const { output } = await suggestTemplatesPrompt(
-        { 
-            prompt: input.prompt, 
-            countryName: input.countryName 
+        tools: [getAccountTool, getSiteTool],
+        output: {
+          schema: SuggestTemplatesOutputSchema,
         },
-        {
-          // Use a tool_handler to intercept tool calls and inject runtime data.
-          tool_handler: (toolRequest) => {
+        tool_handler: (toolRequest) => {
+            console.log(`[Tool Handler] Intercepted call to tool: ${toolRequest.name}`);
             if (toolRequest.name === 'getAccount') {
               // The AI provides the 'name', we inject the 'server' from the flow's input.
               return getAccountTool.run({
@@ -121,9 +111,8 @@ const suggestTemplatesFlow = ai.defineFlow(
                 server: input.server,
               });
             }
-          },
-        }
-    );
+        },
+    });
     
     if (!output) {
       throw new Error("The AI model did not return any output.");
