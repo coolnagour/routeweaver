@@ -49,8 +49,8 @@ export default function JourneyBuilder({
   const [templateName, setTemplateName] = useState(initialData?.name || '');
   const [sites, setSites] = useState<{id: number, name: string, ref: string}[]>([]);
   const [isFetchingSites, setIsFetchingSites] = useState(false);
-  const [selectedSiteId, setSelectedSiteId] = useState<number | undefined>(initialSiteId);
-  const [selectedAccount, setSelectedAccount] = useState<Account | null>(initialAccount || null);
+  const [selectedSiteId, setSelectedSiteId] = useState<number | undefined>(initialSiteId || initialData?.siteId);
+  const [selectedAccount, setSelectedAccount] = useState<Account | null>(initialAccount || initialData?.account || null);
   
   const getInitialBookings = (data: Partial<JourneyTemplate | Journey> | null | undefined): Booking[] => {
     if (!data || !data.bookings) return [];
@@ -133,8 +133,9 @@ export default function JourneyBuilder({
     } else {
         setBookings(getInitialBookings(initialData));
         setTemplateName(initialData?.name || '');
-        setSelectedSiteId(initialSiteId);
-        setSelectedAccount(initialAccount || null);
+        // When loading a template for a new journey OR editing a template, prioritize initialData
+        setSelectedSiteId(initialData?.siteId || initialSiteId);
+        setSelectedAccount(initialData?.account || initialAccount || null);
         setCurrentJourney(null);
     }
   }, [initialData, journeyId, journeys, initialSiteId, initialAccount]);
@@ -231,7 +232,7 @@ export default function JourneyBuilder({
     };
 
     if (isEditingTemplate && initialData?.id) {
-      const updatedTemplates = templates.map(t => t.id === initialData.id ? { ...t, ...templateData } : t);
+      const updatedTemplates = templates.map(t => t.id === initialData.id ? { ...t, ...templateData, id: initialData.id } : t);
       setTemplates(updatedTemplates);
       toast({
         title: "Template Updated!",
