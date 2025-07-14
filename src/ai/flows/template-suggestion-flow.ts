@@ -13,7 +13,7 @@ import { z } from 'zod';
 import type { AITemplateSuggestion } from '@/types';
 import { getAccountTool, getSiteTool } from '@/ai/tools/icabbi-tools';
 import { AccountSchema, ServerConfigSchema, SiteSchema } from '@/types';
-import { GenerateOptions, ToolResponsePart } from 'genkit';
+import { GenerateOptions } from 'genkit';
 
 
 const LocationSchema = z.object({
@@ -66,6 +66,7 @@ const suggestTemplatesFlow = ai.defineFlow(
   },
   async (input) => {
     console.log("Generate templates flow started");
+    
     const generateOptions: GenerateOptions = {
       prompt: `You are an assistant that helps transportation dispatchers create journey templates.
 Based on the user's description, generate 3 plausible journey template suggestions.
@@ -85,58 +86,30 @@ Then, generate the journey details based on the user's request (e.g., 'two booki
 - Do not use real people's names or addresses.
 - Ensure the output is a valid JSON object matching the requested schema.
 
-User's Journey Description: ${input.prompt}`,
+User's Journey Description: ${input.prompt}
+`,
       tools: [getAccountTool, getSiteTool],
-      output: { schema: SuggestTemplatesOutputSchema },
-      returnToolRequests: true,
-      toolChoice: 'auto',
-      messages: [], // Initialize messages array
-    };
-    
-    let llmResponse;
-    while (true) {
-      llmResponse = await ai.generate(generateOptions);
-      const toolRequests = llmResponse.toolRequests;
-      console.log(`[Template Flow] AI requested ${toolRequests.length} tool(s).`);
-
-      if (toolRequests.length < 1) {
-        break;
-      }
-      const toolResponses: ToolResponsePart[] = await Promise.all(
-        toolRequests.map(async (part) => {
-          switch (part.toolRequest.name) {
+      tool_handler: async (toolRequest) => {
+          switch (toolRequest.name) {
             case 'getAccount':
-              return {
-                toolResponse: {
-                  name: part.toolRequest.name,
-                  ref: part.toolRequest.ref,
-                  output: await getAccountTool.run({
-                    ...part.toolRequest.input,
-                    server: input.server,
-                  }),
-                },
-              };
-              case 'getSite':
-                return {
-                  toolResponse: {
-                    name: part.toolRequest.name,
-                    ref: part.toolRequest.ref,
-                    output: await getSiteTool.run({
-                      ...part.toolRequest.input,
-                      server: input.server,
-                    }),
-                  },
-                };
+              return await getAccountTool.run({
+                ...toolRequest.input,
+                server: input.server,
+              });
+            case 'getSite':
+              return await getSiteTool.run({
+                ...toolRequest.input,
+                server: input.server,
+              });
             default:
-              throw Error('Tool not found');
+              // Optional: throw an error if an unknown tool is requested
+              throw new Error(`Unknown tool: ${toolRequest.name}`);
           }
-        }),
-      );
-      // Append the tool responses to the message history for the next turn.
-      generateOptions.messages = [...(llmResponse.messages || []), ...toolResponses];
-      // Clear the prompt as it's now part of the history.
-      generateOptions.prompt = [];
-    }
+      },
+      output: { schema: SuggestTemplatesOutputSchema },
+    };
+
+    const llmResponse = await ai.generate(generateOptions);
     
     if (!llmResponse || !llmResponse.output) {
       throw new Error("The AI model did not return any output.");
