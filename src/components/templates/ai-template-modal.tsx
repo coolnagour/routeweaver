@@ -77,7 +77,7 @@ export default function AiTemplateModal({ isOpen, onOpenChange, onTemplateCreate
 
     setIsFinalizing(true);
     try {
-        let finalAccount: Account | undefined = suggestion.account;
+        let finalAccount: Account | undefined | null = suggestion.account;
         
         // Fetch sites (always needed)
         const sites = await getSites(server);
@@ -155,7 +155,7 @@ export default function AiTemplateModal({ isOpen, onOpenChange, onTemplateCreate
             <Bot /> Create Template with AI
           </DialogTitle>
           <DialogDescription>
-            Describe a journey, including a specific account if needed (e.g., "for the Marian account"). We'll suggest a template.
+            Describe a journey, including the number of bookings and a specific account if needed (e.g., "for the Marian account").
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -163,7 +163,7 @@ export default function AiTemplateModal({ isOpen, onOpenChange, onTemplateCreate
             <Label htmlFor="prompt">Your Journey Description</Label>
             <Textarea
               id="prompt"
-              placeholder="e.g., 'A frequent trip to the airport for business travel for the Marian account.'"
+              placeholder="e.g., 'Two bookings for a frequent trip to the airport for business travel for the Marian account.'"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
             />
@@ -192,7 +192,7 @@ export default function AiTemplateModal({ isOpen, onOpenChange, onTemplateCreate
                     <div>
                       <p className="font-semibold">{s.name}</p>
                       <p className="text-sm text-muted-foreground">
-                        {s.bookings?.[0]?.stops?.[0]?.location.address} to {s.bookings?.[0]?.stops?.[1]?.location.address}
+                        {s.bookings?.length} booking(s) - {s.bookings?.[0]?.stops?.[0]?.location.address}
                       </p>
                        {s.account && (
                           <p className="text-xs text-primary font-medium">

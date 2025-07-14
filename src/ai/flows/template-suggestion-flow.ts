@@ -60,9 +60,9 @@ export async function suggestTemplates(input: SuggestTemplatesInput): Promise<Su
 // The prompt must be defined statically at the top level, not inside the flow.
 const suggestTemplatesPrompt = ai.definePrompt({
     name: 'suggestTemplatesPrompt',
+    input: { schema: z.object({ prompt: z.string(), countryName: z.string() }) },
     output: { schema: SuggestTemplatesOutputSchema },
     tools: [getAccountTool],
-    // The prompt is now a template string that receives variables.
     prompt: `You are an assistant that helps transportation dispatchers create journey templates.
 Based on the user's description, generate 3 plausible journey template suggestions.
 
@@ -73,7 +73,7 @@ First, check if the user's prompt mentions a specific account name (e.g., "for t
 
 Then, generate the journey details:
 - All generated addresses MUST be within the following country: {{{countryName}}}.
-- Each template must contain one or more bookings.
+- Each template must contain one or more bookings, according to the user's request.
 - Each booking must contain at least one pickup and one dropoff.
 - For each stop, you must generate a unique 'id' (e.g., 'stop-1').
 - For each 'pickup' stop, provide a realistic-sounding but fake address, name, and phone number.
