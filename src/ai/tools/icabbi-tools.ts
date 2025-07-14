@@ -1,5 +1,4 @@
 
-'use server';
 /**
  * @fileOverview Defines Genkit tools for interacting with the iCabbi API.
  */
