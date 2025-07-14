@@ -38,6 +38,7 @@ const AITemplateSuggestionSchema = z.object({
 
 const SuggestTemplatesInputSchema = z.object({
   prompt: z.string(),
+  countryName: z.string().describe("The country within which all addresses should be generated."),
 });
 export type SuggestTemplatesInput = z.infer<typeof SuggestTemplatesInputSchema>;
 
@@ -57,6 +58,7 @@ const prompt = ai.definePrompt({
   output: { schema: SuggestTemplatesOutputSchema },
   prompt: `You are an assistant that helps transportation dispatchers create journey templates.
 Based on the user's description, generate 3 plausible journey template suggestions.
+All generated addresses MUST be within the following country: {{{countryName}}}.
 Each template must contain one or more bookings.
 Each booking must contain at least one pickup and one dropoff.
 For each stop, you must generate a unique 'id' (e.g., 'stop-1').

@@ -18,6 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { AITemplateSuggestion, JourneyTemplate } from '@/types';
 import { suggestTemplates } from '@/ai/flows/template-suggestion-flow';
 import { v4 as uuidv4 } from 'uuid';
+import { useServer } from '@/context/server-context';
 
 interface AiTemplateModalProps {
   isOpen: boolean;
@@ -25,19 +26,33 @@ interface AiTemplateModalProps {
   onTemplateCreate: (template: Omit<JourneyTemplate, 'id'>) => void;
 }
 
+// A simple utility to get a country name from its code
+const getCountryName = (code: string) => {
+    try {
+        const regionNames = new Intl.DisplayNames(['en'], { type: 'region' });
+        return regionNames.of(code.toUpperCase());
+    } catch (e) {
+        console.warn("Could not get display name for country code:", code);
+        return code.toUpperCase(); // Fallback to code
+    }
+}
+
 export default function AiTemplateModal({ isOpen, onOpenChange, onTemplateCreate }: AiTemplateModalProps) {
   const [prompt, setPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [suggestions, setSuggestions] = useState<AITemplateSuggestion[]>([]);
   const { toast } = useToast();
+  const { server } = useServer();
 
   const handleGenerate = async () => {
     if (!prompt) return;
     setIsLoading(true);
     setSuggestions([]);
     
+    const countryName = server?.countryCodes?.[0] ? getCountryName(server.countryCodes[0]) : "Ireland";
+
     try {
-      const result = await suggestTemplates({ prompt });
+      const result = await suggestTemplates({ prompt, countryName });
       setSuggestions(result.suggestions);
     } catch (error) {
       console.error("AI suggestion failed:", error);
