@@ -10,7 +10,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import type { AITemplateSuggestion, ServerConfig } from '@/types';
+import type { AITemplateSuggestion } from '@/types';
 import { getAccountTool } from '@/ai/tools/icabbi-tools';
 import { AccountSchema, ServerConfigSchema } from '@/types';
 
@@ -101,7 +101,7 @@ ${input.prompt}
           tools: [
             {
               tool: getAccountTool,
-              handler: async (toolInput) => {
+              handler: (toolInput) => {
                 // The LLM provides the `name` (toolInput). We add the `server`.
                 return getAccountTool.run({
                   ...toolInput,
