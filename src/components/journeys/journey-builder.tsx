@@ -19,6 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import AccountAutocomplete from './account-autocomplete';
 import { v4 as uuidv4 } from 'uuid';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '../ui/collapsible';
+import { cn } from '@/lib/utils';
 
 interface JourneyBuilderProps {
   initialData?: Partial<JourneyTemplate> | null;
@@ -46,7 +47,7 @@ export default function JourneyBuilder({
   const { server } = useServer();
   const [journeys, setJourneys] = useLocalStorage<Journey[]>('recent-journeys', [], server?.companyId);
   const [templates, setTemplates] = useLocalStorage<JourneyTemplate[]>('journey-templates', [], server?.companyId);
-  const [templateName, setTemplateName] = useState(isEditingTemplate ? initialData?.name || '' : '');
+  const [templateName, setTemplateName] = useState('');
   const [sites, setSites] = useState<{id: number, name: string, ref: string}[]>([]);
   const [isFetchingSites, setIsFetchingSites] = useState(false);
   const [selectedSiteId, setSelectedSiteId] = useState<number | undefined>(initialSiteId || initialData?.siteId);
@@ -70,8 +71,7 @@ export default function JourneyBuilder({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentJourney, setCurrentJourney] = useState<Journey | null>(null);
 
-  const [debugApiPayload, setDebugApiPayload] = useState<any | {error: string} | null>(null);
-  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const [stopOrderPreview, setStopOrderPreview] = useState<{ orderedStops: Stop[]; isLoading: boolean }>({ orderedStops: [], isLoading: false });
 
   // Debounce function
   const debounce = <F extends (...args: any[]) => void>(func: F, delay: number) => {
@@ -84,11 +84,11 @@ export default function JourneyBuilder({
 
   const fetchPreview = useCallback(async (currentBookings: Booking[], journey: Journey | null) => {
     if (currentBookings.length === 0) {
-      setDebugApiPayload(null);
+      setStopOrderPreview({ orderedStops: [], isLoading: false });
       return;
     }
     
-    setIsPreviewLoading(true);
+    setStopOrderPreview(prev => ({ ...prev, isLoading: true }));
     try {
         let placeholderIdCounter = 1000;
         // A simplified booking object is created for the debug view, as server IDs are not yet available.
@@ -102,20 +102,19 @@ export default function JourneyBuilder({
           }))
         }));
 
-        const { journeyPayload, orderedStops } = await generateJourneyPayload({ 
+        const { orderedStops } = await generateJourneyPayload({ 
             bookings: tempBookingsForPreview, 
             journeyServerId: journey?.journeyServerId 
         });
-        setDebugApiPayload({ journeyPayload, orderedStops });
+        setStopOrderPreview({ orderedStops, isLoading: false });
     } catch (e) {
         console.error("Error generating journey preview:", e);
-        setDebugApiPayload({ error: (e as Error).message });
-    } finally {
-        setIsPreviewLoading(false);
+        setStopOrderPreview({ orderedStops: [], isLoading: false });
+        toast({ title: "Error generating preview", description: (e as Error).message, variant: "destructive" });
     }
-  }, []);
+  }, [toast]);
 
-  const debouncedFetchPreview = useCallback(debounce(fetchPreview, 500), [fetchPreview]);
+  const debouncedFetchPreview = useCallback(debounce(fetchPreview, 750), [fetchPreview]);
 
   useEffect(() => {
     debouncedFetchPreview(bookings, currentJourney);
@@ -229,7 +228,13 @@ export default function JourneyBuilder({
             pickupStopId: s.pickupStopId,
             dateTime: s.dateTime?.toISOString(),
             instructions: s.instructions
-        }))
+        })),
+        customerId: b.customerId,
+        externalBookingId: b.externalBookingId,
+        vehicleType: b.vehicleType,
+        externalAreaCode: b.externalAreaCode,
+        price: b.price,
+        cost: b.cost
       })),
       siteId: selectedSiteId,
       account: selectedAccount,
@@ -332,6 +337,15 @@ export default function JourneyBuilder({
     if (initialData?.name) return `New Journey from: ${initialData.name}`;
     return 'Create a New Journey';
   };
+
+  const findPassengerForDropoff = (dropoffStop: Stop): Stop | undefined => {
+    if (dropoffStop.stopType !== 'dropoff' || !dropoffStop.pickupStopId) return undefined;
+    for (const booking of bookings) {
+        const pickup = booking.stops.find(s => s.id === dropoffStop.pickupStopId);
+        if (pickup) return pickup;
+    }
+    return undefined;
+  };
   
   const title = getTitle();
   const publishButtonText = currentJourney?.status === 'Scheduled' ? 'Update Journey' : 'Publish';
@@ -431,11 +445,43 @@ export default function JourneyBuilder({
           </CollapsibleTrigger>
           <CollapsibleContent>
             <CardContent>
-              <pre className="p-4 bg-muted rounded-lg text-xs overflow-x-auto">
-                {isPreviewLoading 
-                  ? "Generating preview..." 
-                  : JSON.stringify(debugApiPayload, null, 2)}
-              </pre>
+              <div className="bg-background rounded-lg border p-4 space-y-4">
+                {stopOrderPreview.isLoading ? (
+                  <div className="flex items-center justify-center p-4">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    <span className="ml-2">Generating preview...</span>
+                  </div>
+                ) : stopOrderPreview.orderedStops.length > 0 ? (
+                  stopOrderPreview.orderedStops.map((stop, index) => {
+                    const passenger = stop.stopType === 'pickup' ? stop : findPassengerForDropoff(stop);
+                    return (
+                      <div key={`${stop.id}-${index}`} className="flex items-start gap-3">
+                        <div className="flex flex-col items-center">
+                          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">
+                            {index + 1}
+                          </div>
+                          {index < stopOrderPreview.orderedStops.length - 1 && (
+                            <div className="w-px h-6 bg-border mt-1"></div>
+                          )}
+                        </div>
+                        <div className="flex-1 pt-0.5">
+                          <p className="font-medium">
+                              {stop.location.address}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                              <span className={cn("font-semibold", stop.stopType === 'pickup' ? 'text-green-600' : 'text-red-600')}>
+                                  {stop.stopType.toUpperCase()}
+                              </span>
+                              {passenger?.name && ` - ${passenger.name}`}
+                          </p>
+                        </div>
+                      </div>
+                    )
+                  })
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center">Add some stops to see the journey order.</p>
+                )}
+              </div>
             </CardContent>
           </CollapsibleContent>
         </Card>
