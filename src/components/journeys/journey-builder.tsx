@@ -443,7 +443,7 @@ export default function JourneyBuilder({
                     )
                   })
                 ) : (
-                  <p className="text-sm text-muted-foreground text-center">Add some stops to see the journey order.</p>
+                  <p className="text-sm text-muted-foreground text-center">Add some bookings to see the journey order.</p>
                 )}
               </div>
             </CardContent>
