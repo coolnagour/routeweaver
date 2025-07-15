@@ -70,11 +70,12 @@ const suggestTemplatesFlow = ai.defineFlow(
     const generateOptions: GenerateOptions = {
       prompt: `You are an assistant that helps transportation dispatchers create journey templates.
 Based on the user's description, generate 3 plausible journey template suggestions.
+Use server configuration: ${JSON.stringify(input.server)}
 
 First, analyze the user's prompt for specific tools.
 - If the prompt mentions a site (e.g., "for the Dublin site"), you MUST use the 'getSite' tool to find it.
 - If the prompt mentions an account (e.g., "for the Marian account"), you MUST use the 'getAccount' tool to find it.
-- When you call a tool, only provide the 'name' parameter. The system will handle the server configuration.
+- When you call a tool, you must provide all parameters for the tool, including 'name' and 'server'.
 
 Then, generate the journey details based on the user's request (e.g., 'two bookings', 'airport run').
 - All generated addresses MUST be within the following country: ${input.countryName}.
@@ -89,27 +90,11 @@ Then, generate the journey details based on the user's request (e.g., 'two booki
 User's Journey Description: ${input.prompt}
 `,
       tools: [getAccountTool, getSiteTool],
-      tool_handler: async (toolRequest) => {
-          switch (toolRequest.name) {
-            case 'getAccount':
-              return await getAccountTool.run({
-                ...toolRequest.input,
-                server: input.server,
-              });
-            case 'getSite':
-              return await getSiteTool.run({
-                ...toolRequest.input,
-                server: input.server,
-              });
-            default:
-              // Optional: throw an error if an unknown tool is requested
-              throw new Error(`Unknown tool: ${toolRequest.name}`);
-          }
-      },
       output: { schema: SuggestTemplatesOutputSchema },
     };
 
-    const llmResponse = await ai.generate(generateOptions);
+    let llmResponse;
+    llmResponse = await ai.generate(generateOptions);
     
     if (!llmResponse || !llmResponse.output) {
       throw new Error("The AI model did not return any output.");
