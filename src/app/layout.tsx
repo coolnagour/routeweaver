@@ -5,7 +5,6 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { cn } from "@/lib/utils";
 import AppLayout from "@/components/layout/app-layout";
-import { AuthProvider } from "@/context/auth-context";
 import { ServerProvider } from "@/context/server-context";
 import { ThemeProvider } from "@/components/theme-provider";
 
@@ -52,12 +51,10 @@ export default function RootLayout({
           disableTransitionOnChange
         >
             <ServerProvider>
-              <AuthProvider>
-                  <AppLayout>
+                <AppLayout>
                     {children}
-                  </AppLayout>
-                  <Toaster />
-              </AuthProvider>
+                </AppLayout>
+                <Toaster />
             </ServerProvider>
         </ThemeProvider>
       </body>
