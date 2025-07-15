@@ -32,6 +32,7 @@ export interface Booking {
   stops: Stop[];
   siteId?: number;
   accountId?: number;
+  customerId?: string; // Optional free text field
 }
 
 export interface Account {
@@ -120,6 +121,7 @@ export const BookingSchema = z.object({
   stops: z.array(StopSchema),
   siteId: z.number().optional(),
   accountId: z.number().optional(),
+  customerId: z.string().optional(),
 });
 
 export const AccountSchema = z.object({

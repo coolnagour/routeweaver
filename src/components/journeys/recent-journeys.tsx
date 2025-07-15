@@ -236,12 +236,19 @@ export default function RecentJourneys() {
                                                       </CardTitle>
                                                       <CardDescription>{pickups.length} passenger(s)</CardDescription>
                                                   </div>
-                                                  {(booking.bookingServerId || booking.requestId) && (
-                                                      <div className="text-right text-[10px] font-mono text-muted-foreground space-y-0.5">
-                                                          {booking.bookingServerId && <div>Booking ID: {booking.bookingServerId}</div>}
-                                                          {booking.requestId && <div>Request ID: {booking.requestId}</div>}
-                                                      </div>
-                                                  )}
+                                                  <div className="flex flex-col items-end gap-1">
+                                                      {(booking.bookingServerId || booking.requestId) && (
+                                                          <div className="text-right text-[10px] font-mono text-muted-foreground space-y-0.5">
+                                                              {booking.bookingServerId && <div>Booking ID: {booking.bookingServerId}</div>}
+                                                              {booking.requestId && <div>Request ID: {booking.requestId}</div>}
+                                                          </div>
+                                                      )}
+                                                      {booking.customerId && (
+                                                          <Badge variant="secondary" className="text-xs">
+                                                              Cust ID: {booking.customerId}
+                                                          </Badge>
+                                                      )}
+                                                  </div>
                                               </div>
                                           </CardHeader>
                                           <CardContent className="p-3 pt-0 space-y-2 text-sm">

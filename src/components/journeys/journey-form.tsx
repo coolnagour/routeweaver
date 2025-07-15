@@ -18,7 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { CalendarIcon, MapPin, PlusCircle, X, User, Phone, Clock, MessageSquare, ChevronsUpDown, Sparkles, Loader2 } from 'lucide-react';
+import { CalendarIcon, MapPin, PlusCircle, X, User, Phone, Clock, MessageSquare, ChevronsUpDown, Sparkles, Loader2, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, setHours, setMinutes } from 'date-fns';
 import type { Booking, Stop, SuggestionInput } from '@/types';
@@ -59,7 +59,8 @@ const stopSchema = z.object({
 
 const formSchema = z.object({
   id: z.string().optional(),
-  stops: z.array(stopSchema).min(2, 'At least two stops are required.')
+  stops: z.array(stopSchema).min(2, 'At least two stops are required.'),
+  customerId: z.string().optional(),
 }).refine(data => {
     const firstPickupTime = data.stops.find(s => s.stopType === 'pickup')?.dateTime?.getTime();
     if (!firstPickupTime) return true; // ASAP booking, validation passes
@@ -90,6 +91,7 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
     resolver: zodResolver(formSchema),
     defaultValues: {
       id: initialData?.id || uuidv4(),
+      customerId: initialData?.customerId || '',
       stops: initialData?.stops?.length ? initialData.stops.map(s => ({
           ...s,
           id: s.id || uuidv4(),
@@ -365,6 +367,22 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
+                                )}
+                            />
+                             <FormField
+                                control={form.control}
+                                name="customerId"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Customer ID (Optional)</FormLabel>
+                                    <FormControl>
+                                        <div className="relative flex items-center">
+                                            <Info className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                            <Input placeholder="Enter customer ID" {...field} className="pl-10 bg-background" />
+                                        </div>
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
                                 )}
                             />
                         </CollapsibleContent>
