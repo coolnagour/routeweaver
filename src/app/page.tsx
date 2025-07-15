@@ -1,6 +1,7 @@
 
 'use client';
 
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,17 +9,39 @@ import { useServer } from '@/context/server-context';
 import { Server, PlusCircle } from 'lucide-react';
 import useLocalStorage from '@/hooks/use-local-storage';
 import type { ServerConfig } from '@/types';
-import Link from 'next/link';
+import ServerForm from '@/components/settings/server-form';
+import { useToast } from '@/hooks/use-toast';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 
 export default function SelectServerPage() {
   const { setServer } = useServer();
   const router = useRouter();
-  const [servers] = useLocalStorage<ServerConfig[]>('server-configs', []);
+  const [servers, setServers] = useLocalStorage<ServerConfig[]>('server-configs', []);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const { toast } = useToast();
 
   const handleSelectServer = (serverConfig: any) => {
     setServer(serverConfig);
     router.push('/journeys/new');
   };
+  
+  const handleSave = (data: ServerConfig) => {
+      if (servers.some(s => s.companyId === data.companyId)) {
+        toast({ title: 'Duplicate Company ID', description: 'A server with this Company ID already exists.', variant: 'destructive' });
+        return;
+      }
+      setServers([...servers, data]);
+      toast({ title: 'Server Added', description: 'The new server configuration has been added.' });
+    setIsDialogOpen(false);
+  };
+
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
@@ -35,12 +58,26 @@ export default function SelectServerPage() {
                             <CardDescription>Choose a server to connect to for managing journeys.</CardDescription>
                         </div>
                     </div>
-                    <Button asChild>
-                        <Link href="/settings/servers">
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            Add Server
-                        </Link>
-                    </Button>
+                    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button>
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                Add Server
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Add New Server</DialogTitle>
+                                <DialogDescription>
+                                    Fill in the details for the server configuration.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <ServerForm 
+                                onSave={handleSave} 
+                                onCancel={() => setIsDialogOpen(false)}
+                            />
+                        </DialogContent>
+                    </Dialog>
                 </div>
             </CardHeader>
             <CardContent className="grid grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-4">

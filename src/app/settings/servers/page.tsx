@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -9,7 +10,6 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  CardFooter
 } from '@/components/ui/card';
 import {
   Table,
@@ -23,11 +23,9 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogClose
 } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -40,149 +38,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import {
-    Form,
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import type { ServerConfig } from '@/types';
-import { ServerConfigSchema } from '@/types';
 import { Edit, PlusCircle, Trash2, Server } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-
-type ServerFormData = z.infer<typeof ServerConfigSchema>;
-
-function ServerForm({ server, onSave, onCancel }: { server?: ServerConfig, onSave: (data: ServerFormData) => void, onCancel: () => void }) {
-  const form = useForm<ServerFormData>({
-    resolver: zodResolver(ServerConfigSchema),
-    defaultValues: server || {
-      name: '',
-      host: '',
-      apiPath: '',
-      appKey: '',
-      secretKey: '',
-      companyId: '',
-      countryCodes: [],
-    },
-  });
-
-  const onSubmit = (data: ServerFormData) => {
-    onSave(data);
-  };
-
-  return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <FormField
-          control={form.control}
-          name="name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Server Name</FormLabel>
-              <FormControl>
-                <Input placeholder="e.g., Staging Server" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="host"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Host</FormLabel>
-              <FormControl>
-                <Input placeholder="e.g., api.icabbi.com" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="apiPath"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>API Path</FormLabel>
-              <FormControl>
-                <Input placeholder="e.g., v2" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="appKey"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>App Key</FormLabel>
-              <FormControl>
-                <Input {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="secretKey"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Secret Key</FormLabel>
-              <FormControl>
-                <Input {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="companyId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Company ID</FormLabel>
-              <FormControl>
-                <Input placeholder="e.g., 1234" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="countryCodes"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Country Codes</FormLabel>
-              <FormControl>
-                <Input 
-                    placeholder="e.g., us,ca (comma-separated)" 
-                    value={Array.isArray(field.value) ? field.value.join(',') : ''}
-                    onChange={(e) => field.onChange(e.target.value.split(',').map(code => code.trim()))}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <DialogFooter>
-            <Button type="button" variant="ghost" onClick={onCancel}>Cancel</Button>
-            <Button type="submit">Save</Button>
-        </DialogFooter>
-      </form>
-    </Form>
-  );
-}
+import ServerForm from '@/components/settings/server-form';
 
 export default function ServerSettingsPage() {
   const [servers, setServers] = useLocalStorage<ServerConfig[]>('server-configs', []);
@@ -209,7 +68,7 @@ export default function ServerSettingsPage() {
     });
   };
 
-  const handleSave = (data: ServerFormData) => {
+  const handleSave = (data: ServerConfig) => {
     if (editingServer) {
       // Editing existing server
       setServers(servers.map((s) => (s.companyId === editingServer.companyId ? data : s)));
@@ -236,7 +95,10 @@ export default function ServerSettingsPage() {
               <CardTitle className="font-headline text-2xl">Server Settings</CardTitle>
               <CardDescription>Add, edit, or delete your server configurations.</CardDescription>
             </div>
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
+              setIsDialogOpen(isOpen);
+              if (!isOpen) setEditingServer(undefined);
+            }}>
                 <DialogTrigger asChild>
                     <Button onClick={handleAddClick}>
                       <PlusCircle className="mr-2 h-4 w-4" /> Add Server
