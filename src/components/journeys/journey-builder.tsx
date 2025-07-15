@@ -70,7 +70,7 @@ export default function JourneyBuilder({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentJourney, setCurrentJourney] = useState<Journey | null>(null);
 
-  const [debugApiPayload, setDebugApiPayload] = useState<JourneyPayloadOutput | {error: string} | null>(null);
+  const [debugApiPayload, setDebugApiPayload] = useState<any | {error: string} | null>(null);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
 
   // Debounce function
@@ -102,11 +102,11 @@ export default function JourneyBuilder({
           }))
         }));
 
-        const payload = await generateJourneyPayload({ 
+        const { journeyPayload, orderedStops } = await generateJourneyPayload({ 
             bookings: tempBookingsForPreview, 
             journeyServerId: journey?.journeyServerId 
         });
-        setDebugApiPayload(payload);
+        setDebugApiPayload({ journeyPayload, orderedStops });
     } catch (e) {
         console.error("Error generating journey preview:", e);
         setDebugApiPayload({ error: (e as Error).message });
