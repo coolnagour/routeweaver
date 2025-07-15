@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -24,7 +25,7 @@ import { ThemeToggleButton } from '../theme-toggle-button';
 
 const navItems = [
   { href: '/journeys/new', label: 'New Journey', icon: Route },
-  { href: '/journeys', label: 'My Journeys', icon: History },
+  { href: '/journeys', label: 'My Journeys', icon: History, exact: true },
   { href: '/templates', label: 'Templates', icon: FileText },
   { href: '/settings/servers', label: 'Server Settings', icon: Settings },
 ];
@@ -86,20 +87,23 @@ export default function MainSidebar() {
       <Separator />
       <SidebarContent>
         <SidebarMenu>
-          {navItems.map((item) => (
-            <SidebarMenuItem key={item.href}>
-              <SidebarMenuButton
-                as={Link}
-                href={item.href}
-                isActive={pathname.startsWith(item.href)}
-                tooltip={{ children: item.label }}
-                onClick={handleLinkClick}
-              >
-                <item.icon className="h-5 w-5" />
-                <span>{item.label}</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
+          {navItems.map((item) => {
+            const isActive = item.exact ? pathname === item.href : pathname.startsWith(item.href);
+            return (
+              <SidebarMenuItem key={item.href}>
+                <SidebarMenuButton
+                  as={Link}
+                  href={item.href}
+                  isActive={isActive}
+                  tooltip={{ children: item.label }}
+                  onClick={handleLinkClick}
+                >
+                  <item.icon className="h-5 w-5" />
+                  <span>{item.label}</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )
+          })}
         </SidebarMenu>
       </SidebarContent>
       <Separator />
