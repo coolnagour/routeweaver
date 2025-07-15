@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -74,14 +75,14 @@ export default function TemplateManager({ onLoadTemplate }: TemplateManagerProps
           {templates.map((template) => (
             <Card key={template.id}>
               <CardHeader>
-                <div className="flex items-start justify-between">
+                <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 pr-2">
                         <CardTitle className="font-headline flex items-center gap-2">
                             <FileText className="h-5 w-5 text-primary" /> {template.name}
                         </CardTitle>
                         <CardDescription>A saved journey configuration.</CardDescription>
                     </div>
-                    <div className="flex">
+                    <div className="flex shrink-0">
                       <Button variant="ghost" size="icon" onClick={() => handleEditTemplate(template.id)}>
                           <Edit className="h-4 w-4" />
                       </Button>
