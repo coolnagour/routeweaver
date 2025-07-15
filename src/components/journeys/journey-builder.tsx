@@ -46,7 +46,7 @@ export default function JourneyBuilder({
   const { server } = useServer();
   const [journeys, setJourneys] = useLocalStorage<Journey[]>('recent-journeys', [], server?.companyId);
   const [templates, setTemplates] = useLocalStorage<JourneyTemplate[]>('journey-templates', [], server?.companyId);
-  const [templateName, setTemplateName] = useState(initialData?.name || '');
+  const [templateName, setTemplateName] = useState(isEditingTemplate ? initialData?.name || '' : '');
   const [sites, setSites] = useState<{id: number, name: string, ref: string}[]>([]);
   const [isFetchingSites, setIsFetchingSites] = useState(false);
   const [selectedSiteId, setSelectedSiteId] = useState<number | undefined>(initialSiteId || initialData?.siteId);
@@ -132,13 +132,13 @@ export default function JourneyBuilder({
         }
     } else {
         setBookings(getInitialBookings(initialData));
-        setTemplateName(initialData?.name || '');
+        setTemplateName(isEditingTemplate ? initialData?.name || '' : '');
         // When loading a template for a new journey OR editing a template, prioritize initialData
         setSelectedSiteId(initialData?.siteId || initialSiteId);
         setSelectedAccount(initialData?.account || initialAccount || null);
         setCurrentJourney(null);
     }
-  }, [initialData, journeyId, journeys, initialSiteId, initialAccount]);
+  }, [initialData, journeyId, journeys, initialSiteId, initialAccount, isEditingTemplate]);
 
   useEffect(() => {
     async function fetchSites() {
