@@ -33,6 +33,7 @@ export interface Booking {
   siteId?: number;
   accountId?: number;
   customerId?: string; // Optional free text field
+  externalBookingId?: string; // Optional free text field
 }
 
 export interface Account {
@@ -122,6 +123,7 @@ export const BookingSchema = z.object({
   siteId: z.number().optional(),
   accountId: z.number().optional(),
   customerId: z.string().optional(),
+  externalBookingId: z.string().optional(),
 });
 
 export const AccountSchema = z.object({

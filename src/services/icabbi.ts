@@ -60,6 +60,7 @@ const formatBookingForIcabbi = (booking: Booking, server: ServerConfig) => {
         account_id: booking.accountId,
         site_id: booking.siteId,
         customer_id: booking.customerId,
+        external_booking_id: booking.externalBookingId,
         with_bookingsegments: true,
     };
     

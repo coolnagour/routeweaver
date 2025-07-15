@@ -15,7 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import type { Journey, Booking, Stop } from '@/types';
 import { format } from 'date-fns';
 import useLocalStorage from '@/hooks/use-local-storage';
-import { Users, MapPin, Clock, MessageSquare, Edit, Send, Loader2, Info, ChevronDown, Trash2, Milestone } from 'lucide-react';
+import { Users, MapPin, Clock, MessageSquare, Edit, Send, Loader2, Info, ChevronDown, Trash2, Milestone, Hash } from 'lucide-react';
 import { useServer } from '@/context/server-context';
 import { Button } from '../ui/button';
 import { useRouter } from 'next/navigation';
@@ -243,11 +243,18 @@ export default function RecentJourneys() {
                                                               {booking.requestId && <div>Request ID: {booking.requestId}</div>}
                                                           </div>
                                                       )}
-                                                      {booking.customerId && (
-                                                          <Badge variant="secondary" className="text-xs">
-                                                              Cust ID: {booking.customerId}
-                                                          </Badge>
-                                                      )}
+                                                      <div className="flex flex-wrap gap-1 justify-end">
+                                                        {booking.customerId && (
+                                                            <Badge variant="secondary" className="text-xs">
+                                                                Cust ID: {booking.customerId}
+                                                            </Badge>
+                                                        )}
+                                                        {booking.externalBookingId && (
+                                                            <Badge variant="secondary" className="text-xs">
+                                                                Ext. ID: {booking.externalBookingId}
+                                                            </Badge>
+                                                        )}
+                                                      </div>
                                                   </div>
                                               </div>
                                           </CardHeader>
