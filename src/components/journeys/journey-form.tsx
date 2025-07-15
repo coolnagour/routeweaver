@@ -18,7 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { CalendarIcon, MapPin, PlusCircle, X, User, Phone, Clock, MessageSquare, ChevronsUpDown, Sparkles, Loader2, Info, Hash, Car, Map } from 'lucide-react';
+import { CalendarIcon, MapPin, PlusCircle, X, User, Phone, Clock, MessageSquare, ChevronsUpDown, Sparkles, Loader2, Info, Hash, Car, Map, DollarSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, setHours, setMinutes } from 'date-fns';
 import type { Booking, Stop, SuggestionInput } from '@/types';
@@ -64,6 +64,8 @@ const formSchema = z.object({
   externalBookingId: z.string().optional(),
   vehicleType: z.string().optional(),
   externalAreaCode: z.string().optional(),
+  price: z.coerce.number().optional(),
+  cost: z.coerce.number().optional(),
 }).refine(data => {
     const firstPickupTime = data.stops.find(s => s.stopType === 'pickup')?.dateTime?.getTime();
     if (!firstPickupTime) return true; // ASAP booking, validation passes
@@ -98,6 +100,8 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
       externalBookingId: initialData?.externalBookingId || '',
       vehicleType: initialData?.vehicleType || '',
       externalAreaCode: initialData?.externalAreaCode || '',
+      price: initialData?.price || undefined,
+      cost: initialData?.cost || undefined,
       stops: initialData?.stops?.length ? initialData.stops.map(s => ({
           ...s,
           id: s.id || uuidv4(),
@@ -434,6 +438,38 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
                                         <div className="relative flex items-center">
                                             <Map className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                             <Input placeholder="Enter area code" {...field} className="pl-10 bg-background" />
+                                        </div>
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                             <FormField
+                                control={form.control}
+                                name="price"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Price (Optional)</FormLabel>
+                                    <FormControl>
+                                        <div className="relative flex items-center">
+                                            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                            <Input type="number" placeholder="e.g. 25.50" {...field} className="pl-10 bg-background" />
+                                        </div>
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                             <FormField
+                                control={form.control}
+                                name="cost"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Cost (Optional)</FormLabel>
+                                    <FormControl>
+                                        <div className="relative flex items-center">
+                                            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                            <Input type="number" placeholder="e.g. 10.00" {...field} className="pl-10 bg-background" />
                                         </div>
                                     </FormControl>
                                     <FormMessage />

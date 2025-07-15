@@ -83,6 +83,13 @@ const formatBookingForIcabbi = (booking: Booking, server: ServerConfig) => {
         }
     }
 
+    if ((booking.price && booking.price > 0) || (booking.cost && booking.cost > 0)) {
+        payload.payment = {
+            price: booking.price || 0,
+            cost: booking.cost || 0
+        };
+    }
+
     return payload;
 };
 
@@ -235,4 +242,3 @@ export async function searchAccountsByName(server: ServerConfig, query?: string,
 
   return [];
 }
-    

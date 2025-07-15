@@ -15,7 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import type { Journey, Booking, Stop } from '@/types';
 import { format } from 'date-fns';
 import useLocalStorage from '@/hooks/use-local-storage';
-import { Users, MapPin, Clock, MessageSquare, Edit, Send, Loader2, Info, ChevronDown, Trash2, Milestone, Hash, Car, Map } from 'lucide-react';
+import { Users, MapPin, Clock, MessageSquare, Edit, Send, Loader2, Info, ChevronDown, Trash2, Milestone, Hash, Car, Map, DollarSign } from 'lucide-react';
 import { useServer } from '@/context/server-context';
 import { Button } from '../ui/button';
 import { useRouter } from 'next/navigation';
@@ -255,6 +255,14 @@ export default function RecentJourneys() {
                                                         )}
                                                         {booking.externalAreaCode && (
                                                             <Badge variant="secondary" className="text-xs flex items-center gap-1"><Map className="h-3 w-3" />{booking.externalAreaCode}</Badge>
+                                                        )}
+                                                        {(booking.price || booking.cost) && (
+                                                          <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                                                            <DollarSign className="h-3 w-3" />
+                                                            {booking.price && `P: ${booking.price.toFixed(2)}`}
+                                                            {booking.price && booking.cost && ` / `}
+                                                            {booking.cost && `C: ${booking.cost.toFixed(2)}`}
+                                                          </Badge>
                                                         )}
                                                       </div>
                                                   </div>
