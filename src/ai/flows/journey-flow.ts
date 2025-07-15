@@ -116,8 +116,8 @@ const saveJourneyFlow = ai.defineFlow(
       journeyServerId,
     });
 
-    // Add journey-level payment if provided
-    if (price || cost) {
+    // Add journey-level payment if provided and greater than 0
+    if ((price && price > 0) || (cost && cost > 0)) {
       if (journeyPayload.journeys && journeyPayload.journeys.length > 0) {
         journeyPayload.journeys[0].payment = {
           price: price || 0,
