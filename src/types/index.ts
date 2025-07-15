@@ -154,6 +154,20 @@ export const SiteSchema = z.object({
   ref: z.string(),
 });
 
+// Stored template has string dates
+export const TemplateBookingSchema = BookingSchema.extend({
+  stops: z.array(StopSchema),
+}).omit({ siteId: true, accountId: true, bookingServerId: true, requestId: true });
+
+export const JourneyTemplateSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  bookings: z.array(TemplateBookingSchema),
+  siteId: z.number().optional(), 
+  account: AccountSchema.nullable().optional(),
+  site: SiteSchema.nullable().optional(),
+});
+
 export const JourneyInputSchema = z.object({
   bookings: z.array(BookingSchema),
   journeyServerId: z.number().optional(),
