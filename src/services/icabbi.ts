@@ -1,7 +1,6 @@
-
 'use server';
 
-import type { ServerConfig } from "@/config/servers";
+import type { ServerConfig } from "@/types";
 import type { Booking, Account, Site } from "@/types";
 import parsePhoneNumberFromString, { getCountryCallingCode } from 'libphonenumber-js';
 

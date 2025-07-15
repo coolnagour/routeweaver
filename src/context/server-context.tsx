@@ -1,9 +1,8 @@
-
 'use client';
 
 import { createContext, useContext, type ReactNode } from 'react';
 import useLocalStorage from '@/hooks/use-local-storage';
-import type { ServerConfig } from '@/config/servers';
+import type { ServerConfig } from '@/types';
 
 interface ServerContextType {
   server: ServerConfig | null;
