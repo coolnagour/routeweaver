@@ -34,6 +34,8 @@ export interface Booking {
   accountId?: number;
   customerId?: string; // Optional free text field
   externalBookingId?: string; // Optional free text field
+  vehicleType?: string; // Optional free text field
+  externalAreaCode?: string; // Optional free text field
 }
 
 export interface Account {
@@ -124,6 +126,8 @@ export const BookingSchema = z.object({
   accountId: z.number().optional(),
   customerId: z.string().optional(),
   externalBookingId: z.string().optional(),
+  vehicleType: z.string().optional(),
+  externalAreaCode: z.string().optional(),
 });
 
 export const AccountSchema = z.object({
