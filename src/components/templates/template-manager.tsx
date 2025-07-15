@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -111,7 +110,7 @@ export default function TemplateManager({ onLoadTemplate }: TemplateManagerProps
                 </div>
               </CardContent>
               <CardFooter>
-                <Button className="w-full" onClick={() => onLoadTemplate(template)}>Load Template</Button>
+                <Button className="w-full" onClick={() => onLoadTemplate(template)}>Use</Button>
               </CardFooter>
             </Card>
           ))}
