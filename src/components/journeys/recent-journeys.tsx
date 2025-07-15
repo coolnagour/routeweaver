@@ -20,8 +20,9 @@ import { useServer } from '@/context/server-context';
 import { Button } from '../ui/button';
 import { useRouter } from 'next/navigation';
 import { saveJourney } from '@/ai/flows/journey-flow';
+import { generateJourneyPayload } from '@/ai/flows/journey-payload-flow';
 import { useToast } from '@/hooks/use-toast';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { CollapsibleContent } from '../ui/collapsible';
 
@@ -51,9 +52,49 @@ export default function RecentJourneys() {
   const [journeys, setJourneys] = useLocalStorage<Journey[]>('recent-journeys', [], server?.companyId);
   const [publishingId, setPublishingId] = useState<string | null>(null);
   const [expandedJourneyId, setExpandedJourneyId] = useState<string | null>(null);
+  const [debugData, setDebugData] = useState<Record<string, { orderedStops: Stop[]; isLoading: boolean }>>({});
+
+  const getStopsForDebug = useCallback(async (journey: Journey) => {
+    // If it's already scheduled, use the stored order
+    if (journey.orderedStops) {
+      setDebugData(prev => ({ ...prev, [journey.id]: { orderedStops: journey.orderedStops!, isLoading: false }}));
+      return;
+    }
+
+    // It's a draft, so we generate the payload
+    setDebugData(prev => ({ ...prev, [journey.id]: { orderedStops: [], isLoading: true }}));
+    try {
+      let placeholderIdCounter = 1000;
+        const tempBookingsForPreview = journey.bookings.map((b, bookingIndex) => ({
+          ...b,
+          requestId: b.requestId || (9000 + bookingIndex), 
+          stops: b.stops.map(s => ({
+            ...s,
+            bookingSegmentId: s.bookingSegmentId || placeholderIdCounter++
+          }))
+        }));
+
+      const { orderedStops } = await generateJourneyPayload({ bookings: tempBookingsForPreview });
+      setDebugData(prev => ({ ...prev, [journey.id]: { orderedStops, isLoading: false }}));
+    } catch(e) {
+      console.error("Error generating debug view for journey:", e);
+      toast({ title: "Error generating preview", description: (e as Error).message, variant: "destructive"});
+      setDebugData(prev => ({ ...prev, [journey.id]: { orderedStops: [], isLoading: false }}));
+    }
+
+  }, [toast]);
+
 
   const handleToggleExpand = (journeyId: string) => {
-    setExpandedJourneyId(prevId => prevId === journeyId ? null : journeyId);
+    const newExpandedId = expandedJourneyId === journeyId ? null : journeyId;
+    setExpandedJourneyId(newExpandedId);
+    
+    if (newExpandedId) {
+        const journey = journeys.find(j => j.id === newExpandedId);
+        if (journey) {
+            getStopsForDebug(journey);
+        }
+    }
   }
 
   const handleEditJourney = (id: string) => {
@@ -305,39 +346,45 @@ export default function RecentJourneys() {
                                   )})}
                                   </div>
                               </div>
-                              {journey.orderedStops && (
-                                <div className="space-y-2">
-                                    <h4 className="font-semibold">API Stop Order (Debug View):</h4>
-                                    <div className="bg-background rounded-lg border p-4 space-y-4">
-                                        {journey.orderedStops.map((stop, index) => {
-                                            const passenger = stop.stopType === 'pickup' ? stop : findPickupForDropoff(journey, stop);
-                                            return (
-                                                <div key={`${stop.id}-${index}`} className="flex items-start gap-3">
-                                                    <div className="flex flex-col items-center">
-                                                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">
-                                                            {index + 1}
-                                                        </div>
-                                                        {index < journey.orderedStops!.length - 1 && (
-                                                          <div className="w-px h-6 bg-border mt-1"></div>
-                                                        )}
-                                                    </div>
-                                                    <div className="flex-1 pt-0.5">
-                                                        <p className="font-medium">
-                                                           {stop.location.address}
-                                                        </p>
-                                                        <p className="text-sm text-muted-foreground">
-                                                            <span className={cn("font-semibold", stop.stopType === 'pickup' ? 'text-green-600' : 'text-red-600')}>
-                                                                {stop.stopType.toUpperCase()}
-                                                            </span>
-                                                            {passenger?.name && ` - ${passenger.name}`}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            )
-                                        })}
-                                    </div>
-                                </div>
-                              )}
+                              <div className="space-y-2">
+                                  <h4 className="font-semibold">API Stop Order (Debug View):</h4>
+                                  <div className="bg-background rounded-lg border p-4 space-y-4">
+                                      {debugData[journey.id]?.isLoading ? (
+                                        <div className="flex items-center justify-center p-4">
+                                            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                                        </div>
+                                      ) : debugData[journey.id]?.orderedStops?.length > 0 ? (
+                                          debugData[journey.id].orderedStops.map((stop, index) => {
+                                              const passenger = stop.stopType === 'pickup' ? stop : findPickupForDropoff(journey, stop);
+                                              return (
+                                                  <div key={`${stop.id}-${index}`} className="flex items-start gap-3">
+                                                      <div className="flex flex-col items-center">
+                                                          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">
+                                                              {index + 1}
+                                                          </div>
+                                                          {index < debugData[journey.id].orderedStops.length - 1 && (
+                                                            <div className="w-px h-6 bg-border mt-1"></div>
+                                                          )}
+                                                      </div>
+                                                      <div className="flex-1 pt-0.5">
+                                                          <p className="font-medium">
+                                                             {stop.location.address}
+                                                          </p>
+                                                          <p className="text-sm text-muted-foreground">
+                                                              <span className={cn("font-semibold", stop.stopType === 'pickup' ? 'text-green-600' : 'text-red-600')}>
+                                                                  {stop.stopType.toUpperCase()}
+                                                              </span>
+                                                              {passenger?.name && ` - ${passenger.name}`}
+                                                          </p>
+                                                      </div>
+                                                  </div>
+                                              )
+                                          })
+                                      ) : (
+                                        <p className="text-sm text-muted-foreground">No stops to display.</p>
+                                      )}
+                                  </div>
+                              </div>
                           </div>
                       </TableCell>
                     </TableRow>
