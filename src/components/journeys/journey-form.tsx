@@ -83,11 +83,12 @@ interface JourneyFormProps {
   initialData?: Booking | null;
   onSave: (booking: Booking) => void;
   onCancel: () => void;
+  isJourneyPriceSet: boolean;
 }
 
 const emptyLocation = { address: '', lat: 0, lng: 0 };
 
-export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFormProps) {
+export default function JourneyForm({ initialData, onSave, onCancel, isJourneyPriceSet }: JourneyFormProps) {
   const { toast } = useToast();
   const [generatingFields, setGeneratingFields] = useState<Record<string, boolean>>({});
   const [isScheduled, setIsScheduled] = useState(!!initialData?.stops?.find(s => s.stopType === 'pickup')?.dateTime);
@@ -453,7 +454,7 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
                                     <FormControl>
                                         <div className="relative flex items-center">
                                             <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                            <Input type="number" placeholder="e.g. 25.50" {...field} className="pl-10 bg-background" />
+                                            <Input type="number" placeholder="e.g. 25.50" {...field} disabled={isJourneyPriceSet} className="pl-10 bg-background" />
                                         </div>
                                     </FormControl>
                                     <FormMessage />
@@ -469,7 +470,7 @@ export default function JourneyForm({ initialData, onSave, onCancel }: JourneyFo
                                     <FormControl>
                                         <div className="relative flex items-center">
                                             <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                            <Input type="number" placeholder="e.g. 10.00" {...field} className="pl-10 bg-background" />
+                                            <Input type="number" placeholder="e.g. 10.00" {...field} disabled={isJourneyPriceSet} className="pl-10 bg-background" />
                                         </div>
                                     </FormControl>
                                     <FormMessage />

@@ -31,7 +31,7 @@ const saveJourneyFlow = ai.defineFlow(
     inputSchema: SaveJourneyInputSchema,
     outputSchema: JourneyOutputSchema,
   },
-  async ({ bookings, server, siteId, accountId, journeyServerId }) => {
+  async ({ bookings, server, siteId, accountId, journeyServerId, price, cost }) => {
     console.log(`[Journey Flow] Starting journey processing with ${bookings.length} booking(s) for site ID: ${siteId}, account ID: ${accountId}, and journey ID: ${journeyServerId || 'new'}`);
 
     if (bookings.length === 0) {
@@ -115,6 +115,16 @@ const saveJourneyFlow = ai.defineFlow(
       bookings: processedBookings, 
       journeyServerId,
     });
+
+    // Add journey-level payment if provided
+    if (price || cost) {
+      if (journeyPayload.journeys && journeyPayload.journeys.length > 0) {
+        journeyPayload.journeys[0].payment = {
+          price: price || 0,
+          cost: cost || 0,
+        };
+      }
+    }
     
     console.log(`[Journey Flow] Creating/updating journey with payload:`, JSON.stringify(journeyPayload, null, 2));
 

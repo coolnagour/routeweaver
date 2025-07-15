@@ -11,7 +11,7 @@ import { saveJourney } from '@/ai/flows/journey-flow';
 import { generateJourneyPayload } from '@/ai/flows/journey-payload-flow';
 import { getSites } from '@/services/icabbi';
 import type { Booking, Journey, JourneyTemplate, Account, JourneyPayloadOutput, Stop } from '@/types';
-import { Save, Building, Loader2, Send, ChevronsUpDown, Code } from 'lucide-react';
+import { Save, Building, Loader2, Send, ChevronsUpDown, Code, DollarSign, Info } from 'lucide-react';
 import BookingManager from './booking-manager';
 import { useServer } from '@/context/server-context';
 import { useRouter } from 'next/navigation';
@@ -20,6 +20,7 @@ import AccountAutocomplete from './account-autocomplete';
 import { v4 as uuidv4 } from 'uuid';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '../ui/collapsible';
 import { cn } from '@/lib/utils';
+import { Label } from '../ui/label';
 
 interface JourneyBuilderProps {
   initialData?: Partial<JourneyTemplate> | null;
@@ -79,6 +80,12 @@ export default function JourneyBuilder({
 
   const [journeyPreview, setJourneyPreview] = useState<JourneyPreviewState>({ orderedStops: [], journeyPayload: null, isLoading: false });
 
+  const [journeyPrice, setJourneyPrice] = useState<number | undefined>(undefined);
+  const [journeyCost, setJourneyCost] = useState<number | undefined>(undefined);
+
+  const hasBookingLevelPrice = bookings.some(b => b.price || b.cost);
+  const hasJourneyLevelPrice = journeyPrice || journeyCost;
+
   // Debounce function
   const debounce = <F extends (...args: any[]) => void>(func: F, delay: number) => {
     let timeoutId: ReturnType<typeof setTimeout>;
@@ -134,6 +141,8 @@ export default function JourneyBuilder({
           setBookings(getInitialBookings(foundJourney));
           setSelectedSiteId(foundJourney.siteId);
           setSelectedAccount(foundJourney.account || null);
+          setJourneyPrice(foundJourney.price);
+          setJourneyCost(foundJourney.cost);
         }
     } else {
         setBookings(getInitialBookings(initialData));
@@ -186,6 +195,8 @@ export default function JourneyBuilder({
         siteId: selectedSiteId,
         account: selectedAccount,
         orderedStops: currentJourney.orderedStops, // Preserve ordered stops on local save
+        price: journeyPrice,
+        cost: journeyCost,
       };
       onUpdateJourney(updatedJourneyData);
       toast({
@@ -200,6 +211,8 @@ export default function JourneyBuilder({
             bookings: bookings,
             siteId: selectedSiteId,
             account: selectedAccount,
+            price: journeyPrice,
+            cost: journeyCost,
         };
         setJourneys([newJourney, ...journeys]);
         toast({
@@ -299,6 +312,8 @@ export default function JourneyBuilder({
           siteId: selectedSiteId, 
           accountId: selectedAccount.id,
           journeyServerId: journeyToPublish.journeyServerId, // Pass existing journey ID
+          price: journeyToPublish.price,
+          cost: journeyToPublish.cost,
         });
         
         const publishedJourney: Journey = {
@@ -398,10 +413,62 @@ export default function JourneyBuilder({
                   />
               </div>
           </div>
+          <Collapsible className="mt-4">
+            <CollapsibleTrigger asChild>
+                <Button variant="link" size="sm" className="p-0 h-auto">
+                    <ChevronsUpDown className="h-4 w-4 mr-2" />
+                    Extra Information
+                </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-4 pt-4">
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <Label htmlFor="journey-price">Journey Price</Label>
+                        <div className="relative flex items-center">
+                            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                id="journey-price"
+                                type="number"
+                                placeholder="e.g., 50.00"
+                                value={journeyPrice || ''}
+                                onChange={(e) => setJourneyPrice(e.target.value ? parseFloat(e.target.value) : undefined)}
+                                disabled={hasBookingLevelPrice}
+                                className="pl-10 bg-background"
+                            />
+                        </div>
+                    </div>
+                    <div>
+                        <Label htmlFor="journey-cost">Journey Cost</Label>
+                        <div className="relative flex items-center">
+                            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                id="journey-cost"
+                                type="number"
+                                placeholder="e.g., 20.00"
+                                value={journeyCost || ''}
+                                onChange={(e) => setJourneyCost(e.target.value ? parseFloat(e.target.value) : undefined)}
+                                disabled={hasBookingLevelPrice}
+                                className="pl-10 bg-background"
+                            />
+                        </div>
+                    </div>
+                </div>
+                {hasBookingLevelPrice && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Info className="h-3 w-3" />
+                        Journey-level price/cost is disabled because one or more bookings have individual pricing.
+                    </p>
+                )}
+            </CollapsibleContent>
+          </Collapsible>
         </CardContent>
       </Card>
 
-      <BookingManager bookings={bookings} setBookings={setBookings} />
+      <BookingManager 
+        bookings={bookings} 
+        setBookings={setBookings} 
+        isJourneyPriceSet={hasJourneyLevelPrice}
+      />
       
       <Card>
           <CardHeader>

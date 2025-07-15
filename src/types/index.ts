@@ -68,6 +68,8 @@ export interface Journey {
   siteId?: number;
   account?: Account | null;
   orderedStops?: Stop[]; // The final ordered stops from the server
+  price?: number;
+  cost?: number;
 }
 
 // Stored template has string dates
@@ -171,6 +173,8 @@ export const JourneyTemplateSchema = z.object({
 export const JourneyInputSchema = z.object({
   bookings: z.array(BookingSchema),
   journeyServerId: z.number().optional(),
+  price: z.number().optional(),
+  cost: z.number().optional(),
 });
 export type JourneyInput = z.infer<typeof JourneyInputSchema>;
 

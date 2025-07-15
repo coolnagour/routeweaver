@@ -133,7 +133,9 @@ export default function RecentJourneys() {
             server, 
             siteId: journey.siteId, 
             accountId: journey.account.id, 
-            journeyServerId: journey.journeyServerId 
+            journeyServerId: journey.journeyServerId,
+            price: journey.price,
+            cost: journey.cost,
         });
         
         const publishedJourney: Journey = {
@@ -261,8 +263,18 @@ export default function RecentJourneys() {
                     <TableRow>
                       <TableCell colSpan={5} className="p-0">
                           <div className="p-4 bg-muted/50 space-y-4">
+                              <div className="flex justify-between items-start gap-4">
+                                <h4 className="font-semibold">Journey Details:</h4>
+                                {(journey.price || journey.cost) && (
+                                    <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                                        <DollarSign className="h-3 w-3" />
+                                        {journey.price && `Price: ${journey.price.toFixed(2)}`}
+                                        {journey.price && journey.cost && ` / `}
+                                        {journey.cost && `Cost: ${journey.cost.toFixed(2)}`}
+                                    </Badge>
+                                )}
+                              </div>
                               <div className="space-y-4">
-                                  <h4 className="font-semibold">Bookings in this Journey:</h4>
                                   <div className="grid gap-4 md:grid-cols-2">
                                   {journey.bookings.map(booking => {
                                       const bookingDateTime = getBookingDateTime(booking);

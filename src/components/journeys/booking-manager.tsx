@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import type { Booking, Stop } from '@/types';
 import JourneyForm from './journey-form';
-import { Edit, MapPin, Package, Trash2, UserPlus, Users, Phone, Clock, MessageSquare, Lock } from 'lucide-react';
+import { Edit, MapPin, Package, Trash2, UserPlus, Users, Phone, Clock, MessageSquare, Lock, Info } from 'lucide-react';
 import { format } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -17,11 +17,12 @@ const getPassengersFromStops = (stops: Stop[]) => {
 interface BookingManagerProps {
   bookings: Booking[];
   setBookings: React.Dispatch<React.SetStateAction<Booking[]>>;
+  isJourneyPriceSet: boolean;
 }
 
 const emptyLocation = { address: '', lat: 0, lng: 0 };
 
-export default function BookingManager({ bookings, setBookings }: BookingManagerProps) {
+export default function BookingManager({ bookings, setBookings, isJourneyPriceSet }: BookingManagerProps) {
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
 
   const handleEditBooking = (booking: Booking) => {
@@ -75,7 +76,8 @@ export default function BookingManager({ bookings, setBookings }: BookingManager
         key={editingBooking.id}
         initialData={editingBooking} 
         onSave={handleSaveBooking}
-        onCancel={handleCancelEdit} 
+        onCancel={handleCancelEdit}
+        isJourneyPriceSet={isJourneyPriceSet}
       />
     );
   }
@@ -89,6 +91,12 @@ export default function BookingManager({ bookings, setBookings }: BookingManager
         </div>
         <CardDescription>
           {bookings.length > 0 ? `This journey has ${bookings.length} booking(s) and ${getTotalPassengers(bookings)} passenger(s).` : 'Click "Add New Booking" to get started.'}
+          {isJourneyPriceSet && (
+            <span className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                <Info className="h-3 w-3" />
+                Individual booking prices are disabled because a journey-level price is set.
+            </span>
+          )}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
