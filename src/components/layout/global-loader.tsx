@@ -6,33 +6,31 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 
 function Loader() {
-  const [loading, setLoading] = useState(false);
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [previousUrl, setPreviousUrl] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [lastHref, setLastHref] = useState('');
 
   useEffect(() => {
-    const currentUrl = `${pathname}?${searchParams.toString()}`;
+    const currentHref = `${pathname}?${searchParams.toString()}`;
 
-    // If the URL has changed, we are navigating.
-    if (currentUrl !== previousUrl) {
-      setLoading(true);
-      setPreviousUrl(currentUrl);
+    if (lastHref !== currentHref) {
+      setIsLoading(true);
+      setLastHref(currentHref);
+    } else {
+      // The page content has rendered for the current URL, so we can hide the loader.
+      const timer = setTimeout(() => {
+        setIsLoading(false);
+      }, 100); // A small delay prevents flickering on fast loads
+      
+      return () => clearTimeout(timer);
     }
-  }, [pathname, searchParams, previousUrl]);
 
-  useEffect(() => {
-    // This effect runs after the component has rendered with the new URL content.
-    // We can now safely turn off the loader.
-    // A small delay helps prevent flicker on very fast page loads.
-    const timer = setTimeout(() => {
-        setLoading(false);
-    }, 100);
-    
-    return () => clearTimeout(timer);
-  }, [pathname, searchParams]); // This effect depends on the same things as the one above
+  }, [pathname, searchParams, lastHref]);
 
-  if (!loading) return null;
+  if (!isLoading) {
+    return null;
+  }
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-background/80 backdrop-blur-sm">
@@ -40,7 +38,6 @@ function Loader() {
     </div>
   );
 }
-
 
 // Wrap the loader in a Suspense boundary as recommended by Next.js
 // when using navigation hooks like usePathname and useSearchParams.
