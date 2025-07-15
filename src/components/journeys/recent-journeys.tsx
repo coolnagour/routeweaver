@@ -347,7 +347,7 @@ export default function RecentJourneys() {
                                   </div>
                               </div>
                               <div className="space-y-2">
-                                  <h4 className="font-semibold">API Stop Order (Debug View):</h4>
+                                  <h4 className="font-semibold">Journey Stop Order:</h4>
                                   <div className="bg-background rounded-lg border p-4 space-y-4">
                                       {debugData[journey.id]?.isLoading ? (
                                         <div className="flex items-center justify-center p-4">

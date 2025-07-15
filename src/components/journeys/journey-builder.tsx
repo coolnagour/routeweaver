@@ -422,7 +422,7 @@ export default function JourneyBuilder({
             <CardHeader className="cursor-pointer flex-row items-center justify-between">
               <div className="flex items-center gap-2">
                 <Code className="h-5 w-5" />
-                <CardTitle className="font-headline text-lg">API Payload (Preview)</CardTitle>
+                <CardTitle className="font-headline text-lg">Journey Stop Order</CardTitle>
               </div>
               <Button variant="ghost" size="icon" className="h-8 w-8">
                   <ChevronsUpDown className="h-4 w-4" />
