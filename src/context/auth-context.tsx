@@ -69,13 +69,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (loading || !isConfigValid) return;
 
     const isAuthPage = pathname === '/login';
-    const isServerSelectPage = pathname === '/';
+    const serverIsRequired = !['/', '/settings/servers'].includes(pathname);
 
     if (user) { // User is "logged in"
       if (isAuthPage) {
         router.push('/'); // If on login page, go to server select
-      } else if (!server && !isServerSelectPage) {
-        router.push('/'); // If no server selected and not on server select page, go there
+      } else if (!server && serverIsRequired) {
+        router.push('/'); // If no server selected and it's required for the page, go to server select
       }
     } else { // User is not logged in
         if (!isAuthPage) {
