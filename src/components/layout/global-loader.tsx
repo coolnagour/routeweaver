@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, Suspense, useRef } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 
@@ -9,24 +9,26 @@ function Loader() {
   const [loading, setLoading] = useState(false);
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const previousPath = useRef(pathname);
 
   useEffect(() => {
-    // If the path changes, it means a navigation has started.
-    // We compare the current path with the one from the previous render.
-    if (previousPath.current !== pathname) {
+    const url = `${pathname}?${searchParams.toString()}`;
+
+    // A simple way to track navigation events.
+    // We use a timeout to set loading to true, which gives Next.js
+    // a moment to start rendering the new page. If the component unmounts
+    // before the timeout, the navigation was instant, and no loader is needed.
+    const timer = setTimeout(() => {
       setLoading(true);
-    }
-    // Update the ref to the new path for the next render.
-    previousPath.current = pathname;
-  }, [pathname]);
+    }, 100); // Small delay to avoid flicker on fast navigations
 
-  useEffect(() => {
-    // This effect runs when the new page component has finished loading,
-    // as it's triggered by the final update to searchParams after navigation.
-    // This is a reliable way to know when to hide the loader.
+    // When the component re-renders with the new URL, it means navigation is complete.
+    // The `useEffect` cleanup will clear the timer if it hasn't fired yet.
+    // And this effect itself will set loading to false.
     setLoading(false);
-  }, [searchParams]);
+
+    // When the component unmounts or the URL changes again, clear the timer.
+    return () => clearTimeout(timer);
+  }, [pathname, searchParams]);
 
 
   if (!loading) return null;
