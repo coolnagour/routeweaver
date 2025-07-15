@@ -1,7 +1,16 @@
 
 import { z } from 'zod';
-import type { ServerConfig as ServerConfigType } from '@/config/servers';
-export type ServerConfig = ServerConfigType;
+
+export const ServerConfigSchema = z.object({
+    name: z.string().min(1, "Name is required"),
+    host: z.string().min(1, "Host is required"),
+    apiPath: z.string().min(1, "API Path is required"),
+    appKey: z.string().min(1, "App Key is required"),
+    secretKey: z.string().min(1, "Secret Key is required"),
+    companyId: z.string().min(1, "Company ID is required"),
+    countryCodes: z.array(z.string()).min(1, "At least one country code is required"),
+});
+export type ServerConfig = z.infer<typeof ServerConfigSchema>;
 
 export type StopType = 'pickup' | 'dropoff';
 
@@ -144,16 +153,6 @@ export const SiteSchema = z.object({
   id: z.number(),
   name: z.string(),
   ref: z.string(),
-});
-
-export const ServerConfigSchema = z.object({
-    name: z.string(),
-    host: z.string(),
-    apiPath: z.string(),
-    appKey: z.string(),
-    secretKey: z.string(),
-    companyId: z.string(),
-    countryCodes: z.array(z.string()),
 });
 
 export const JourneyInputSchema = z.object({

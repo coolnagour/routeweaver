@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Route, History, FileText, User, LogOut, Bot, Server } from 'lucide-react';
+import { Route, History, FileText, User, LogOut, Bot, Server, Settings } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/use-auth';
@@ -27,6 +27,7 @@ const navItems = [
   { href: '/journeys/new', label: 'New Journey', icon: Route },
   { href: '/journeys', label: 'My Journeys', icon: History },
   { href: '/templates', label: 'Templates', icon: FileText },
+  { href: '/settings/servers', label: 'Server Settings', icon: Settings },
 ];
 
 export default function MainSidebar() {
@@ -91,7 +92,7 @@ export default function MainSidebar() {
               <SidebarMenuButton
                 as={Link}
                 href={item.href}
-                isActive={pathname === item.href}
+                isActive={pathname.startsWith(item.href)}
                 tooltip={{ children: item.label }}
                 onClick={handleLinkClick}
               >
