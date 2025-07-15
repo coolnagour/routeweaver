@@ -32,6 +32,12 @@ interface JourneyBuilderProps {
   initialAccount?: Account | null; // For loading from template
 }
 
+interface JourneyPreviewState {
+  orderedStops: Stop[];
+  journeyPayload: any | null;
+  isLoading: boolean;
+}
+
 export default function JourneyBuilder({ 
   initialData, 
   onNewJourneyClick, 
@@ -71,7 +77,7 @@ export default function JourneyBuilder({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentJourney, setCurrentJourney] = useState<Journey | null>(null);
 
-  const [stopOrderPreview, setStopOrderPreview] = useState<{ orderedStops: Stop[]; isLoading: boolean }>({ orderedStops: [], isLoading: false });
+  const [journeyPreview, setJourneyPreview] = useState<JourneyPreviewState>({ orderedStops: [], journeyPayload: null, isLoading: false });
 
   // Debounce function
   const debounce = <F extends (...args: any[]) => void>(func: F, delay: number) => {
@@ -83,12 +89,12 @@ export default function JourneyBuilder({
   };
 
   const fetchPreview = useCallback(async (currentBookings: Booking[], journey: Journey | null) => {
-    if (currentBookings.length === 0) {
-      setStopOrderPreview({ orderedStops: [], isLoading: false });
+    if (currentBookings.length === 0 || currentBookings.flatMap(b => b.stops).length < 2) {
+      setJourneyPreview({ orderedStops: [], journeyPayload: null, isLoading: false });
       return;
     }
     
-    setStopOrderPreview(prev => ({ ...prev, isLoading: true }));
+    setJourneyPreview(prev => ({ ...prev, isLoading: true }));
     try {
         let placeholderIdCounter = 1000;
         // A simplified booking object is created for the debug view, as server IDs are not yet available.
@@ -102,14 +108,14 @@ export default function JourneyBuilder({
           }))
         }));
 
-        const { orderedStops } = await generateJourneyPayload({ 
+        const { orderedStops, journeyPayload } = await generateJourneyPayload({ 
             bookings: tempBookingsForPreview, 
             journeyServerId: journey?.journeyServerId 
         });
-        setStopOrderPreview({ orderedStops, isLoading: false });
+        setJourneyPreview({ orderedStops, journeyPayload, isLoading: false });
     } catch (e) {
         console.error("Error generating journey preview:", e);
-        setStopOrderPreview({ orderedStops: [], isLoading: false });
+        setJourneyPreview({ orderedStops: [], journeyPayload: null, isLoading: false });
         toast({ title: "Error generating preview", description: (e as Error).message, variant: "destructive" });
     }
   }, [toast]);
@@ -398,6 +404,52 @@ export default function JourneyBuilder({
       <BookingManager bookings={bookings} setBookings={setBookings} />
       
       <Card>
+          <CardHeader>
+             <CardTitle className="font-headline text-lg">Journey Stop Order</CardTitle>
+             <CardDescription>This is a preview of the optimized stop order that will be sent to the API.</CardDescription>
+          </CardHeader>
+          <CardContent>
+              <div className="bg-background rounded-lg border p-4 space-y-4">
+                {journeyPreview.isLoading ? (
+                  <div className="flex items-center justify-center p-4">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    <span className="ml-2">Generating preview...</span>
+                  </div>
+                ) : journeyPreview.orderedStops.length > 0 ? (
+                  journeyPreview.orderedStops.map((stop, index) => {
+                    const passenger = stop.stopType === 'pickup' ? stop : findPassengerForDropoff(stop);
+                    return (
+                      <div key={`${stop.id}-${index}`} className="flex items-start gap-3">
+                        <div className="flex flex-col items-center">
+                          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">
+                            {index + 1}
+                          </div>
+                          {index < journeyPreview.orderedStops.length - 1 && (
+                            <div className="w-px h-6 bg-border mt-1"></div>
+                          )}
+                        </div>
+                        <div className="flex-1 pt-0.5">
+                          <p className="font-medium">
+                              {stop.location.address}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                              <span className={cn("font-semibold", stop.stopType === 'pickup' ? 'text-green-600' : 'text-red-600')}>
+                                  {stop.stopType.toUpperCase()}
+                              </span>
+                              {passenger?.name && ` - ${passenger.name}`}
+                          </p>
+                        </div>
+                      </div>
+                    )
+                  })
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center">Add some stops to see the journey order.</p>
+                )}
+              </div>
+            </CardContent>
+      </Card>
+      
+      <Card>
           <CardFooter className="flex flex-col sm:flex-row justify-between items-center bg-muted/50 p-4 rounded-b-lg gap-4">
               <div className="flex-grow w-full sm:w-auto">
                 <Input
@@ -436,7 +488,7 @@ export default function JourneyBuilder({
             <CardHeader className="cursor-pointer flex-row items-center justify-between">
               <div className="flex items-center gap-2">
                 <Code className="h-5 w-5" />
-                <CardTitle className="font-headline text-lg">Journey Stop Order</CardTitle>
+                <CardTitle className="font-headline text-lg">Debug Data</CardTitle>
               </div>
               <Button variant="ghost" size="icon" className="h-8 w-8">
                   <ChevronsUpDown className="h-4 w-4" />
@@ -445,41 +497,17 @@ export default function JourneyBuilder({
           </CollapsibleTrigger>
           <CollapsibleContent>
             <CardContent>
-              <div className="bg-background rounded-lg border p-4 space-y-4">
-                {stopOrderPreview.isLoading ? (
+              <div className="bg-muted text-muted-foreground rounded-lg border p-4">
+                 {journeyPreview.isLoading ? (
                   <div className="flex items-center justify-center p-4">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                    <span className="ml-2">Generating preview...</span>
+                    <Loader2 className="h-6 w-6 animate-spin" />
                   </div>
-                ) : stopOrderPreview.orderedStops.length > 0 ? (
-                  stopOrderPreview.orderedStops.map((stop, index) => {
-                    const passenger = stop.stopType === 'pickup' ? stop : findPassengerForDropoff(stop);
-                    return (
-                      <div key={`${stop.id}-${index}`} className="flex items-start gap-3">
-                        <div className="flex flex-col items-center">
-                          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">
-                            {index + 1}
-                          </div>
-                          {index < stopOrderPreview.orderedStops.length - 1 && (
-                            <div className="w-px h-6 bg-border mt-1"></div>
-                          )}
-                        </div>
-                        <div className="flex-1 pt-0.5">
-                          <p className="font-medium">
-                              {stop.location.address}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                              <span className={cn("font-semibold", stop.stopType === 'pickup' ? 'text-green-600' : 'text-red-600')}>
-                                  {stop.stopType.toUpperCase()}
-                              </span>
-                              {passenger?.name && ` - ${passenger.name}`}
-                          </p>
-                        </div>
-                      </div>
-                    )
-                  })
+                ) : journeyPreview.journeyPayload ? (
+                    <pre className="text-xs whitespace-pre-wrap break-all">
+                        {JSON.stringify(journeyPreview.journeyPayload, null, 2)}
+                    </pre>
                 ) : (
-                  <p className="text-sm text-muted-foreground text-center">Add some stops to see the journey order.</p>
+                  <p className="text-sm text-center">No debug data to display.</p>
                 )}
               </div>
             </CardContent>
