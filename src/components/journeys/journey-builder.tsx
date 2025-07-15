@@ -132,7 +132,11 @@ export default function JourneyBuilder({
         }
     } else {
         setBookings(getInitialBookings(initialData));
-        setTemplateName(isEditingTemplate ? initialData?.name || '' : '');
+        if (isEditingTemplate) {
+          setTemplateName(initialData?.name || '');
+        } else {
+          setTemplateName(''); // Clear template name when loading from template
+        }
         // When loading a template for a new journey OR editing a template, prioritize initialData
         setSelectedSiteId(initialData?.siteId || initialSiteId);
         setSelectedAccount(initialData?.account || initialAccount || null);
@@ -384,7 +388,7 @@ export default function JourneyBuilder({
               <div className="flex-1 min-w-[250px] flex gap-2">
                     <Input
                       type="text"
-                      placeholder="Enter name to save as template..."
+                      placeholder={isEditingTemplate ? "Template Name" : "Enter name to save as template..."}
                       value={templateName}
                       onChange={(e) => setTemplateName(e.target.value)}
                       className="border p-2 rounded-md bg-background"
@@ -393,16 +397,19 @@ export default function JourneyBuilder({
                     <Save className="mr-2 h-4 w-4" /> {isEditingTemplate ? 'Update Template' : 'Save as Template'}
                 </Button>
               </div>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={handleSaveJourneyLocally} disabled={bookings.length === 0}>
-                    <Save className="mr-2 h-4 w-4" /> {isEditingJourney ? 'Update Journey' : 'Save Journey'}
-                </Button>
-                
-                <Button onClick={handlePublishJourney} disabled={isSubmitting || !currentJourney || bookings.length === 0 || !selectedSiteId || !selectedAccount}>
-                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                    {publishButtonText}
-                </Button>
-              </div>
+              
+              {!isEditingTemplate && (
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={handleSaveJourneyLocally} disabled={bookings.length === 0}>
+                      <Save className="mr-2 h-4 w-4" /> {isEditingJourney ? 'Update Journey' : 'Save Journey'}
+                  </Button>
+                  
+                  <Button onClick={handlePublishJourney} disabled={isSubmitting || !currentJourney || bookings.length === 0 || !selectedSiteId || !selectedAccount}>
+                      {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                      {publishButtonText}
+                  </Button>
+                </div>
+              )}
           </CardFooter>
       </Card>
 
