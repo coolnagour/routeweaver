@@ -1,3 +1,4 @@
+
 'use server';
 
 import type { ServerConfig } from "@/types";
@@ -85,7 +86,8 @@ const formatBookingForIcabbi = (booking: Booking, server: ServerConfig) => {
     if ((booking.price && booking.price > 0) || (booking.cost && booking.cost > 0)) {
         payload.payment = {
             price: booking.price || 0,
-            cost: booking.cost || 0
+            cost: booking.cost || 0,
+            fixed: 1,
         };
     }
 
