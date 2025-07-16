@@ -124,9 +124,12 @@ export default function JourneyForm({
 
   // This effect synchronizes the form state when an address is selected on the map.
   useEffect(() => {
+    console.log('[JourneyForm] locationFromMap prop changed:', locationFromMap);
     if (locationFromMap && locationFromMap.target.bookingId === bookingId) {
       const stopIndex = form.getValues('stops').findIndex(s => s.id === locationFromMap.target.stopId);
+      console.log(`[JourneyForm] Target booking matches. Stop index found: ${stopIndex}`);
       if (stopIndex !== -1) {
+        console.log(`[JourneyForm] Updating form field 'stops.${stopIndex}.location' with value:`, locationFromMap.location);
         form.setValue(`stops.${stopIndex}.location`, locationFromMap.location, { shouldValidate: true, shouldDirty: true });
       }
     }

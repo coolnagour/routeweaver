@@ -120,28 +120,14 @@ export default function JourneyBuilder({
   };
 
   const handleSetLocationFromMap = (location: Location) => {
-    if (!mapSelectionTarget) return;
+    console.log('[JourneyBuilder] handleSetLocationFromMap called with location:', location);
+    if (!mapSelectionTarget) {
+      console.log('[JourneyBuilder] No map selection target, exiting.');
+      return;
+    }
 
-    // For local state updates (for the map markers, etc.)
-    setBookings(prevBookings => {
-      const newBookings = prevBookings.map(booking => {
-        if (booking.id === mapSelectionTarget.bookingId) {
-          return {
-            ...booking,
-            stops: booking.stops.map(stop => {
-              if (stop.id === mapSelectionTarget.stopId) {
-                return { ...stop, location };
-              }
-              return stop;
-            })
-          };
-        }
-        return booking;
-      });
-      return newBookings;
-    });
-
-    // For updating the form directly
+    console.log('[JourneyBuilder] Setting locationFromMap state for target:', mapSelectionTarget);
+    // Pass the target and location down to the form
     setLocationFromMap({ target: mapSelectionTarget, location });
 
     setMapSelectionTarget(null); // Exit map selection mode
