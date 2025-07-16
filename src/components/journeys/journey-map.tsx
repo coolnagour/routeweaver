@@ -110,12 +110,20 @@ const mapStyles = {
     ]
 };
 
+// Catppuccin Mocha palette for good contrast and aesthetics
 const bookingColors = [
-  '#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', 
-  '#911eb4', '#46f0f0', '#f032e6', '#bcf60c', '#fabebe',
-  '#008080', '#e6beff', '#9a6324', '#fffac8', '#800000',
-  '#aaffc3', '#808000', '#ffd8b1', '#000075', '#808080', 
-  '#ffffff', '#000000'
+  '#f38ba8', // Red
+  '#89b4fa', // Blue
+  '#a6e3a1', // Green
+  '#fab387', // Peach
+  '#cba6f7', // Mauve
+  '#f9e2af', // Yellow
+  '#94e2d5', // Teal
+  '#74c7ec', // Sapphire
+  '#f5c2e7', // Pink
+  '#b4befe', // Lavender
+  '#eba0ac', // Maroon
+  '#89dceb', // Sky
 ];
 
 const getBookingColor = (bookingId: string) => {
