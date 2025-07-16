@@ -3,10 +3,10 @@ import type { Booking, ServerConfig } from "@/types";
 import parsePhoneNumberFromString from 'libphonenumber-js';
 
 /**
- * @fileOverview A shared utility to format booking data for the iCabbi API.
+ * @fileOverview A shared utility to format booking data for the API.
  */
 
-export const formatBookingForIcabbi = (booking: Booking, server: ServerConfig) => {
+export const formatBookingForApi = (booking: Booking, server: ServerConfig) => {
     if (booking.stops.length < 2) {
         throw new Error("Booking must have at least a pickup and a dropoff stop.");
     }

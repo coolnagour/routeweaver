@@ -3,7 +3,7 @@
 
 import type { ServerConfig } from "@/types";
 import type { Booking, Account, Site } from "@/types";
-import { formatBookingForIcabbi } from "@/lib/booking-formatter";
+import { formatBookingForApi } from "@/lib/booking-formatter";
 
 interface IcabbiApiCallOptions {
     server: ServerConfig;
@@ -74,7 +74,7 @@ export async function callIcabbiApi({ server, method, endpoint, body }: IcabbiAp
 }
 
 export async function createBooking(server: ServerConfig, booking: Booking) {
-    const payload = formatBookingForIcabbi(booking, server);
+    const payload = formatBookingForApi(booking, server);
 
     const response = await callIcabbiApi({
         server,
@@ -90,7 +90,7 @@ export async function updateBooking(server: ServerConfig, booking: Booking) {
     if (!booking.bookingServerId) {
         throw new Error("Booking must have a bookingServerId to be updated.");
     }
-    const payload = formatBookingForIcabbi(booking, server);
+    const payload = formatBookingForApi(booking, server);
 
     const response = await callIcabbiApi({
         server,

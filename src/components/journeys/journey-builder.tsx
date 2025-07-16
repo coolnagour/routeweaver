@@ -21,7 +21,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '../ui/collapsible';
 import { cn } from '@/lib/utils';
 import { Label } from '../ui/label';
-import { formatBookingForIcabbi } from '@/lib/booking-formatter';
+import { formatBookingForApi } from '@/lib/booking-formatter';
 
 interface JourneyBuilderProps {
   initialData?: Partial<JourneyTemplate> | null;
@@ -49,7 +49,7 @@ const generateDebugBookingPayloads = (bookings: Booking[], server: any, siteId?:
     return bookings.map(booking => {
         try {
             const bookingWithContext = { ...booking, siteId, accountId };
-            return formatBookingForIcabbi(bookingWithContext, server);
+            return formatBookingForApi(bookingWithContext, server);
         } catch (e) {
             return { error: `Error generating payload: ${e instanceof Error ? e.message : 'Unknown error'}` };
         }
