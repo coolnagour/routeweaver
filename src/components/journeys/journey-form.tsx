@@ -22,7 +22,7 @@ import { CalendarIcon, MapPin, PlusCircle, X, User, Phone, Clock, MessageSquare,
 import { cn } from '@/lib/utils';
 import { format, setHours, setMinutes } from 'date-fns';
 import type { Booking, Stop, SuggestionInput, StopType } from '@/types';
-import { StopSchema } from '@/types';
+import { BookingSchema, StopSchema } from '@/types';
 import ViaStop from './via-stop';
 import AddressAutocomplete from './address-autocomplete';
 import { generateSuggestion } from '@/ai/flows/suggestion-flow';
@@ -32,7 +32,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Switch } from '../ui/switch';
 import { Label } from '../ui/label';
 
-// Use the main StopSchema and override dateTime for form handling (Date object instead of string)
+// Create a form-specific schema by overriding dateTime to use a Date object
 const FormStopSchema = StopSchema.extend({
   dateTime: z.date().optional(),
 }).refine(data => {
@@ -46,28 +46,25 @@ const FormStopSchema = StopSchema.extend({
     path: ['pickupStopId'], // Target the specific field for the error
 });
 
-const formSchema = z.object({
-  id: z.string().optional(),
-  bookingServerId: z.number().optional(),
+// Use the main BookingSchema and override the stops to use our form-specific stop schema.
+const FormBookingSchema = BookingSchema.extend({
   stops: z.array(FormStopSchema).min(2, 'At least two stops are required.'),
-  customerId: z.string().optional(),
-  externalBookingId: z.string().optional(),
-  vehicleType: z.string().optional(),
-  externalAreaCode: z.string().optional(),
-  price: z.coerce.number().optional(),
-  cost: z.coerce.number().optional(),
 }).refine(data => {
     const firstPickupTime = data.stops.find(s => s.stopType === 'pickup')?.dateTime?.getTime();
     if (!firstPickupTime) return true; // ASAP booking, validation passes
 
-    const subsequentPickups = data.stops.filter((s, index) => s.stopType === 'pickup' && s.dateTime);
+    // Filter for subsequent pickups that actually have a time set
+    const subsequentPickups = data.stops.filter(s => s.stopType === 'pickup' && s.dateTime);
+
+    // Ensure all subsequent pickups with a time are not before the first one
     return subsequentPickups.every(p => !p.dateTime || p.dateTime.getTime() >= firstPickupTime);
 }, {
     message: "Subsequent pickup times must not be before the first pickup.",
     path: ["stops"],
 });
 
-type BookingFormData = z.infer<typeof formSchema>;
+
+type BookingFormData = z.infer<typeof FormBookingSchema>;
 
 interface JourneyFormProps {
   initialData?: Booking | null;
@@ -84,7 +81,7 @@ export default function JourneyForm({ initialData, onSave, onCancel, isJourneyPr
   const [isScheduled, setIsScheduled] = useState(!!initialData?.stops?.find(s => s.stopType === 'pickup')?.dateTime);
   
   const form = useForm<BookingFormData>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(FormBookingSchema),
     defaultValues: {
       id: initialData?.id || uuidv4(),
       bookingServerId: initialData?.bookingServerId,
@@ -101,11 +98,11 @@ export default function JourneyForm({ initialData, onSave, onCancel, isJourneyPr
           name: s.name || '',
           phone: s.phone || '',
           instructions: s.instructions || '',
-          pickupStopId: s.pickupStopId || '',
+          pickupStopId: s.pickupStopId || undefined,
           bookingSegmentId: s.bookingSegmentId,
       })) : [
         { id: uuidv4(), location: emptyLocation, stopType: 'pickup', name: '', phone: '', dateTime: undefined, instructions: '' },
-        { id: uuidv4(), location: emptyLocation, stopType: 'dropoff', pickupStopId: '', instructions: '' }
+        { id: uuidv4(), location: emptyLocation, stopType: 'dropoff', pickupStopId: undefined, instructions: '' }
       ] 
     },
   });
