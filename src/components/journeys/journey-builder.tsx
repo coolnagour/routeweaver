@@ -102,8 +102,8 @@ const generateDebugBookingPayloads = (bookings: Booking[], server: any, siteId?:
                 payload.payment = { price: booking.price || 0, cost: booking.cost || 0, fixed: 1 };
             }
 
-            if (lastStop.instructions) {
-                payload.instructions = lastStop.instructions;
+            if (booking.instructions) {
+                payload.instructions = booking.instructions;
             }
 
             return payload;
@@ -327,7 +327,8 @@ export default function JourneyBuilder({
         vehicleType: b.vehicleType,
         externalAreaCode: b.externalAreaCode,
         price: b.price,
-        cost: b.cost
+        cost: b.cost,
+        instructions: b.instructions,
       })),
       siteId: selectedSiteId,
       account: selectedAccount,
