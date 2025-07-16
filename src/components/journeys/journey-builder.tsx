@@ -392,9 +392,6 @@ export default function JourneyBuilder({
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 py-8 h-full">
-      <div className="lg:h-[calc(100vh-10rem)] lg:sticky lg:top-20">
-        <JourneyMap stops={journeyPreview.orderedStops} />
-      </div>
       <div className="space-y-6">
         <Card>
           <CardHeader>
@@ -630,6 +627,9 @@ export default function JourneyBuilder({
             </CollapsibleContent>
           </Card>
         </Collapsible>
+      </div>
+      <div className="lg:h-[calc(100vh-10rem)] lg:sticky lg:top-20">
+        <JourneyMap stops={journeyPreview.orderedStops} />
       </div>
     </div>
   );
