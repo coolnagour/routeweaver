@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -58,19 +59,14 @@ const FormBookingSchema = BookingSchema.extend({
 
 
 type BookingFormData = z.infer<typeof FormBookingSchema>;
-interface MapSelectionTarget {
-  bookingId: string;
-  stopId: string;
-}
 
 interface JourneyFormProps {
   initialData: Booking;
   onSave: (booking: Booking) => void;
   onCancel: (bookingId: string) => void;
   isJourneyPriceSet: boolean;
-  onSetMapForSelection: (isSelecting: boolean, bookingId: string, stopId: string) => void;
+  onSetMapForSelection: (isSelecting: boolean) => void;
   locationFromMap: Location | null;
-  mapSelectionTarget: MapSelectionTarget | null;
   onMapLocationHandled: () => void;
 }
 
@@ -83,12 +79,12 @@ export default function JourneyForm({
     isJourneyPriceSet,
     onSetMapForSelection,
     locationFromMap,
-    mapSelectionTarget,
     onMapLocationHandled,
 }: JourneyFormProps) {
   const { toast } = useToast();
   const [generatingFields, setGeneratingFields] = useState<Record<string, boolean>>({});
   const [isScheduled, setIsScheduled] = useState(!!initialData?.stops?.find(s => s.stopType === 'pickup')?.dateTime);
+  const [localMapSelectionTarget, setLocalMapSelectionTarget] = useState<string | null>(null);
   
   const form = useForm<BookingFormData>({
     resolver: zodResolver(FormBookingSchema),
@@ -109,20 +105,21 @@ export default function JourneyForm({
   
   // Effect to update form when a location is selected from the map
   useEffect(() => {
-    if (locationFromMap && mapSelectionTarget && mapSelectionTarget.bookingId === initialData.id) {
-      console.log(`[JourneyForm] Received location from map for booking ${initialData.id} and stop ${mapSelectionTarget.stopId}:`, locationFromMap);
+    if (locationFromMap && localMapSelectionTarget) {
+      console.log(`[JourneyForm] Received location from map for stop ${localMapSelectionTarget}:`, locationFromMap);
       const stops = form.getValues('stops');
-      const stopIndex = stops.findIndex(s => s.id === mapSelectionTarget.stopId);
+      const stopIndex = stops.findIndex(s => s.id === localMapSelectionTarget);
 
       if (stopIndex !== -1) {
           console.log(`[JourneyForm] Found stop at index ${stopIndex}, setting location.`);
           form.setValue(`stops.${stopIndex}.location`, locationFromMap, { shouldValidate: true, shouldDirty: true });
       } else {
-        console.error('[JourneyForm] Could not find stop index for target:', mapSelectionTarget.stopId);
+        console.error('[JourneyForm] Could not find stop index for target:', localMapSelectionTarget);
       }
       onMapLocationHandled();
+      setLocalMapSelectionTarget(null); // Reset target after use
     }
-  }, [locationFromMap, mapSelectionTarget, form, initialData.id, onMapLocationHandled]);
+  }, [locationFromMap, localMapSelectionTarget, form, onMapLocationHandled]);
 
 
   const currentStops = useWatch({ control: form.control, name: 'stops' });
@@ -200,8 +197,9 @@ export default function JourneyForm({
   }
 
   const handleSetAddressFromMap = (stopId: string) => {
-    console.log(`[JourneyForm] Setting map selection for booking ${initialData.id}, stop ${stopId}`);
-    onSetMapForSelection(true, initialData.id, stopId);
+    console.log(`[JourneyForm] Setting map selection for stop ${stopId}`);
+    setLocalMapSelectionTarget(stopId);
+    onSetMapForSelection(true);
   };
 
 
@@ -571,3 +569,5 @@ export default function JourneyForm({
       </Card>
   );
 }
+
+    

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -42,11 +43,6 @@ interface JourneyPreviewState {
   isLoading: boolean;
 }
 
-interface MapSelectionTarget {
-  bookingId: string;
-  stopId: string;
-}
-
 const generateDebugBookingPayloads = (bookings: Booking[], server: any, siteId?: number, accountId?: number) => {
     if (!server || !siteId || !accountId) return [];
     
@@ -89,7 +85,6 @@ export default function JourneyBuilder({
   
   const [isMapInSelectionMode, setIsMapInSelectionMode] = useState(false);
   const [locationFromMap, setLocationFromMap] = useState<Location | null>(null);
-  const [mapSelectionTarget, setMapSelectionTarget] = useState<MapSelectionTarget | null>(null);
   
   const getInitialBookings = (data: Partial<JourneyTemplate | Journey> | null | undefined): Booking[] => {
     if (!data || !data.bookings) return [];
@@ -125,14 +120,9 @@ export default function JourneyBuilder({
     };
   };
 
-  const handleSetMapForSelection = (isSelecting: boolean, bookingId: string, stopId: string) => {
-    console.log(`[JourneyBuilder] Received request to set map selection mode: ${isSelecting} for booking ${bookingId}, stop ${stopId}`);
+  const handleSetMapForSelection = (isSelecting: boolean) => {
+    console.log(`[JourneyBuilder] Received request to set map selection mode: ${isSelecting}`);
     setIsMapInSelectionMode(isSelecting);
-    if (isSelecting) {
-      setMapSelectionTarget({ bookingId, stopId });
-    } else {
-      setMapSelectionTarget(null);
-    }
   };
   
   const handleLocationSelectFromMap = (location: Location) => {
@@ -145,7 +135,6 @@ export default function JourneyBuilder({
   const handleMapLocationHandled = () => {
     console.log('[JourneyBuilder] JourneyForm has handled the map location. Clearing state.');
     setLocationFromMap(null);
-    setMapSelectionTarget(null);
   };
 
 
@@ -527,7 +516,6 @@ export default function JourneyBuilder({
           isJourneyPriceSet={hasJourneyLevelPrice}
           onSetMapForSelection={handleSetMapForSelection}
           locationFromMap={locationFromMap}
-          mapSelectionTarget={mapSelectionTarget}
           onMapLocationHandled={handleMapLocationHandled}
         />
         
@@ -679,3 +667,5 @@ export default function JourneyBuilder({
     </div>
   );
 }
+
+    

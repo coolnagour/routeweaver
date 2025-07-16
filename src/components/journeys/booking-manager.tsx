@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -28,19 +29,14 @@ const getPassengersFromStops = (stops: Stop[]) => {
     return stops.filter(s => s.stopType === 'pickup');
 }
 
-interface MapSelectionTarget {
-  bookingId: string;
-  stopId: string;
-}
 interface BookingManagerProps {
   bookings: Booking[];
   setBookings: React.Dispatch<React.SetStateAction<Booking[]>>;
   editingBooking: Booking | null;
   setEditingBooking: React.Dispatch<React.SetStateAction<Booking | null>>;
   isJourneyPriceSet: boolean;
-  onSetMapForSelection: (isSelecting: boolean, bookingId: string, stopId: string) => void;
+  onSetMapForSelection: (isSelecting: boolean) => void;
   locationFromMap: Location | null;
-  mapSelectionTarget: MapSelectionTarget | null;
   onMapLocationHandled: () => void;
 }
 
@@ -54,7 +50,6 @@ export default function BookingManager({
     isJourneyPriceSet,
     onSetMapForSelection,
     locationFromMap,
-    mapSelectionTarget,
     onMapLocationHandled
 }: BookingManagerProps) {
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
@@ -147,7 +142,6 @@ export default function BookingManager({
         isJourneyPriceSet={isJourneyPriceSet}
         onSetMapForSelection={onSetMapForSelection}
         locationFromMap={locationFromMap}
-        mapSelectionTarget={mapSelectionTarget}
         onMapLocationHandled={onMapLocationHandled}
       />
     );
@@ -258,3 +252,5 @@ export default function BookingManager({
     </Card>
   );
 }
+
+    
