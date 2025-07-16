@@ -50,18 +50,17 @@ const generateDebugBookingPayloads = (bookings: Booking[], server: any, siteId?:
         try {
             if (booking.stops.length < 2) return { error: 'Booking must have at least a pickup and a dropoff.' };
 
-            const pickupStop = booking.stops.find(s => s.stopType === 'pickup');
-            if (!pickupStop) return { error: 'Booking must contain a pickup stop.' };
-
             const firstStop = booking.stops[0];
+            if (firstStop.stopType !== 'pickup') return { error: 'The first stop of a booking must be a pickup.'};
+
             const lastStop = booking.stops[booking.stops.length - 1];
             const viaStops = booking.stops.slice(1, -1);
             const defaultCountry = server.countryCodes?.[0]?.toUpperCase();
 
             const payload: any = {
-                date: pickupStop.dateTime?.toISOString() || new Date().toISOString(),
+                date: firstStop.dateTime?.toISOString() || new Date().toISOString(),
                 source: "DISPATCH",
-                name: pickupStop.name || 'N/A',
+                name: firstStop.name || 'N/A',
                 address: {
                     lat: firstStop.location.lat.toString(),
                     lng: firstStop.location.lng.toString(),
@@ -92,8 +91,8 @@ const generateDebugBookingPayloads = (bookings: Booking[], server: any, siteId?:
                 }));
             }
 
-            if (pickupStop.phone) {
-                const phoneNumber = parsePhoneNumberFromString(pickupStop.phone, defaultCountry);
+            if (firstStop.phone) {
+                const phoneNumber = parsePhoneNumberFromString(firstStop.phone, defaultCountry);
                 if (phoneNumber && phoneNumber.isValid()) {
                     payload.phone = phoneNumber.number;
                 }
@@ -101,6 +100,10 @@ const generateDebugBookingPayloads = (bookings: Booking[], server: any, siteId?:
 
             if ((booking.price && booking.price > 0) || (booking.cost && booking.cost > 0)) {
                 payload.payment = { price: booking.price || 0, cost: booking.cost || 0, fixed: 1 };
+            }
+
+            if (lastStop.instructions) {
+                payload.instructions = lastStop.instructions;
             }
 
             return payload;
@@ -440,7 +443,7 @@ export default function JourneyBuilder({
   };
   
   const title = getTitle();
-  const publishButtonText = currentJourney?.status === 'Scheduled' ? 'Update Journey' : 'Publish';
+  const publishButtonText = currentJourney?.status === 'Scheduled' ? 'Update Published Journey' : 'Publish';
 
   return (
     <div className="space-y-6 py-8">
