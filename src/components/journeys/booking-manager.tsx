@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -33,8 +32,10 @@ const getPassengersFromStops = (stops: Stop[]) => {
 interface BookingManagerProps {
   bookings: Booking[];
   setBookings: React.Dispatch<React.SetStateAction<Booking[]>>;
+  editingBooking: Booking | null;
+  setEditingBooking: React.Dispatch<React.SetStateAction<Booking | null>>;
   isJourneyPriceSet: boolean;
-  onSetAddressFromMap: (target: MapSelectionTarget) => void;
+  setMapSelectionTarget: (target: MapSelectionTarget | null) => void;
 }
 
 const emptyLocation = { address: '', lat: 0, lng: 0 };
@@ -42,10 +43,11 @@ const emptyLocation = { address: '', lat: 0, lng: 0 };
 export default function BookingManager({ 
     bookings, 
     setBookings, 
+    editingBooking,
+    setEditingBooking,
     isJourneyPriceSet,
-    onSetAddressFromMap
+    setMapSelectionTarget,
 }: BookingManagerProps) {
-  const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const { server } = useServer();
   const { toast } = useToast();
@@ -64,22 +66,12 @@ export default function BookingManager({
         { id: uuidv4(), location: emptyLocation, stopType: 'dropoff', pickupStopId: newPickupStopId, instructions: '' }
       ]
     };
-    // Add the new booking to the list immediately
     setBookings(prev => [...prev, newBooking]);
-    // Set it as the booking to be edited
     setEditingBooking(newBooking);
   };
   
   const handleSaveBooking = (bookingToSave: Booking) => {
-    const existingIndex = bookings.findIndex(b => b.id === bookingToSave.id);
-    if (existingIndex > -1) {
-      const updatedBookings = [...bookings];
-      updatedBookings[existingIndex] = bookingToSave;
-      setBookings(updatedBookings);
-    } else {
-      // This case should no longer be hit due to the new `handleAddNewBooking` logic
-      setBookings([...bookings, bookingToSave]);
-    }
+    setBookings(prev => prev.map(b => b.id === bookingToSave.id ? bookingToSave : b));
     setEditingBooking(null);
   };
   
@@ -87,7 +79,6 @@ export default function BookingManager({
     const bookingToDelete = bookings.find(b => b.id === bookingId);
     if (!bookingToDelete) return;
 
-    // If the booking has been saved to the server, call the delete API
     if (bookingToDelete.bookingServerId && server) {
         setIsDeleting(bookingToDelete.id);
         try {
@@ -113,13 +104,11 @@ export default function BookingManager({
         });
     }
     
-    // Always remove from the local state
     setBookings(bookings.filter(b => b.id !== bookingId));
   }
 
   const handleCancelEdit = (bookingId: string) => {
     const booking = bookings.find(b => b.id === bookingId);
-    // If it's a new booking (has no server ID), remove it from the list on cancel.
     if (booking && !booking.bookingServerId) {
         setBookings(prev => prev.filter(b => b.id !== bookingId));
     }
@@ -146,8 +135,7 @@ export default function BookingManager({
         onCancel={handleCancelEdit}
         isJourneyPriceSet={isJourneyPriceSet}
         onSetAddressFromMap={(target) => {
-            // This ensures we pass the booking ID even for a new booking
-            onSetAddressFromMap({ ...target, bookingId: editingBooking.id });
+            setMapSelectionTarget({ ...target, bookingId: editingBooking.id });
         }}
       />
     );

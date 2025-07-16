@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -35,7 +34,6 @@ import { Textarea } from '../ui/textarea';
 import type { MapSelectionTarget } from './journey-builder';
 
 // Create a form-specific schema by extending the base BookingSchema to handle Date objects
-// This avoids duplicating the entire schema structure.
 const FormBookingSchema = BookingSchema.extend({
   stops: z.array(BookingSchema.shape.stops.element.extend({
     dateTime: z.date().optional(),
@@ -63,7 +61,7 @@ const FormBookingSchema = BookingSchema.extend({
 type BookingFormData = z.infer<typeof FormBookingSchema>;
 
 interface JourneyFormProps {
-  initialData: Booking; // Now required
+  initialData: Booking;
   onSave: (booking: Booking) => void;
   onCancel: (bookingId: string) => void;
   isJourneyPriceSet: boolean;
@@ -101,9 +99,6 @@ export default function JourneyForm({
 
   const currentStops = useWatch({ control: form.control, name: 'stops' });
   
-  // This effect listens for changes to initialData and resets the form.
-  // This is crucial for reflecting updates from map clicks and ensuring the form
-  // has the latest state, including correct stop IDs.
   useEffect(() => {
     form.reset({
       ...initialData,
@@ -158,12 +153,10 @@ export default function JourneyForm({
     const bookingToSave: Booking = { ...values, stops: [] };
     
     bookingToSave.stops = values.stops.map(stop => {
-      // Ensure we don't send a dateTime for ASAP bookings
       const stopDateTime = isScheduled ? stop.dateTime : undefined;
       return { 
         ...stop, 
         dateTime: stopDateTime,
-        // Ensure instructions are carried over
         instructions: stop.instructions,
       };
     }) as Stop[];
@@ -192,7 +185,7 @@ export default function JourneyForm({
   const firstPickupIndex = stopFields.findIndex(s => s.stopType === 'pickup');
 
   return (
-      <Card key={initialData.id}>
+      <Card>
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)}>
             <CardHeader>

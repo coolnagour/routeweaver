@@ -47,11 +47,9 @@ export interface MapSelectionTarget {
   stopId: string;
 }
 
-
 const generateDebugBookingPayloads = (bookings: Booking[], server: any, siteId?: number, accountId?: number) => {
     if (!server || !siteId || !accountId) return [];
     
-    // We need to pass the siteId and accountId to the booking object for the formatter
     const bookingsWithContext = bookings.map(b => ({
       ...b,
       siteId: siteId,
@@ -92,7 +90,6 @@ export default function JourneyBuilder({
   
   const getInitialBookings = (data: Partial<JourneyTemplate | Journey> | null | undefined): Booking[] => {
     if (!data || !data.bookings) return [];
-    // Deep copy to prevent mutation of the source
     return JSON.parse(JSON.stringify(data.bookings)).map((b: any) => ({
       ...b,
       id: b.id || uuidv4(),
@@ -103,7 +100,8 @@ export default function JourneyBuilder({
       }))
     }));
   };
-
+  
+  const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
   const [bookings, setBookings] = useState<Booking[]>(() => getInitialBookings(initialData));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentJourney, setCurrentJourney] = useState<Journey | null>(null);
@@ -116,7 +114,6 @@ export default function JourneyBuilder({
   const hasBookingLevelPrice = bookings.some(b => b.price || b.cost);
   const hasJourneyLevelPrice = journeyPrice || journeyCost;
 
-  // Debounce function
   const debounce = <F extends (...args: any[]) => void>(func: F, delay: number) => {
     let timeoutId: ReturnType<typeof setTimeout>;
     return (...args: Parameters<F>) => {
@@ -126,36 +123,18 @@ export default function JourneyBuilder({
   };
 
   const handleSetLocationFromMap = (location: Location) => {
-    console.log('[JourneyBuilder] handleSetLocationFromMap triggered with location:', location);
-    if (!mapSelectionTarget) {
-        console.log('[JourneyBuilder] No map selection target, exiting.');
-        return;
-    }
-    console.log('[JourneyBuilder] Current mapSelectionTarget:', mapSelectionTarget);
+    if (!mapSelectionTarget || !editingBooking) return;
 
-    setBookings(currentBookings => {
-        console.log('[JourneyBuilder] Updating bookings state. Current bookings:', currentBookings);
-        const newBookings = [...currentBookings];
-        const bookingIndex = newBookings.findIndex(b => b.id === mapSelectionTarget.bookingId);
-        console.log(`[JourneyBuilder] Searching for bookingId ${mapSelectionTarget.bookingId}. Found index: ${bookingIndex}`);
-        
-        if (bookingIndex > -1) {
-            const stopIndex = newBookings[bookingIndex].stops.findIndex(s => s.id === mapSelectionTarget.stopId);
-            console.log(`[JourneyBuilder] Searching for stopId ${mapSelectionTarget.stopId} in booking. Found index: ${stopIndex}`);
-            if (stopIndex > -1) {
-                newBookings[bookingIndex].stops[stopIndex].location = location;
-                console.log('[JourneyBuilder] Location updated in booking object.');
-            } else {
-                 console.error('[JourneyBuilder] Stop index not found!');
-            }
-        } else {
-            console.error('[JourneyBuilder] Booking index not found!');
-        }
-        console.log('[JourneyBuilder] New bookings state after update:', newBookings);
-        return newBookings;
+    const updatedStops = editingBooking.stops.map(stop => {
+      if (stop.id === mapSelectionTarget.stopId) {
+        return { ...stop, location };
+      }
+      return stop;
     });
 
-    setMapSelectionTarget(null); // Exit map selection mode
+    setEditingBooking({ ...editingBooking, stops: updatedStops });
+
+    setMapSelectionTarget(null);
     toast({ title: "Address Updated", description: "The address has been set from the map." });
   };
 
@@ -532,12 +511,11 @@ export default function JourneyBuilder({
 
         <BookingManager 
           bookings={bookings} 
-          setBookings={setBookings} 
+          setBookings={setBookings}
+          editingBooking={editingBooking}
+          setEditingBooking={setEditingBooking}
           isJourneyPriceSet={hasJourneyLevelPrice}
-          onSetAddressFromMap={(target) => {
-              console.log('[JourneyBuilder] onSetAddressFromMap called with target:', target);
-              setMapSelectionTarget(target);
-          }}
+          setMapSelectionTarget={setMapSelectionTarget}
         />
         
         <Card>
@@ -681,7 +659,7 @@ export default function JourneyBuilder({
       <div className="lg:h-[calc(100vh-10rem)] lg:sticky lg:top-20">
         <JourneyMap 
           stops={journeyPreview.orderedStops} 
-          onMapClick={handleSetLocationFromMap} 
+          onLocationSelect={handleSetLocationFromMap} 
           isSelectionMode={!!mapSelectionTarget}
         />
       </div>

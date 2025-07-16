@@ -10,7 +10,7 @@ import { toast } from '@/hooks/use-toast';
 
 interface JourneyMapProps {
   stops: Stop[];
-  onMapClick?: (location: Location) => void;
+  onLocationSelect?: (location: Location) => void;
   isSelectionMode?: boolean;
 }
 
@@ -107,7 +107,7 @@ const mapStyles = {
     ]
 };
 
-export default function JourneyMap({ stops, onMapClick, isSelectionMode = false }: JourneyMapProps) {
+export default function JourneyMap({ stops, onLocationSelect, isSelectionMode = false }: JourneyMapProps) {
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
     libraries,
@@ -140,7 +140,7 @@ export default function JourneyMap({ stops, onMapClick, isSelectionMode = false 
   };
   
   const handleInternalMapClick = (e: google.maps.MapMouseEvent) => {
-    if (!onMapClick || !isSelectionMode || !geocoderRef.current || !e.latLng) return;
+    if (!onLocationSelect || !isSelectionMode || !geocoderRef.current || !e.latLng) return;
 
     geocoderRef.current.geocode({ location: e.latLng }, (results, status) => {
       if (status === 'OK' && results && results[0]) {
@@ -149,7 +149,7 @@ export default function JourneyMap({ stops, onMapClick, isSelectionMode = false 
           lat: e.latLng!.lat(),
           lng: e.latLng!.lng(),
         };
-        onMapClick(location);
+        onLocationSelect(location);
       } else {
         console.error(`Geocode was not successful for the following reason: ${status}`);
         toast({
