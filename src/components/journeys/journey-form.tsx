@@ -21,7 +21,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { CalendarIcon, MapPin, PlusCircle, X, User, Phone, Clock, MessageSquare, ChevronsUpDown, Sparkles, Loader2, Info, Hash, Car, Map, DollarSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, setHours, setMinutes } from 'date-fns';
-import type { Booking, Stop, SuggestionInput } from '@/types';
+import type { Booking, Stop, SuggestionInput, StopType } from '@/types';
 import ViaStop from './via-stop';
 import AddressAutocomplete from './address-autocomplete';
 import { generateSuggestion } from '@/ai/flows/suggestion-flow';
@@ -142,6 +142,7 @@ export default function JourneyForm({ initialData, onSave, onCancel, isJourneyPr
     fieldType: SuggestionInput['type'],
     fieldNameToUpdate: `stops.${number}.${'name' | 'phone' | 'instructions'}`,
     fieldIndex: number,
+    stopType?: StopType
   ) => {
     const fieldKey = `${fieldNameToUpdate}-${fieldType}`;
     setGeneratingFields(prev => ({ ...prev, [fieldKey]: true }));
@@ -155,7 +156,7 @@ export default function JourneyForm({ initialData, onSave, onCancel, isJourneyPr
     }
     
     try {
-      const result = await generateSuggestion({ type: fieldType, existingValues });
+      const result = await generateSuggestion({ type: fieldType, existingValues, stopType });
       form.setValue(fieldNameToUpdate, result.suggestion);
     } catch (error) {
       console.error(`AI ${fieldType} generation failed:`, error);
@@ -371,7 +372,7 @@ export default function JourneyForm({ initialData, onSave, onCancel, isJourneyPr
                                             <div className="relative flex items-center">
                                                 <MessageSquare className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                                 <Input placeholder="e.g., Gate code #1234" {...field} className="pl-10 pr-10 bg-background"/>
-                                                <Button type="button" variant="ghost" size="icon" className="absolute right-1 h-8 w-8 text-primary" onClick={() => handleGenerateField('instructions', 'stops.0.instructions', 0)} disabled={generatingFields['stops.0.instructions-instructions']}>
+                                                <Button type="button" variant="ghost" size="icon" className="absolute right-1 h-8 w-8 text-primary" onClick={() => handleGenerateField('instructions', 'stops.0.instructions', 0, 'pickup')} disabled={generatingFields['stops.0.instructions-instructions']}>
                                                     {generatingFields['stops.0.instructions-instructions'] ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                                                 </Button>
                                             </div>

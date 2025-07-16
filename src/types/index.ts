@@ -192,6 +192,7 @@ export type JourneyOutput = z.infer<typeof JourneyOutputSchema>;
 export const SuggestionInputSchema = z.object({
   type: z.enum(['name', 'phone', 'instructions']),
   existingValues: z.array(z.string()).optional().describe("A list of existing values to avoid generating duplicates."),
+  stopType: z.enum(['pickup', 'dropoff']).optional().describe("The type of stop for which the instruction is being generated."),
 });
 export type SuggestionInput = z.infer<typeof SuggestionInputSchema>;
 

@@ -16,7 +16,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { MapPin, MinusCircle, User, Phone, MessageSquare, ChevronsUpDown, CalendarIcon, Clock, Sparkles, Loader2 } from 'lucide-react';
-import type { Stop, SuggestionInput } from '@/types';
+import type { Stop, SuggestionInput, StopType } from '@/types';
 import { cn } from '@/lib/utils';
 import { format, setHours, setMinutes } from 'date-fns';
 import AddressAutocomplete from './address-autocomplete';
@@ -32,6 +32,7 @@ interface ViaStopProps {
     fieldType: SuggestionInput['type'],
     fieldNameToUpdate: `stops.${number}.${'name' | 'phone' | 'instructions'}`,
     fieldIndex: number,
+    stopType?: StopType
   ) => void;
   generatingFields: Record<string, boolean>;
 }
@@ -263,7 +264,7 @@ export default function ViaStop({
                                  <div className="relative flex items-center">
                                      <MessageSquare className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                      <Input placeholder="e.g., Gate code #1234" {...field} className="pl-10 pr-10 bg-background"/>
-                                     <Button type="button" variant="ghost" size="icon" className="absolute right-1 h-8 w-8 text-primary" onClick={() => onGenerateField('instructions', `stops.${index}.instructions`, index)} disabled={generatingFields[`stops.${index}.instructions-instructions`]}>
+                                     <Button type="button" variant="ghost" size="icon" className="absolute right-1 h-8 w-8 text-primary" onClick={() => onGenerateField('instructions', `stops.${index}.instructions`, index, stopType)} disabled={generatingFields[`stops.${index}.instructions-instructions`]}>
                                         {generatingFields[`stops.${index}.instructions-instructions`] ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                                      </Button>
                                  </div>

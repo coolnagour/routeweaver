@@ -23,6 +23,9 @@ Based on the requested type, generate a single, realistic-sounding suggestion.
 Do not use real people's names or data.
 
 Requested data type: {{{type}}}
+{{#if stopType}}
+This is for a '{{{stopType}}}' stop.
+{{/if}}
 
 {{#if existingValues}}
 The following values are already in use, so please generate a different one:
@@ -33,9 +36,10 @@ The following values are already in use, so please generate a different one:
 
 Example for 'name': Jane Doe
 Example for 'phone': 555-123-4567
-Example for 'instructions': Gate code is #1234, leave at front desk.
+Example for 'instructions' (pickup): Meet at the main entrance by the fountain.
+Example for 'instructions' (dropoff): Gate code is #1234, leave at front desk.
 
-Generate a suggestion for '{{{type}}}'.
+Generate a suggestion for '{{{type}}}'{{#if stopType}} for a '{{{stopType}}}' stop{{/if}}.
 `,
 });
 
