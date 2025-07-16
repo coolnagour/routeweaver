@@ -68,10 +68,11 @@ const saveJourneyFlow = ai.defineFlow(
         }
           
         const bookingRequestId = result?.id ? parseInt(result.id, 10) : booking.requestId;
-        const serverBookingId = result?.booking?.id ? parseInt(result.booking.id, 10) : booking.bookingServerId;
+        // Use perma_id from the response for the bookingServerId.
+        const serverBookingId = result?.perma_id ? parseInt(result.perma_id, 10) : booking.bookingServerId;
           
         if (!serverBookingId) {
-          throw new Error(`Invalid response from ${isUpdate ? 'updateBooking' : 'createBooking'}. Booking ID not returned. Response: ${JSON.stringify(result)}`);
+          throw new Error(`Invalid response from ${isUpdate ? 'updateBooking' : 'createBooking'}. Booking ID (perma_id) not returned. Response: ${JSON.stringify(result)}`);
         }
 
         const bookingWithServerIds: Booking = { 
