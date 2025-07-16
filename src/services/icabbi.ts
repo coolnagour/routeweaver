@@ -165,7 +165,7 @@ export async function createBooking(server: ServerConfig, booking: Booking) {
         body: payload,
     });
     
-    return response.body;
+    return response.body.booking;
 }
 
 export async function updateBooking(server: ServerConfig, booking: Booking) {
@@ -181,7 +181,7 @@ export async function updateBooking(server: ServerConfig, booking: Booking) {
         body: payload,
     });
     
-    return response.body;
+    return response.body.booking;
 }
 
 export async function deleteBooking(server: ServerConfig, bookingId: number) {
