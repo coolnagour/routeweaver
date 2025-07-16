@@ -60,8 +60,8 @@ export default function BookingManager({
     const newBooking: Booking = {
       id: newBookingId,
       stops: [
-        { id: newPickupStopId, location: emptyLocation, stopType: 'pickup', name: '', phone: '', dateTime: undefined, instructions: '' },
-        { id: uuidv4(), location: emptyLocation, stopType: 'dropoff', pickupStopId: newPickupStopId, instructions: '' }
+        { id: newPickupStopId, order: 0, location: emptyLocation, stopType: 'pickup', name: '', phone: '', dateTime: undefined, instructions: '' },
+        { id: uuidv4(), order: 1, location: emptyLocation, stopType: 'dropoff', pickupStopId: newPickupStopId, instructions: '' }
       ]
     };
     setBookings(prev => [...prev, newBooking]);
@@ -69,7 +69,12 @@ export default function BookingManager({
   };
   
   const handleSaveBooking = (bookingToSave: Booking) => {
-    setBookings(prev => prev.map(b => b.id === bookingToSave.id ? bookingToSave : b));
+    // Ensure stops are sorted by order before saving
+    const sortedBooking = {
+      ...bookingToSave,
+      stops: [...bookingToSave.stops].sort((a, b) => a.order - b.order)
+    };
+    setBookings(prev => prev.map(b => b.id === sortedBooking.id ? sortedBooking : b));
     setEditingBooking(null);
   };
   
@@ -122,7 +127,7 @@ export default function BookingManager({
   }
 
   const getBookingDateTime = (booking: Booking) => {
-    const firstPickup = booking.stops.find(s => s.stopType === 'pickup');
+    const firstPickup = [...booking.stops].sort((a,b) => a.order - b.order).find(s => s.stopType === 'pickup');
     return firstPickup?.dateTime;
   }
 
@@ -167,7 +172,7 @@ export default function BookingManager({
                           {bookingDateTime ? <p className="font-semibold text-primary">{format(new Date(bookingDateTime), 'PPP p')}</p> : <p className="font-semibold text-primary">ASAP</p>}
                           <p className="text-sm text-muted-foreground flex items-center gap-2"><Users className="h-4 w-4" />{pickups.length} passenger(s)</p>
                           
-                          {booking.stops.map(stop => {
+                          {[...booking.stops].sort((a, b) => a.order - b.order).map(stop => {
                               const isPickup = stop.stopType === 'pickup';
                               const dropoffPassenger = isPickup ? null : pickups.find(p => p.id === stop.pickupStopId);
 

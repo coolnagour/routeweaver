@@ -7,11 +7,14 @@ import parsePhoneNumberFromString from 'libphonenumber-js';
  */
 
 export const formatBookingForApi = (booking: Booking, server: ServerConfig) => {
-    if (booking.stops.length < 2) {
+    // Ensure stops are sorted by the order field before processing
+    const sortedStops = [...booking.stops].sort((a, b) => a.order - b.order);
+
+    if (sortedStops.length < 2) {
         throw new Error("Booking must have at least a pickup and a dropoff stop.");
     }
     
-    const firstPickup = booking.stops.find(s => s.stopType === 'pickup');
+    const firstPickup = sortedStops.find(s => s.stopType === 'pickup');
     if (!firstPickup) {
         throw new Error("Booking must have at least one pickup stop.");
     }
@@ -24,8 +27,8 @@ export const formatBookingForApi = (booking: Booking, server: ServerConfig) => {
         throw new Error("Account ID is required for booking.");
     }
 
-    const lastStop = booking.stops[booking.stops.length - 1];
-    const viaStops = booking.stops.slice(1, -1);
+    const lastStop = sortedStops[sortedStops.length - 1];
+    const viaStops = sortedStops.slice(1, -1);
     
     const defaultCountry = server.countryCodes?.[0]?.toUpperCase() as any;
     

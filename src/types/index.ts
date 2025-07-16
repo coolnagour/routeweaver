@@ -22,6 +22,7 @@ export interface Location {
 
 export interface Stop {
   id: string;
+  order: number;
   location: Location;
   stopType: StopType;
   bookingSegmentId?: number; // ID from iCabbi API for a specific leg
@@ -121,6 +122,7 @@ const LocationSchema = z.object({
 
 export const StopSchema = z.object({
   id: z.string(),
+  order: z.number(),
   location: LocationSchema,
   stopType: z.enum(['pickup', 'dropoff']),
   bookingSegmentId: z.number().optional(),

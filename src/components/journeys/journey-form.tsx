@@ -48,10 +48,11 @@ const FormBookingSchema = BookingSchema.extend({
     message: 'A passenger must be selected for this drop-off.',
     path: ['stops'], 
 }).refine(data => {
-    const firstPickupTime = data.stops.find(s => s.stopType === 'pickup')?.dateTime?.getTime();
+    const sortedStops = [...data.stops].sort((a,b) => a.order - b.order);
+    const firstPickupTime = sortedStops.find(s => s.stopType === 'pickup')?.dateTime?.getTime();
     if (!firstPickupTime) return true;
 
-    const subsequentPickups = data.stops.filter(s => s.stopType === 'pickup' && s.dateTime);
+    const subsequentPickups = sortedStops.filter(s => s.stopType === 'pickup' && s.dateTime);
     return subsequentPickups.every(p => !p.dateTime || p.dateTime.getTime() >= firstPickupTime);
 }, {
     message: "Subsequent pickup times must not be before the first pickup.",
@@ -79,22 +80,25 @@ export default function JourneyForm({
   const { toast } = useToast();
   const { server } = useServer();
   const [generatingFields, setGeneratingFields] = useState<Record<string, boolean>>({});
-  const [isScheduled, setIsScheduled] = useState(!!initialData?.stops?.find(s => s.stopType === 'pickup')?.dateTime);
+  
+  const sortedInitialStops = [...initialData.stops].sort((a, b) => a.order - b.order);
+  const [isScheduled, setIsScheduled] = useState(!!sortedInitialStops.find(s => s.stopType === 'pickup')?.dateTime);
   
   const form = useForm<BookingFormData>({
     resolver: zodResolver(FormBookingSchema),
-    defaultValues: initialData,
+    defaultValues: { ...initialData, stops: sortedInitialStops },
   });
   
-  const { fields: stopFields, insert: insertStop, remove: removeStop } = useFieldArray({
+  const { fields: stopFields, insert: insertStop, remove: removeStop, update } = useFieldArray({
     control: form.control,
     name: "stops"
   });
   
   useEffect(() => {
+    const sortedStops = [...initialData.stops].sort((a,b) => a.order - b.order);
     form.reset({
       ...initialData,
-      stops: initialData.stops.map(s => ({ ...s, dateTime: s.dateTime ? new Date(s.dateTime) : undefined }))
+      stops: sortedStops.map(s => ({ ...s, dateTime: s.dateTime ? new Date(s.dateTime) : undefined }))
     });
   }, [initialData, form]);
 
@@ -162,16 +166,46 @@ export default function JourneyForm({
   const handleScheduledToggle = (checked: boolean) => {
     setIsScheduled(checked);
     
-    const firstPickupIndex = form.getValues('stops').findIndex(s => s.stopType === 'pickup');
+    const stops = form.getValues('stops');
+    const firstPickupIndex = stops.findIndex(s => s.stopType === 'pickup');
 
     if (firstPickupIndex !== -1) {
         if (checked) {
             form.setValue(`stops.${firstPickupIndex}.dateTime`, new Date(), { shouldValidate: true });
         } else {
-            form.setValue(`stops.${firstPickupIndex}.dateTime`, undefined, { shouldValidate: true });
+            // Set all pickup dateTimes to undefined
+            stops.forEach((stop, index) => {
+                if (stop.stopType === 'pickup') {
+                    form.setValue(`stops.${index}.dateTime`, undefined, { shouldValidate: true });
+                }
+            });
         }
     }
   }
+  
+  const handleAddStop = () => {
+    const currentStops = form.getValues('stops');
+    const insertIndex = currentStops.length - 1;
+    const newOrder = insertIndex;
+
+    const newStop: Omit<Stop, 'id'> = {
+        order: newOrder,
+        location: emptyLocation,
+        stopType: 'pickup',
+        name: '',
+        phone: '',
+        instructions: ''
+    };
+    
+    insertStop(insertIndex, { ...newStop, id: uuidv4() });
+    
+    // Update the order of the last stop
+    const lastStop = currentStops[currentStops.length - 1];
+    if (lastStop) {
+        const updatedLastStop = { ...lastStop, order: newOrder + 1 };
+        update(currentStops.length, updatedLastStop);
+    }
+  };
 
   const firstStop = stopFields[0];
   const lastStop = stopFields[stopFields.length - 1];
@@ -370,7 +404,7 @@ export default function JourneyForm({
 
                 {/* Add Stop Button */}
                 <div className="flex justify-center my-4">
-                    <Button type="button" variant="link" size="sm" onClick={() => insertStop(stopFields.length - 1, { id: uuidv4(), location: emptyLocation, stopType: 'pickup', name: '', phone: '', instructions: ''})}>
+                    <Button type="button" variant="link" size="sm" onClick={handleAddStop}>
                         <PlusCircle className="mr-2 h-4 w-4"/> Add Stop
                     </Button>
                 </div>
