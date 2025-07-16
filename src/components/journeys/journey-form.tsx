@@ -46,6 +46,7 @@ const stopSchema = z.object({
   phone: z.string().optional(),
   pickupStopId: z.string().optional(),
   instructions: z.string().optional(),
+  bookingSegmentId: z.number().optional(), // Added field
 }).refine(data => {
     // If it's a dropoff, it MUST have a pickupStopId
     if (data.stopType === 'dropoff') {
@@ -112,7 +113,8 @@ export default function JourneyForm({ initialData, onSave, onCancel, isJourneyPr
           name: s.name || '',
           phone: s.phone || '',
           instructions: s.instructions || '',
-          pickupStopId: s.pickupStopId || ''
+          pickupStopId: s.pickupStopId || '',
+          bookingSegmentId: s.bookingSegmentId, // Ensure segment ID is preserved
       })) : [
         { id: uuidv4(), location: emptyLocation, stopType: 'pickup', name: '', phone: '', dateTime: undefined, instructions: '' },
         { id: uuidv4(), location: emptyLocation, stopType: 'dropoff', pickupStopId: '', instructions: '' }
