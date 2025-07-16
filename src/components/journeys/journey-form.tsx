@@ -60,12 +60,20 @@ const FormBookingSchema = BookingSchema.extend({
 
 type BookingFormData = z.infer<typeof FormBookingSchema>;
 
+interface MapSelectionTarget {
+    bookingId: string;
+    stopId: string;
+}
+
 interface JourneyFormProps {
   initialData: Booking;
   onSave: (booking: Booking) => void;
   onCancel: (bookingId: string) => void;
   isJourneyPriceSet: boolean;
-  allStops: Stop[]; // All stops from all bookings for map context
+  onSetMapForSelection: (target: MapSelectionTarget) => void;
+  locationFromMap: Location | null;
+  onMapLocationHandled: () => void;
+  mapSelectionTarget: MapSelectionTarget | null;
 }
 
 const emptyLocation = { address: '', lat: 0, lng: 0 };
@@ -75,7 +83,10 @@ export default function JourneyForm({
     onSave, 
     onCancel, 
     isJourneyPriceSet,
-    allStops
+    onSetMapForSelection,
+    locationFromMap,
+    onMapLocationHandled,
+    mapSelectionTarget,
 }: JourneyFormProps) {
   const { toast } = useToast();
   const [generatingFields, setGeneratingFields] = useState<Record<string, boolean>>({});
@@ -97,6 +108,23 @@ export default function JourneyForm({
       stops: initialData.stops.map(s => ({ ...s, dateTime: s.dateTime ? new Date(s.dateTime) : undefined }))
     });
   }, [initialData, form]);
+  
+  useEffect(() => {
+    if (locationFromMap && mapSelectionTarget && mapSelectionTarget.bookingId === initialData.id) {
+      console.log(`[JourneyForm] Received location for target stop ${mapSelectionTarget.stopId}:`, locationFromMap);
+      
+      const stops = form.getValues('stops');
+      const stopIndex = stops.findIndex(s => s.id === mapSelectionTarget.stopId);
+
+      if (stopIndex !== -1) {
+          console.log(`[JourneyForm] Found stop at index ${stopIndex}, updating form value.`);
+          form.setValue(`stops.${stopIndex}.location`, locationFromMap, { shouldValidate: true, shouldDirty: true });
+      } else {
+        console.error('[JourneyForm] Could not find stop index for target:', mapSelectionTarget.stopId);
+      }
+      onMapLocationHandled();
+    }
+  }, [locationFromMap, mapSelectionTarget, onMapLocationHandled, form, initialData.id]);
 
   const currentStops = useWatch({ control: form.control, name: 'stops' });
 
@@ -171,6 +199,12 @@ export default function JourneyForm({
         }
     }
   }
+
+  const handleSetAddressFromMap = (stopId: string) => {
+    console.log(`[JourneyForm] Setting map selection for booking ${initialData.id}, stop ${stopId}`);
+    onSetMapForSelection({ bookingId: initialData.id, stopId });
+  };
+
 
   const firstStop = stopFields[0];
   const lastStop = stopFields[stopFields.length - 1];
@@ -285,9 +319,9 @@ export default function JourneyForm({
                                     <AddressAutocomplete 
                                         value={field.value.address}
                                         onChange={field.onChange}
+                                        onSetAddressFromMap={() => handleSetAddressFromMap(firstStop.id)}
                                         placeholder="Pickup location"
                                         className={"bg-background"}
-                                        stopsForMapContext={allStops}
                                     />
                                 </FormControl>
                                  <FormMessage>{fieldState.error?.message}</FormMessage>
@@ -366,7 +400,7 @@ export default function JourneyForm({
                         onGenerateField={handleGenerateField}
                         generatingFields={generatingFields}
                         stopId={stop.id}
-                        allStops={allStops}
+                        onSetAddressFromMap={() => handleSetAddressFromMap(stop.id)}
                     />
                 ))}
 
@@ -386,7 +420,7 @@ export default function JourneyForm({
                     onGenerateField={handleGenerateField}
                     generatingFields={generatingFields}
                     stopId={lastStop.id}
-                    allStops={allStops}
+                    onSetAddressFromMap={() => handleSetAddressFromMap(lastStop.id)}
                 />
                 
                 <Collapsible className="mt-4">

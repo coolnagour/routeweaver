@@ -35,7 +35,7 @@ interface ViaStopProps {
     stopType?: StopType
   ) => void;
   generatingFields: Record<string, boolean>;
-  allStops: Stop[]; // For map context
+  onSetAddressFromMap: () => void;
 }
 
 export default function ViaStop({ 
@@ -47,7 +47,7 @@ export default function ViaStop({
     isDestination = false,
     onGenerateField,
     generatingFields,
-    allStops,
+    onSetAddressFromMap,
 }: ViaStopProps) {
   const { setValue } = useFormContext();
   const stopType = useWatch({ control, name: `stops.${index}.stopType` });
@@ -91,9 +91,9 @@ export default function ViaStop({
                                   <AddressAutocomplete 
                                      value={field.value.address}
                                      onChange={field.onChange}
+                                     onSetAddressFromMap={onSetAddressFromMap}
                                      placeholder={isPickup ? 'Pickup location' : 'Drop-off location'}
                                      className={'bg-background'}
-                                     stopsForMapContext={allStops}
                                   />
                             </FormControl>
                             <FormMessage>{fieldState.error?.message}</FormMessage>

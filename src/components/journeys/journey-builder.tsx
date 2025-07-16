@@ -43,6 +43,11 @@ interface JourneyPreviewState {
   isLoading: boolean;
 }
 
+interface MapSelectionTarget {
+    bookingId: string;
+    stopId: string;
+}
+
 const generateDebugBookingPayloads = (bookings: Booking[], server: any, siteId?: number, accountId?: number) => {
     if (!server || !siteId || !accountId) return [];
     
@@ -105,6 +110,11 @@ export default function JourneyBuilder({
 
   const [journeyPrice, setJourneyPrice] = useState<number | undefined>(undefined);
   const [journeyCost, setJourneyCost] = useState<number | undefined>(undefined);
+  
+  // State for map selection
+  const [isMapInSelectionMode, setIsMapInSelectionMode] = useState(false);
+  const [mapSelectionTarget, setMapSelectionTarget] = useState<MapSelectionTarget | null>(null);
+  const [locationFromMap, setLocationFromMap] = useState<Location | null>(null);
 
   const hasBookingLevelPrice = bookings.some(b => b.price || b.cost);
   const hasJourneyLevelPrice = journeyPrice || journeyCost;
@@ -390,6 +400,26 @@ export default function JourneyBuilder({
     return undefined;
   };
   
+  const handleSetMapForSelection = (target: MapSelectionTarget) => {
+    console.log('[JourneyBuilder] Activating map selection mode for target:', target);
+    setMapSelectionTarget(target);
+    setIsMapInSelectionMode(true);
+  };
+
+  const handleLocationSelectFromMap = (location: Location) => {
+    console.log('[JourneyBuilder] Location selected from map:', location, 'Target:', mapSelectionTarget);
+    if (mapSelectionTarget) {
+      setLocationFromMap(location);
+    }
+    setIsMapInSelectionMode(false); // Turn off selection mode after a location is picked
+  };
+  
+  const onMapLocationHandled = () => {
+    console.log('[JourneyBuilder] Resetting locationFromMap state.');
+    setLocationFromMap(null);
+    setMapSelectionTarget(null);
+  };
+  
   const title = getTitle();
   const publishButtonText = currentJourney?.status === 'Scheduled' ? 'Update Published Journey' : 'Publish';
 
@@ -493,6 +523,10 @@ export default function JourneyBuilder({
           editingBooking={editingBooking}
           setEditingBooking={setEditingBooking}
           isJourneyPriceSet={hasJourneyLevelPrice}
+          onSetMapForSelection={handleSetMapForSelection}
+          locationFromMap={locationFromMap}
+          onMapLocationHandled={onMapLocationHandled}
+          mapSelectionTarget={mapSelectionTarget}
         />
         
         <Card>
@@ -635,7 +669,9 @@ export default function JourneyBuilder({
       </div>
       <div className="lg:h-[calc(100vh-10rem)] lg:sticky lg:top-20">
         <JourneyMap 
-          stops={journeyPreview.orderedStops}
+            stops={journeyPreview.orderedStops}
+            onLocationSelect={handleLocationSelectFromMap}
+            isSelectionMode={isMapInSelectionMode}
         />
       </div>
     </div>
