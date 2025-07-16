@@ -1,10 +1,9 @@
-
 'use client';
 
 import { Autocomplete, useLoadScript } from "@react-google-maps/api";
 import { Input } from "@/components/ui/input";
 import { MapPin } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { Location } from "@/types";
 import { useServer } from "@/context/server-context";
 import { useTheme } from "next-themes";
@@ -55,6 +54,7 @@ export default function AddressAutocomplete({ value, onChange, placeholder, clas
 
   const [autocomplete, setAutocomplete] = useState<google.maps.places.Autocomplete | null>(null);
   const [inputValue, setInputValue] = useState(value);
+  const inputRef = useRef<HTMLInputElement>(null);
   
   useEffect(() => {
     const styleTagId = 'google-maps-dark-theme';
@@ -101,7 +101,13 @@ export default function AddressAutocomplete({ value, onChange, placeholder, clas
   }
 
   useEffect(() => {
-    setInputValue(value);
+    // This effect ensures that if the value is updated externally (e.g., by the map click),
+    // the input field reflects that change.
+    if (value !== inputValue) {
+        setInputValue(value);
+    }
+    // We only want this to run when the external `value` prop changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
 
@@ -132,6 +138,7 @@ export default function AddressAutocomplete({ value, onChange, placeholder, clas
       <div className="relative">
         <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
+          ref={inputRef}
           type="text"
           placeholder={placeholder}
           value={inputValue}

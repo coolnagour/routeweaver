@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useFormContext, useWatch, Controller } from 'react-hook-form';
@@ -15,16 +14,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { MapPin, MinusCircle, User, Phone, MessageSquare, ChevronsUpDown, CalendarIcon, Clock, Sparkles, Loader2, Lock } from 'lucide-react';
+import { MapPin, MinusCircle, User, Phone, MessageSquare, ChevronsUpDown, CalendarIcon, Clock, Sparkles, Loader2, Lock, LocateFixed } from 'lucide-react';
 import type { Stop, SuggestionInput, StopType } from '@/types';
 import { cn } from '@/lib/utils';
 import { format, setHours, setMinutes } from 'date-fns';
 import AddressAutocomplete from './address-autocomplete';
 import { v4 as uuidv4 } from 'uuid';
+import type { MapSelectionTarget } from './journey-builder';
 
 interface ViaStopProps {
   control: any;
   index: number;
+  bookingId: string;
+  stopId: string;
   removeStop?: (index: number) => void;
   getAvailablePickups: (currentIndex: number) => Stop[];
   isDestination?: boolean;
@@ -35,16 +37,22 @@ interface ViaStopProps {
     stopType?: StopType
   ) => void;
   generatingFields: Record<string, boolean>;
+  onSetAddressFromMap: (target: MapSelectionTarget) => void;
+  mapSelectionTarget: MapSelectionTarget | null;
 }
 
 export default function ViaStop({ 
     control, 
-    index, 
+    index,
+    bookingId,
+    stopId,
     removeStop, 
     getAvailablePickups, 
     isDestination = false,
     onGenerateField,
     generatingFields,
+    onSetAddressFromMap,
+    mapSelectionTarget,
 }: ViaStopProps) {
   const { setValue } = useFormContext();
   const stopType = useWatch({ control, name: `stops.${index}.stopType` });
@@ -82,18 +90,30 @@ export default function ViaStop({
                      control={control}
                      name={`stops.${index}.location`}
                      render={({ field, fieldState }) => (
-                         <FormItem>
-                             <FormLabel>Address</FormLabel>
-                             <FormControl>
-                                  <AddressAutocomplete 
-                                     value={field.value.address}
-                                     onChange={field.onChange}
-                                     placeholder={isPickup ? 'Pickup location' : 'Drop-off location'}
-                                     className={'bg-background'}
-                                  />
-                             </FormControl>
-                             <FormMessage>{fieldState.error?.message}</FormMessage>
-                         </FormItem>
+                        <FormItem>
+                            <FormLabel>Address</FormLabel>
+                            <div className="flex items-center gap-2">
+                                <FormControl className="flex-1">
+                                      <AddressAutocomplete 
+                                         value={field.value.address}
+                                         onChange={field.onChange}
+                                         placeholder={isPickup ? 'Pickup location' : 'Drop-off location'}
+                                         className={'bg-background'}
+                                      />
+                                </FormControl>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={() => onSetAddressFromMap({ bookingId, stopId })}
+                                    className={cn("shrink-0", mapSelectionTarget?.stopId === stopId && "ring-2 ring-primary")}
+                                    title="Set address from map"
+                                >
+                                    <LocateFixed className="h-4 w-4"/>
+                                </Button>
+                            </div>
+                            <FormMessage>{fieldState.error?.message}</FormMessage>
+                        </FormItem>
                      )}
                  />
              </div>

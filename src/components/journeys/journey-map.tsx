@@ -1,14 +1,17 @@
-
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { GoogleMap, useLoadScript, Marker, Polyline } from '@react-google-maps/api';
-import type { Stop } from '@/types';
-import { Loader2, MapPin } from 'lucide-react';
+import { GoogleMap, useLoadScript, Marker } from '@react-google-maps/api';
+import type { Stop, Location } from '@/types';
+import { Loader2, LocateFixed } from 'lucide-react';
 import { useTheme } from 'next-themes';
+import { Button } from '../ui/button';
+import { toast } from '@/hooks/use-toast';
 
 interface JourneyMapProps {
   stops: Stop[];
+  onMapClick?: (location: Location) => void;
+  isSelectionMode?: boolean;
 }
 
 const libraries: ('places')[] = ['places'];
@@ -16,6 +19,7 @@ const mapContainerStyle = {
   width: '100%',
   height: '100%',
   borderRadius: '0.5rem',
+  position: 'relative' as const,
 };
 
 // Custom map styles
@@ -103,13 +107,14 @@ const mapStyles = {
     ]
 };
 
-export default function JourneyMap({ stops }: JourneyMapProps) {
+export default function JourneyMap({ stops, onMapClick, isSelectionMode = false }: JourneyMapProps) {
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
     libraries,
   });
 
   const mapRef = useRef<google.maps.Map | null>(null);
+  const geocoderRef = useRef<google.maps.Geocoder | null>(null);
   const { theme } = useTheme();
   
   const [center, setCenter] = useState({ lat: 53.3498, lng: -6.2603 }); // Default to Dublin
@@ -123,18 +128,38 @@ export default function JourneyMap({ stops }: JourneyMapProps) {
         }
       });
 
-      if (bounds.isEmpty()) {
-        // This case handles stops that might have location objects but invalid lat/lng.
-        // It prevents the map from zooming to (0,0).
-        if(stops[0]?.location.lat && stops[0]?.location.lng) {
-            mapRef.current.setCenter({lat: stops[0].location.lat, lng: stops[0].location.lng});
-            mapRef.current.setZoom(12);
-        }
-      } else {
+      if (!bounds.isEmpty()) {
         mapRef.current.fitBounds(bounds);
       }
     }
   }, [stops]);
+  
+  const handleMapLoad = (map: google.maps.Map) => {
+    mapRef.current = map;
+    geocoderRef.current = new google.maps.Geocoder();
+  };
+  
+  const handleInternalMapClick = (e: google.maps.MapMouseEvent) => {
+    if (!onMapClick || !isSelectionMode || !geocoderRef.current || !e.latLng) return;
+
+    geocoderRef.current.geocode({ location: e.latLng }, (results, status) => {
+      if (status === 'OK' && results && results[0]) {
+        const location: Location = {
+          address: results[0].formatted_address,
+          lat: e.latLng!.lat(),
+          lng: e.latLng!.lng(),
+        };
+        onMapClick(location);
+      } else {
+        console.error(`Geocode was not successful for the following reason: ${status}`);
+        toast({
+          variant: "destructive",
+          title: "Could not find address",
+          description: "Please try clicking a different location on the map.",
+        });
+      }
+    });
+  };
 
   if (loadError) return <div>Error loading maps</div>;
   if (!isLoaded) return (
@@ -146,42 +171,34 @@ export default function JourneyMap({ stops }: JourneyMapProps) {
   const validStops = stops.filter(stop => stop.location && stop.location.lat && stop.location.lng);
 
   return (
-    <GoogleMap
-      mapContainerStyle={mapContainerStyle}
-      center={center}
-      zoom={10}
-      options={{ 
-        styles: theme === 'dark' ? mapStyles.dark : mapStyles.light,
-        disableDefaultUI: true,
-        zoomControl: true,
-      }}
-      onLoad={ref => mapRef.current = ref}
-    >
-      {validStops.map((stop, index) => (
-        <Marker
-          key={`${stop.id}-${index}`}
-          position={{ lat: stop.location.lat, lng: stop.location.lng }}
-          label={(index + 1).toString()}
-          icon={{
-            path: google.maps.SymbolPath.CIRCLE,
-            fillColor: stop.stopType === 'pickup' ? '#16a34a' : '#dc2626', // green for pickup, red for dropoff
-            fillOpacity: 1,
-            strokeColor: 'white',
-            strokeWeight: 2,
-            scale: 12,
-          }}
-        />
-      ))}
-      {validStops.length > 1 && (
-        <Polyline
-          path={validStops.map(stop => ({ lat: stop.location.lat, lng: stop.location.lng }))}
-          options={{
-            strokeColor: '#4f46e5', // A nice indigo color
-            strokeOpacity: 0.8,
-            strokeWeight: 3,
-          }}
-        />
-      )}
-    </GoogleMap>
+    <div style={mapContainerStyle}>
+        {isSelectionMode && (
+          <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 bg-primary text-primary-foreground text-sm font-semibold p-2 rounded-md shadow-lg flex items-center gap-2">
+            <LocateFixed className="h-4 w-4" />
+            Click on the map to set the address
+          </div>
+        )}
+        <GoogleMap
+            mapContainerStyle={{ width: '100%', height: '100%', borderRadius: '0.5rem' }}
+            center={center}
+            zoom={10}
+            options={{ 
+                styles: theme === 'dark' ? mapStyles.dark : mapStyles.light,
+                disableDefaultUI: true,
+                zoomControl: true,
+                draggableCursor: isSelectionMode ? 'crosshair' : undefined,
+            }}
+            onLoad={handleMapLoad}
+            onClick={handleInternalMapClick}
+        >
+        {validStops.map((stop, index) => (
+            <Marker
+            key={`${stop.id}-${index}`}
+            position={{ lat: stop.location.lat, lng: stop.location.lng }}
+            label={(index + 1).toString()}
+            />
+        ))}
+        </GoogleMap>
+    </div>
   );
 }

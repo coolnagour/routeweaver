@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -10,7 +9,7 @@ import useLocalStorage from '@/hooks/use-local-storage';
 import { saveJourney } from '@/ai/flows/journey-flow';
 import { generateJourneyPayload } from '@/ai/flows/journey-payload-flow';
 import { getSites } from '@/services/icabbi';
-import type { Booking, Journey, JourneyTemplate, Account, JourneyPayloadOutput, Stop } from '@/types';
+import type { Booking, Journey, JourneyTemplate, Account, JourneyPayloadOutput, Stop, Location } from '@/types';
 import { Save, Building, Loader2, Send, ChevronsUpDown, Code, DollarSign, Info } from 'lucide-react';
 import BookingManager from './booking-manager';
 import { useServer } from '@/context/server-context';
@@ -41,6 +40,11 @@ interface JourneyPreviewState {
   bookings: Booking[];
   bookingPayloads: any[];
   isLoading: boolean;
+}
+
+export interface MapSelectionTarget {
+  bookingId: string;
+  stopId: string;
 }
 
 
@@ -78,6 +82,7 @@ export default function JourneyBuilder({
   const [isFetchingSites, setIsFetchingSites] = useState(false);
   const [selectedSiteId, setSelectedSiteId] = useState<number | undefined>(initialSiteId || initialData?.siteId);
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(initialAccount || initialData?.account || null);
+  const [mapSelectionTarget, setMapSelectionTarget] = useState<MapSelectionTarget | null>(null);
   
   const getInitialBookings = (data: Partial<JourneyTemplate | Journey> | null | undefined): Booking[] => {
     if (!data || !data.bookings) return [];
@@ -113,6 +118,32 @@ export default function JourneyBuilder({
       timeoutId = setTimeout(() => func(...args), delay);
     };
   };
+
+  const handleSetLocationFromMap = (location: Location) => {
+    if (!mapSelectionTarget) return;
+
+    const { bookingId, stopId } = mapSelectionTarget;
+
+    setBookings(prevBookings => 
+      prevBookings.map(booking => {
+        if (booking.id === bookingId) {
+          return {
+            ...booking,
+            stops: booking.stops.map(stop => {
+              if (stop.id === stopId) {
+                return { ...stop, location };
+              }
+              return stop;
+            })
+          };
+        }
+        return booking;
+      })
+    );
+    setMapSelectionTarget(null); // Exit map selection mode
+    toast({ title: "Address Updated", description: "The address has been set from the map." });
+  };
+
 
   const fetchPreview = useCallback(async (currentBookings: Booking[], journey: Journey | null, siteId?: number, accountId?: number) => {
     if (currentBookings.length === 0 || currentBookings.flatMap(b => b.stops).length < 2) {
@@ -488,6 +519,8 @@ export default function JourneyBuilder({
           bookings={bookings} 
           setBookings={setBookings} 
           isJourneyPriceSet={hasJourneyLevelPrice}
+          onSetAddressFromMap={setMapSelectionTarget}
+          mapSelectionTarget={mapSelectionTarget}
         />
         
         <Card>
@@ -629,7 +662,11 @@ export default function JourneyBuilder({
         </Collapsible>
       </div>
       <div className="lg:h-[calc(100vh-10rem)] lg:sticky lg:top-20">
-        <JourneyMap stops={journeyPreview.orderedStops} />
+        <JourneyMap 
+          stops={journeyPreview.orderedStops} 
+          onMapClick={handleSetLocationFromMap} 
+          isSelectionMode={!!mapSelectionTarget}
+        />
       </div>
     </div>
   );

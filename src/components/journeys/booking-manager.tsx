@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -23,6 +22,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import type { MapSelectionTarget } from './journey-builder';
 
 
 const getPassengersFromStops = (stops: Stop[]) => {
@@ -33,11 +33,19 @@ interface BookingManagerProps {
   bookings: Booking[];
   setBookings: React.Dispatch<React.SetStateAction<Booking[]>>;
   isJourneyPriceSet: boolean;
+  onSetAddressFromMap: (target: MapSelectionTarget) => void;
+  mapSelectionTarget: MapSelectionTarget | null;
 }
 
 const emptyLocation = { address: '', lat: 0, lng: 0 };
 
-export default function BookingManager({ bookings, setBookings, isJourneyPriceSet }: BookingManagerProps) {
+export default function BookingManager({ 
+    bookings, 
+    setBookings, 
+    isJourneyPriceSet,
+    onSetAddressFromMap,
+    mapSelectionTarget
+}: BookingManagerProps) {
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const { server } = useServer();
@@ -48,11 +56,13 @@ export default function BookingManager({ bookings, setBookings, isJourneyPriceSe
   };
 
   const handleAddNewBooking = () => {
+    const newBookingId = uuidv4();
+    const newPickupStopId = uuidv4();
     setEditingBooking({
-      id: uuidv4(),
+      id: newBookingId,
       stops: [
-        { id: uuidv4(), location: emptyLocation, stopType: 'pickup', name: '', phone: '', dateTime: undefined },
-        { id: uuidv4(), location: emptyLocation, stopType: 'dropoff' }
+        { id: newPickupStopId, location: emptyLocation, stopType: 'pickup', name: '', phone: '', dateTime: undefined },
+        { id: uuidv4(), location: emptyLocation, stopType: 'dropoff', pickupStopId: newPickupStopId }
       ]
     });
   };
@@ -126,6 +136,8 @@ export default function BookingManager({ bookings, setBookings, isJourneyPriceSe
         onSave={handleSaveBooking}
         onCancel={handleCancelEdit}
         isJourneyPriceSet={isJourneyPriceSet}
+        onSetAddressFromMap={onSetAddressFromMap}
+        mapSelectionTarget={mapSelectionTarget}
       />
     );
   }
