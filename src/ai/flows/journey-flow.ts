@@ -67,7 +67,7 @@ const saveJourneyFlow = ai.defineFlow(
           result = await createBooking(server, bookingWithContext);
         }
           
-        const bookingRequestId = result?.id ? parseInt(result.id, 10) : booking.requestId;
+        const bookingRequestId = result?.request_id ? parseInt(result.request_id, 10) : booking.requestId;
         // Use perma_id from the response for the bookingServerId.
         const serverBookingId = result?.perma_id ? parseInt(result.perma_id, 10) : booking.bookingServerId;
           
