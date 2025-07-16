@@ -23,7 +23,7 @@ import {
 const SIDEBAR_STORAGE_KEY = "sidebar_state"
 const SIDEBAR_WIDTH = "16rem"
 const SIDEBAR_WIDTH_MOBILE = "18rem"
-const SIDEBAR_WIDTH_ICON = "3.5rem"
+const SIDEBAR_WIDTH_ICON = "4.5rem"
 const SIDEBAR_KEYBOARD_SHORTCUT = "b"
 
 type SidebarContext = {
@@ -396,7 +396,7 @@ const SidebarContent = React.forwardRef<
       ref={ref}
       data-sidebar="content"
       className={cn(
-        "flex min-h-0 flex-1 flex-col gap-2 overflow-auto p-4 group-data-[collapsible=icon]:overflow-hidden group-data-[collapsible=icon]:px-2",
+        "flex min-h-0 flex-1 flex-col gap-2 overflow-auto p-4 group-data-[collapsible=icon]:overflow-hidden group-data-[collapsible=icon]:p-2",
         className
       )}
       {...props}
