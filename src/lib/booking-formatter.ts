@@ -66,22 +66,19 @@ export const formatBookingForApi = (booking: Booking, server: ServerConfig) => {
         }));
     }
     
-    // API requires the phone field to be present. Use a valid one if provided, otherwise create a placeholder.
+    // API requires the phone field to be present. Initialize with a placeholder.
+    const countryCode = getCountryCallingCode(defaultCountry);
+    payload.phone = `+${countryCode}0000000000`.slice(0, 15);
+
+    // If a valid phone number is provided, use it instead of the placeholder.
     if (firstPickup.phone) {
         const phoneNumber = parsePhoneNumberFromString(firstPickup.phone, defaultCountry);
         if (phoneNumber && phoneNumber.isValid()) {
             payload.phone = phoneNumber.number;
         } else {
              console.warn(`Invalid phone number provided: ${firstPickup.phone}. A placeholder will be used.`);
-             const countryCode = getCountryCallingCode(defaultCountry);
-             payload.phone = `+${countryCode}0000000000`.slice(0, 15);
         }
-    } else {
-        // If no phone is provided, create a placeholder based on the country code
-        const countryCode = getCountryCallingCode(defaultCountry);
-        payload.phone = `+${countryCode}0000000000`.slice(0, 15);
     }
-
 
     if ((booking.price && booking.price > 0) || (booking.cost && booking.cost > 0)) {
         payload.payment = {
