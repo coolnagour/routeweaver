@@ -407,6 +407,7 @@ function JourneyBuilderInner({
           stops={journeyPreview.orderedStops}
           onLocationSelect={handleLocationSelectedFromMap}
           isSelectionMode={isMapInSelectionMode}
+          countryCode={server?.countryCodes[0]}
       />
   );
 

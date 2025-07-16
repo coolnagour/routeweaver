@@ -14,7 +14,18 @@ interface JourneyMapProps {
   stops: (Stop & { parentBookingId?: string })[];
   onLocationSelect?: (location: Location) => void;
   isSelectionMode?: boolean;
+  countryCode?: string;
 }
+
+// A simple lookup for country coordinates
+const countryCoordinates: Record<string, { lat: number, lng: number }> = {
+    'us': { lat: 39.8283, lng: -98.5795 }, // United States
+    'ca': { lat: 56.1304, lng: -106.3468 }, // Canada
+    'gb': { lat: 55.3781, lng: -3.4360 }, // United Kingdom
+    'ie': { lat: 53.4129, lng: -8.2439 }, // Ireland
+    'au': { lat: -25.2744, lng: 133.7751 }, // Australia
+    // Add more countries as needed
+};
 
 const libraries: ('places')[] = ['places'];
 const mapContainerStyle = {
@@ -126,7 +137,7 @@ const getBookingColor = (bookingId: string) => {
 };
 
 
-export default function JourneyMap({ stops, onLocationSelect, isSelectionMode = false }: JourneyMapProps) {
+export default function JourneyMap({ stops, onLocationSelect, isSelectionMode = false, countryCode }: JourneyMapProps) {
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
     libraries,
@@ -136,7 +147,13 @@ export default function JourneyMap({ stops, onLocationSelect, isSelectionMode = 
   const geocoderRef = useRef<google.maps.Geocoder | null>(null);
   const { theme } = useTheme();
   
-  const [center, setCenter] = useState({ lat: 53.3498, lng: -6.2603 }); // Default to Dublin
+  const [center, setCenter] = useState(() => {
+    const code = countryCode?.toLowerCase();
+    if (code && countryCoordinates[code]) {
+      return countryCoordinates[code];
+    }
+    return { lat: 51.5074, lng: -0.1278 }; // Default to London if no country code
+  });
   
   const fitBounds = useCallback(() => {
       if (mapRef.current && stops && stops.length > 0) {
