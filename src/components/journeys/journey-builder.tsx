@@ -104,14 +104,16 @@ export default function JourneyBuilder({
     setJourneyPreview(prev => ({ ...prev, isLoading: true }));
     try {
         let placeholderIdCounter = 1000;
-        // A simplified booking object is created for the debug view, as server IDs are not yet available.
-        // This provides a structural preview but won't have the final IDs.
+        
+        // Use real server IDs if they exist, otherwise generate placeholders for the debug view.
         const tempBookingsForPreview = currentBookings.map((b, bookingIndex) => ({
           ...b,
-          requestId: b.requestId || (9000 + bookingIndex), // Use a temp ID for preview
+          // Use real requestId if available, otherwise a temp one for preview
+          requestId: b.requestId || (9000 + bookingIndex), 
           stops: b.stops.map(s => ({
             ...s,
-            bookingSegmentId: s.bookingSegmentId || placeholderIdCounter++ // Use unique placeholder IDs
+            // Use real bookingSegmentId if available, otherwise a unique placeholder
+            bookingSegmentId: s.bookingSegmentId || placeholderIdCounter++
           }))
         }));
 
