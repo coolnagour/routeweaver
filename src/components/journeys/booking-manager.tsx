@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -56,13 +57,17 @@ export default function BookingManager({
   const handleAddNewBooking = () => {
     const newBookingId = uuidv4();
     const newPickupStopId = uuidv4();
-    setEditingBooking({
+    const newBooking: Booking = {
       id: newBookingId,
       stops: [
-        { id: newPickupStopId, location: emptyLocation, stopType: 'pickup', name: '', phone: '', dateTime: undefined },
-        { id: uuidv4(), location: emptyLocation, stopType: 'dropoff', pickupStopId: newPickupStopId }
+        { id: newPickupStopId, location: emptyLocation, stopType: 'pickup', name: '', phone: '', dateTime: undefined, instructions: '' },
+        { id: uuidv4(), location: emptyLocation, stopType: 'dropoff', pickupStopId: newPickupStopId, instructions: '' }
       ]
-    });
+    };
+    // Add the new booking to the list immediately
+    setBookings(prev => [...prev, newBooking]);
+    // Set it as the booking to be edited
+    setEditingBooking(newBooking);
   };
   
   const handleSaveBooking = (bookingToSave: Booking) => {
@@ -72,6 +77,7 @@ export default function BookingManager({
       updatedBookings[existingIndex] = bookingToSave;
       setBookings(updatedBookings);
     } else {
+      // This case should no longer be hit due to the new `handleAddNewBooking` logic
       setBookings([...bookings, bookingToSave]);
     }
     setEditingBooking(null);
@@ -111,7 +117,12 @@ export default function BookingManager({
     setBookings(bookings.filter(b => b.id !== bookingId));
   }
 
-  const handleCancelEdit = () => {
+  const handleCancelEdit = (bookingId: string) => {
+    const booking = bookings.find(b => b.id === bookingId);
+    // If it's a new booking (has no server ID), remove it from the list on cancel.
+    if (booking && !booking.bookingServerId) {
+        setBookings(prev => prev.filter(b => b.id !== bookingId));
+    }
     setEditingBooking(null);
   };
 

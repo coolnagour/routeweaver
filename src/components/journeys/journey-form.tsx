@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -62,9 +63,9 @@ const FormBookingSchema = BookingSchema.extend({
 type BookingFormData = z.infer<typeof FormBookingSchema>;
 
 interface JourneyFormProps {
-  initialData?: Booking | null;
+  initialData: Booking; // Now required
   onSave: (booking: Booking) => void;
-  onCancel: () => void;
+  onCancel: (bookingId: string) => void;
   isJourneyPriceSet: boolean;
   onSetAddressFromMap: (target: Omit<MapSelectionTarget, 'bookingId'>) => void;
 }
@@ -84,29 +85,14 @@ export default function JourneyForm({
   
   const form = useForm<BookingFormData>({
     resolver: zodResolver(FormBookingSchema),
+    // The key on the parent Card now handles re-initialization.
+    // We can rely on defaultValues being correct on mount.
     defaultValues: {
-      id: initialData?.id || uuidv4(),
-      bookingServerId: initialData?.bookingServerId,
-      instructions: initialData?.instructions || '',
-      customerId: initialData?.customerId || '',
-      externalBookingId: initialData?.externalBookingId || '',
-      vehicleType: initialData?.vehicleType || '',
-      externalAreaCode: initialData?.externalAreaCode || '',
-      price: initialData?.price || undefined,
-      cost: initialData?.cost || undefined,
-      stops: initialData?.stops?.length ? initialData.stops.map(s => ({
-          ...s,
-          id: s.id || uuidv4(),
-          dateTime: s.dateTime ? new Date(s.dateTime) : undefined,
-          name: s.name || '',
-          phone: s.phone || '',
-          instructions: s.instructions || '',
-          pickupStopId: s.pickupStopId || undefined,
-          bookingSegmentId: s.bookingSegmentId,
-      })) : [
-        { id: uuidv4(), location: emptyLocation, stopType: 'pickup', name: '', phone: '', dateTime: undefined, instructions: '' },
-        { id: uuidv4(), location: emptyLocation, stopType: 'dropoff', pickupStopId: undefined, instructions: '' }
-      ] 
+      ...initialData,
+      stops: initialData.stops.map(s => ({
+        ...s,
+        dateTime: s.dateTime ? new Date(s.dateTime) : undefined,
+      })),
     },
   });
   
@@ -117,11 +103,12 @@ export default function JourneyForm({
 
   const currentStops = useWatch({ control: form.control, name: 'stops' });
   
-  // This effect synchronizes the form with initialData when it changes (e.g., from map click)
+  // This effect listens for changes to initialData and resets the form.
+  // This is crucial for reflecting updates from map clicks.
   useEffect(() => {
     form.reset({
       ...initialData,
-      stops: initialData?.stops.map(s => ({ ...s, dateTime: s.dateTime ? new Date(s.dateTime) : undefined }))
+      stops: initialData.stops.map(s => ({ ...s, dateTime: s.dateTime ? new Date(s.dateTime) : undefined }))
     });
   }, [initialData, form]);
 
@@ -206,19 +193,19 @@ export default function JourneyForm({
   const firstPickupIndex = stopFields.findIndex(s => s.stopType === 'pickup');
 
   return (
-      <Card key={initialData?.id || 'new-booking'}>
+      <Card key={initialData.id}>
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)}>
             <CardHeader>
                 <div className="flex justify-between items-center">
-                    <CardTitle className="font-headline text-xl">{initialData?.id ? 'Edit Booking' : 'Add New Booking'}</CardTitle>
-                    <Button type="button" variant="ghost" size="icon" onClick={onCancel} title="Cancel">
+                    <CardTitle className="font-headline text-xl">{initialData.bookingServerId ? 'Edit Booking' : 'Add New Booking'}</CardTitle>
+                    <Button type="button" variant="ghost" size="icon" onClick={() => onCancel(initialData.id)} title="Cancel">
                         <X className="h-5 w-5" />
                     </Button>
                 </div>
                 <CardDescription>
-                    {initialData?.id ? 'Modify the details below and click "Update Booking".' : 'Fill in the details for the new booking.'}
-                    {initialData?.bookingServerId && (
+                    {initialData.bookingServerId ? 'Modify the details below and click "Update Booking".' : 'Fill in the details for the new booking.'}
+                    {initialData.bookingServerId && (
                         <span className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                             <Lock className="h-3 w-3" />
                             Editing a booking that has been saved to the server.
@@ -557,8 +544,8 @@ export default function JourneyForm({
                     </Collapsible>
 
                  <div className="flex justify-end gap-2 mt-4">
-                    <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
-                    <Button type="submit">{initialData?.id ? 'Update Booking' : 'Add to Journey'}</Button>
+                    <Button type="button" variant="outline" onClick={() => onCancel(initialData.id)}>Cancel</Button>
+                    <Button type="submit">{initialData.bookingServerId ? 'Update Booking' : 'Add to Journey'}</Button>
                 </div>
             </CardContent>
           </form>
