@@ -21,7 +21,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '../ui/collapsible';
 import { cn } from '@/lib/utils';
 import { Label } from '../ui/label';
-import parsePhoneNumberFromString from 'libphonenumber-js';
+import { formatBookingForIcabbi } from '@/lib/booking-formatter';
 
 interface JourneyBuilderProps {
   initialData?: Partial<JourneyTemplate> | null;
@@ -42,71 +42,14 @@ interface JourneyPreviewState {
   isLoading: boolean;
 }
 
-// Client-side utility to generate booking payloads for debugging, mirroring server logic.
+
 const generateDebugBookingPayloads = (bookings: Booking[], server: any, siteId?: number, accountId?: number) => {
     if (!server || !siteId || !accountId) return [];
     
     return bookings.map(booking => {
         try {
-            if (booking.stops.length < 2) return { error: 'Booking must have at least a pickup and a dropoff.' };
-
-            const firstStop = booking.stops[0];
-            if (firstStop.stopType !== 'pickup') return { error: 'The first stop of a booking must be a pickup.'};
-
-            const lastStop = booking.stops[booking.stops.length - 1];
-            const viaStops = booking.stops.slice(1, -1);
-            const defaultCountry = server.countryCodes?.[0]?.toUpperCase();
-
-            const payload: any = {
-                date: firstStop.dateTime?.toISOString() || new Date().toISOString(),
-                source: "DISPATCH",
-                name: firstStop.name || 'N/A',
-                address: {
-                    lat: firstStop.location.lat.toString(),
-                    lng: firstStop.location.lng.toString(),
-                    formatted: firstStop.location.address,
-                    driver_instructions: firstStop.instructions || "",
-                },
-                destination: {
-                    lat: lastStop.location.lat.toString(),
-                    lng: lastStop.location.lng.toString(),
-                    formatted: lastStop.location.address,
-                    driver_instructions: lastStop.instructions || "",
-                },
-                account_id: accountId,
-                site_id: siteId,
-                customer_id: booking.customerId,
-                external_booking_id: booking.externalBookingId,
-                vehicle_type: booking.vehicleType,
-                external_area_code: booking.externalAreaCode,
-                with_bookingsegments: true,
-            };
-
-            if (viaStops.length > 0) {
-                payload.vias = viaStops.map(stop => ({
-                    lat: stop.location.lat.toString(),
-                    lng: stop.location.lng.toString(),
-                    formatted: stop.location.address,
-                    driver_instructions: stop.instructions || "",
-                }));
-            }
-
-            if (firstStop.phone) {
-                const phoneNumber = parsePhoneNumberFromString(firstStop.phone, defaultCountry);
-                if (phoneNumber && phoneNumber.isValid()) {
-                    payload.phone = phoneNumber.number;
-                }
-            }
-
-            if ((booking.price && booking.price > 0) || (booking.cost && booking.cost > 0)) {
-                payload.payment = { price: booking.price || 0, cost: booking.cost || 0, fixed: 1 };
-            }
-
-            if (booking.instructions) {
-                payload.instructions = booking.instructions;
-            }
-
-            return payload;
+            const bookingWithContext = { ...booking, siteId, accountId };
+            return formatBookingForIcabbi(bookingWithContext, server);
         } catch (e) {
             return { error: `Error generating payload: ${e instanceof Error ? e.message : 'Unknown error'}` };
         }
