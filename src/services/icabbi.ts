@@ -1,4 +1,3 @@
-
 'use server';
 
 import type { ServerConfig } from "@/types";
@@ -176,7 +175,7 @@ export async function updateBooking(server: ServerConfig, booking: Booking) {
 
     const response = await callIcabbiApi({
         server,
-        method: 'PUT',
+        method: 'POST',
         endpoint: `bookings/update/${booking.bookingServerId}`,
         body: payload,
     });
