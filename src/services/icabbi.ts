@@ -165,7 +165,6 @@ export async function createBooking(server: ServerConfig, booking: Booking) {
         body: payload,
     });
     
-    // The top-level object in the response body is the booking object itself.
     return response.body;
 }
 
