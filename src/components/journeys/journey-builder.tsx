@@ -42,6 +42,11 @@ interface JourneyPreviewState {
   isLoading: boolean;
 }
 
+interface MapSelectionTarget {
+  bookingId: string;
+  stopId: string;
+}
+
 const generateDebugBookingPayloads = (bookings: Booking[], server: any, siteId?: number, accountId?: number) => {
     if (!server || !siteId || !accountId) return [];
     
@@ -85,6 +90,7 @@ export default function JourneyBuilder({
   // State for map interactions
   const [isMapInSelectionMode, setIsMapInSelectionMode] = useState(false);
   const [locationFromMap, setLocationFromMap] = useState<Location | null>(null);
+  const [mapSelectionTarget, setMapSelectionTarget] = useState<MapSelectionTarget | null>(null);
   
   const getInitialBookings = (data: Partial<JourneyTemplate | Journey> | null | undefined): Booking[] => {
     if (!data || !data.bookings) return [];
@@ -120,24 +126,20 @@ export default function JourneyBuilder({
     };
   };
 
-  const handleSetMapSelectionMode = (isSelecting: boolean) => {
-    console.log(`[JourneyBuilder] Setting map selection mode to: ${isSelecting}`);
-    setIsMapInSelectionMode(isSelecting);
-    if (!isSelecting) {
-      setLocationFromMap(null);
-    }
+  const handleSetMapForSelection = (target: MapSelectionTarget | null) => {
+    setMapSelectionTarget(target);
+    setIsMapInSelectionMode(!!target);
   };
-
+  
   const handleLocationSelectFromMap = (location: Location) => {
-    console.log('[JourneyBuilder] Location selected from map:', location);
     setLocationFromMap(location);
-    setIsMapInSelectionMode(false);
+    setIsMapInSelectionMode(false); // Turn off selection mode after a location is picked
     toast({ title: "Address Selected", description: "The address has been set from the map." });
   };
   
   const handleMapLocationHandled = () => {
-    console.log('[JourneyBuilder] JourneyForm has handled the map location. Clearing locationFromMap.');
     setLocationFromMap(null);
+    setMapSelectionTarget(null);
   };
 
 
@@ -518,6 +520,8 @@ export default function JourneyBuilder({
           setEditingBooking={setEditingBooking}
           isJourneyPriceSet={hasJourneyLevelPrice}
           locationFromMap={locationFromMap}
+          mapSelectionTarget={mapSelectionTarget}
+          onSetMapForSelection={handleSetMapForSelection}
           onMapLocationHandled={handleMapLocationHandled}
         />
         

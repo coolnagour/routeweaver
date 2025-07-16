@@ -59,13 +59,19 @@ const FormBookingSchema = BookingSchema.extend({
 
 type BookingFormData = z.infer<typeof FormBookingSchema>;
 
+interface MapSelectionTarget {
+  bookingId: string;
+  stopId: string;
+}
 interface JourneyFormProps {
   initialData: Booking;
   onSave: (booking: Booking) => void;
   onCancel: (bookingId: string) => void;
   isJourneyPriceSet: boolean;
-  locationFromMap?: Location | null;
+  locationFromMap: Location | null;
+  mapSelectionTarget: MapSelectionTarget | null;
   onMapLocationHandled: () => void;
+  onSetMapForSelection: (target: MapSelectionTarget | null) => void;
 }
 
 const emptyLocation = { address: '', lat: 0, lng: 0 };
@@ -76,7 +82,9 @@ export default function JourneyForm({
     onCancel, 
     isJourneyPriceSet,
     locationFromMap,
+    mapSelectionTarget,
     onMapLocationHandled,
+    onSetMapForSelection,
 }: JourneyFormProps) {
   const { toast } = useToast();
   const [generatingFields, setGeneratingFields] = useState<Record<string, boolean>>({});
@@ -101,32 +109,16 @@ export default function JourneyForm({
   
   // Effect to update form when a location is selected from the map
   useEffect(() => {
-    if (locationFromMap) {
-      console.log('[JourneyForm] Received location from map:', locationFromMap);
-      
+    if (locationFromMap && mapSelectionTarget && mapSelectionTarget.bookingId === initialData.id) {
       const stops = form.getValues('stops');
-      // The target is now stored in the form component itself
-      const mapSelectionTarget = (form as any)._mapSelectionTarget;
-      console.log('[JourneyForm] Current map selection target:', mapSelectionTarget);
+      const stopIndex = stops.findIndex(s => s.id === mapSelectionTarget.stopId);
 
-      if (mapSelectionTarget) {
-          const stopIndex = stops.findIndex(s => s.id === mapSelectionTarget);
-          console.log('[JourneyForm] Found stop index:', stopIndex);
-
-          if (stopIndex !== -1) {
-              console.log(`[JourneyForm] Updating form value for stops.${stopIndex}.location`);
-              form.setValue(`stops.${stopIndex}.location`, locationFromMap, { shouldValidate: true, shouldDirty: true });
-          } else {
-              console.error('[JourneyForm] Could not find the stop to update in the form.');
-          }
-          // Clear target and notify parent
-          (form as any)._mapSelectionTarget = null;
-          onMapLocationHandled();
-      } else {
-        console.warn('[JourneyForm] locationFromMap was received, but there was no target stop ID.');
+      if (stopIndex !== -1) {
+          form.setValue(`stops.${stopIndex}.location`, locationFromMap, { shouldValidate: true, shouldDirty: true });
       }
+      onMapLocationHandled();
     }
-  }, [locationFromMap, form, onMapLocationHandled]);
+  }, [locationFromMap, mapSelectionTarget, form, initialData.id, onMapLocationHandled]);
 
 
   const currentStops = useWatch({ control: form.control, name: 'stops' });
@@ -204,11 +196,7 @@ export default function JourneyForm({
   }
 
   const handleSetAddressFromMap = (stopId: string) => {
-    console.log(`[JourneyForm] Clicked 'Set Address from Map' for stopId: ${stopId}`);
-    // Store the target ID in a temporary property on the form instance
-    (form as any)._mapSelectionTarget = stopId;
-    // This prop no longer exists, parent will handle this.
-    // onSetMapForSelection(true, stopId); 
+    onSetMapForSelection({ bookingId: initialData.id, stopId });
   };
 
 
@@ -410,7 +398,7 @@ export default function JourneyForm({
                 {viaStops.map((stop, index) => (
                     <ViaStop 
                         key={stop.id}
-                        control={form.control}
+                        control={control}
                         index={index + 1}
                         removeStop={removeStop}
                         getAvailablePickups={getAvailablePickups}
@@ -430,7 +418,7 @@ export default function JourneyForm({
 
                 {/* Destination Section */}
                 <ViaStop
-                    control={form.control}
+                    control={control}
                     index={stopFields.length - 1}
                     isDestination
                     getAvailablePickups={getAvailablePickups}

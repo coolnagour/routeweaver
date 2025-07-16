@@ -28,13 +28,19 @@ const getPassengersFromStops = (stops: Stop[]) => {
     return stops.filter(s => s.stopType === 'pickup');
 }
 
+interface MapSelectionTarget {
+  bookingId: string;
+  stopId: string;
+}
 interface BookingManagerProps {
   bookings: Booking[];
   setBookings: React.Dispatch<React.SetStateAction<Booking[]>>;
   editingBooking: Booking | null;
   setEditingBooking: React.Dispatch<React.SetStateAction<Booking | null>>;
   isJourneyPriceSet: boolean;
-  locationFromMap?: Location | null;
+  locationFromMap: Location | null;
+  mapSelectionTarget: MapSelectionTarget | null;
+  onSetMapForSelection: (target: MapSelectionTarget | null) => void;
   onMapLocationHandled: () => void;
 }
 
@@ -47,6 +53,8 @@ export default function BookingManager({
     setEditingBooking,
     isJourneyPriceSet,
     locationFromMap,
+    mapSelectionTarget,
+    onSetMapForSelection,
     onMapLocationHandled
 }: BookingManagerProps) {
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
@@ -139,6 +147,8 @@ export default function BookingManager({
         isJourneyPriceSet={isJourneyPriceSet}
         locationFromMap={locationFromMap}
         onMapLocationHandled={onMapLocationHandled}
+        onSetMapForSelection={onSetMapForSelection}
+        mapSelectionTarget={mapSelectionTarget}
       />
     );
   }
