@@ -6,9 +6,24 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import type { Booking, Stop } from '@/types';
 import JourneyForm from './journey-form';
-import { Edit, MapPin, Package, Trash2, UserPlus, Users, Phone, Clock, MessageSquare, Info } from 'lucide-react';
+import { Edit, MapPin, Package, Trash2, UserPlus, Users, Phone, Clock, MessageSquare, Info, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
+import { useServer } from '@/context/server-context';
+import { useToast } from '@/hooks/use-toast';
+import { deleteBooking } from '@/services/icabbi';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+
 
 const getPassengersFromStops = (stops: Stop[]) => {
     return stops.filter(s => s.stopType === 'pickup');
@@ -24,6 +39,9 @@ const emptyLocation = { address: '', lat: 0, lng: 0 };
 
 export default function BookingManager({ bookings, setBookings, isJourneyPriceSet }: BookingManagerProps) {
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const { server } = useServer();
+  const { toast } = useToast();
 
   const handleEditBooking = (booking: Booking) => {
     setEditingBooking(booking);
@@ -51,7 +69,37 @@ export default function BookingManager({ bookings, setBookings, isJourneyPriceSe
     setEditingBooking(null);
   };
   
-  const handleRemoveBooking = (bookingId: string) => {
+  const handleRemoveBooking = async (bookingId: string) => {
+    const bookingToDelete = bookings.find(b => b.id === bookingId);
+    if (!bookingToDelete) return;
+
+    // If the booking has been saved to the server, call the delete API
+    if (bookingToDelete.bookingServerId && server) {
+        setIsDeleting(bookingToDelete.id);
+        try {
+            await deleteBooking(server, bookingToDelete.bookingServerId);
+            toast({
+                title: 'Booking Deleted',
+                description: 'The booking was successfully deleted from the server.',
+            });
+        } catch (error) {
+            console.error("Failed to delete booking from server:", error);
+            toast({
+                variant: 'destructive',
+                title: 'Server Deletion Failed',
+                description: `Could not delete the booking from the server. It has been removed locally. Reason: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            });
+        } finally {
+            setIsDeleting(null);
+        }
+    } else {
+        toast({
+            title: 'Booking Removed',
+            description: 'The local booking has been removed from the journey.',
+        });
+    }
+    
+    // Always remove from the local state
     setBookings(bookings.filter(b => b.id !== bookingId));
   }
 
@@ -149,9 +197,30 @@ export default function BookingManager({ bookings, setBookings, isJourneyPriceSe
                           <Button variant="ghost" size="icon" onClick={() => handleEditBooking(booking)}>
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleRemoveBooking(booking.id)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="text-destructive" disabled={isDeleting === booking.id}>
+                                    {isDeleting === booking.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                <AlertDialogTitle>Are you sure you want to delete this booking?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    {booking.bookingServerId
+                                    ? "This booking exists on the server. This action will delete it from both this journey and the iCabbi server. This cannot be undone."
+                                    : "This action will remove the booking from the current journey. This cannot be undone."}
+                                </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleRemoveBooking(booking.id)}>
+                                    Delete
+                                </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                       </div>
                       </div>
                   </Card>

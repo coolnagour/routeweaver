@@ -168,6 +168,15 @@ export async function createBooking(server: ServerConfig, booking: Booking) {
     return response.body.booking;
 }
 
+export async function deleteBooking(server: ServerConfig, bookingId: number) {
+    const response = await callIcabbiApi({
+        server,
+        method: 'DELETE',
+        endpoint: `bookings/delete/${bookingId}`,
+    });
+    return response;
+}
+
 export async function createJourney(server: ServerConfig, journeyPayload: any) {
     const response = await callIcabbiApi({
         server,
