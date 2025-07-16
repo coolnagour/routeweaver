@@ -149,7 +149,7 @@ export default function JourneyMap({ stops, onLocationSelect, isSelectionMode = 
         });
 
         if (!bounds.isEmpty()) {
-          mapRef.current.fitBounds(bounds, 40);
+          mapRef.current.fitBounds(bounds, {top: 50, bottom: 50, left: 20, right: 20});
         }
       }
   }, [stops]);
