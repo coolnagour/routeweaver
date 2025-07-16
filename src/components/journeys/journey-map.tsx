@@ -110,20 +110,28 @@ const mapStyles = {
     ]
 };
 
-// High-contrast color palette
+// A modern, diverse color palette for data visualization
 const bookingColors = [
-  '#1976d2', // Blue
-  '#d32f2f', // Red
-  '#388e3c', // Green
-  '#f57f17', // Orange
-  '#7b1fa2', // Purple
-  '#00796b', // Teal
-  '#c2185b', // Pink
-  '#5d4037', // Brown
-  '#0288d1', // Light Blue
-  '#e64a19', // Deep Orange
-  '#689f38', // Light Green
-  '#fbc02d', // Yellow
+    '#1f77b4', // Muted Blue
+    '#ff7f0e', // Safety Orange
+    '#2ca02c', // Cooked Asparagus Green
+    '#d62728', // Brick Red
+    '#9467bd', // Muted Purple
+    '#8c564b', // Chestnut Brown
+    '#e377c2', // Raspberry Pink
+    '#7f7f7f', // Middle Gray
+    '#bcbd22', // Curry Yellow-Green
+    '#17becf', // Pacific Blue
+    '#636EFA', // Indigo
+    '#EF553B', // Vermilion
+    '#00CC96', // Mint Green
+    '#AB63FA', // Amethyst
+    '#FFA15A', // Coral
+    '#19D3F3', // Cyan
+    '#FF6692', // Watermelon Pink
+    '#B6E880', // Lime Green
+    '#FF97FF', // Orchid Pink
+    '#FECB52'  // Saffron Yellow
 ];
 
 const getBookingColor = (bookingId: string) => {
