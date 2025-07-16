@@ -111,9 +111,11 @@ const mapStyles = {
 };
 
 const bookingColors = [
-  '#F44336', '#E91E63', '#9C27B0', '#673AB7', '#3F51B5',
-  '#2196F3', '#03A9F4', '#00BCD4', '#009688', '#4CAF50',
-  '#8BC34A', '#CDDC39', '#FFEB3B', '#FFC107', '#FF9800', '#FF5722'
+  '#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', 
+  '#911eb4', '#46f0f0', '#f032e6', '#bcf60c', '#fabebe',
+  '#008080', '#e6beff', '#9a6324', '#fffac8', '#800000',
+  '#aaffc3', '#808000', '#ffd8b1', '#000075', '#808080', 
+  '#ffffff', '#000000'
 ];
 
 const getBookingColor = (bookingId: string) => {
@@ -149,7 +151,7 @@ export default function JourneyMap({ stops, onLocationSelect, isSelectionMode = 
         });
 
         if (!bounds.isEmpty()) {
-          mapRef.current.fitBounds(bounds, {top: 50, bottom: 50, left: 20, right: 20});
+          mapRef.current.fitBounds(bounds, {top: 20, bottom: 20, left: 20, right: 20});
         }
       }
   }, [stops]);
