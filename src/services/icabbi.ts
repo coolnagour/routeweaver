@@ -70,19 +70,11 @@ const formatBookingForIcabbi = (booking: Booking, server: ServerConfig) => {
     }
     
     if (pickupStop.phone) {
-        const cleanedPhone = pickupStop.phone.replace(/\D/g, '');
-        const phoneNumber = parsePhoneNumberFromString(cleanedPhone, defaultCountry);
+        const phoneNumber = parsePhoneNumberFromString(pickupStop.phone, defaultCountry);
         if (phoneNumber && phoneNumber.isValid()) {
             payload.phone = phoneNumber.number;
-        }
-    }
-    
-    if (!payload.phone) {
-        try {
-            const countryCallingCode = getCountryCallingCode(defaultCountry);
-            payload.phone = `+${countryCallingCode}`;
-        } catch (e) {
-             console.warn(`Could not get calling code for country: ${defaultCountry}. Omitting phone field.`);
+        } else {
+             console.warn(`Invalid phone number provided: ${pickupStop.phone}. It will be omitted from the API call.`);
         }
     }
 
