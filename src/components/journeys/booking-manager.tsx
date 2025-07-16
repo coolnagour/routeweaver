@@ -110,6 +110,7 @@ export default function BookingManager({
     }
     
     setBookings(bookings.filter(b => b.id !== bookingId));
+    setEditingBooking(null);
   }
 
   const handleCancelEdit = (bookingId: string) => {
@@ -140,12 +141,9 @@ export default function BookingManager({
         onSave={handleSaveBooking}
         onCancel={handleCancelEdit}
         isJourneyPriceSet={isJourneyPriceSet}
-        onSetAddressFromMap={(target) => {
-            setMapSelectionTarget({ ...target, bookingId: editingBooking.id });
-        }}
+        onSetAddressFromMap={setMapSelectionTarget}
         locationFromMap={locationFromMap}
         onMapLocationHandled={onMapLocationHandled}
-        mapSelectionTarget={mapSelectionTarget}
       />
     );
   }
