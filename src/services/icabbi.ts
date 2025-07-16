@@ -1,3 +1,4 @@
+
 'use server';
 
 import type { ServerConfig } from "@/types";
@@ -50,12 +51,6 @@ const formatBookingForIcabbi = (booking: Booking, server: ServerConfig) => {
             formatted: lastStop.location.address,
             driver_instructions: lastStop.instructions || "",
         },
-        vias: viaStops.map(stop => ({
-            lat: stop.location.lat.toString(),
-            lng: stop.location.lng.toString(),
-            formatted: stop.location.address,
-            driver_instructions: stop.instructions || "",
-        })),
         account_id: booking.accountId,
         site_id: booking.siteId,
         customer_id: booking.customerId,
@@ -64,6 +59,15 @@ const formatBookingForIcabbi = (booking: Booking, server: ServerConfig) => {
         external_area_code: booking.externalAreaCode,
         with_bookingsegments: true,
     };
+
+    if (viaStops.length > 0) {
+        payload.vias = viaStops.map(stop => ({
+            lat: stop.location.lat.toString(),
+            lng: stop.location.lng.toString(),
+            formatted: stop.location.address,
+            driver_instructions: stop.instructions || "",
+        }));
+    }
     
     if (pickupStop.phone) {
         const cleanedPhone = pickupStop.phone.replace(/\D/g, '');
