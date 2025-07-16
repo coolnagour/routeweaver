@@ -148,7 +148,7 @@ export default function JourneyMap({ stops, onLocationSelect, isSelectionMode = 
         });
 
         if (!bounds.isEmpty()) {
-          mapRef.current.fitBounds(bounds, 100); // 100px padding
+          mapRef.current.fitBounds(bounds, 40); // Use smaller padding for better zoom
         } else {
             mapRef.current.setCenter(center);
             mapRef.current.setZoom(10);
