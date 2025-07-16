@@ -56,7 +56,7 @@ const generateDebugBookingPayloads = (bookings: Booking[], server: any, siteId?:
     return bookingsWithContext.map(booking => {
         try {
             return formatBookingForApi(booking, server);
-        } catch (e) => {
+        } catch (e) {
             return { error: `Error generating payload: ${e instanceof Error ? e.message : 'Unknown error'}` };
         }
     });
@@ -109,7 +109,7 @@ function JourneyBuilderInner({
   const hasBookingLevelPrice = bookings.some(b => b.price || b.cost);
   const hasJourneyLevelPrice = journeyPrice || journeyCost;
 
-  const { isMapInSelectionMode, setSelectedLocation } = useMapSelection();
+  const { isMapInSelectionMode, startSelection, selectedLocation, clearSelection, activeCallback, setActiveCallback } = useMapSelection();
 
   const debounce = <F extends (...args: any[]) => void>(func: F, delay: number) => {
     let timeoutId: ReturnType<typeof setTimeout>;
@@ -392,6 +392,13 @@ function JourneyBuilderInner({
     return undefined;
   };
 
+  const handleLocationSelectedFromMap = (location: Location) => {
+    if (activeCallback) {
+        activeCallback(location);
+        clearSelection();
+    }
+  };
+
   const title = getTitle();
   const publishButtonText = currentJourney?.status === 'Scheduled' ? 'Update Published Journey' : 'Publish';
 
@@ -638,7 +645,7 @@ function JourneyBuilderInner({
       <div className="lg:h-[calc(100vh-10rem)] lg:sticky lg:top-20">
         <JourneyMap 
             stops={journeyPreview.orderedStops}
-            onLocationSelect={setSelectedLocation}
+            onLocationSelect={handleLocationSelectedFromMap}
             isSelectionMode={isMapInSelectionMode}
         />
       </div>
