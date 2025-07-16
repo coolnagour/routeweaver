@@ -62,21 +62,21 @@ const saveJourneyFlow = ai.defineFlow(
           const bookingWithContext = { ...booking, siteId, accountId };
           const result = await createBooking(server, bookingWithContext);
           
-          const bookingRequestId = result?.bookingsegments?.[0]?.request_id;
+          const bookingRequestId = result?.request_id ? parseInt(result.request_id, 10) : undefined;
           
-          if (!result || !result.id || !bookingRequestId || !result.bookingsegments) {
-            throw new Error(`Invalid response from createBooking. Response: ${JSON.stringify(result)}`);
+          if (!result || !result.id || !bookingRequestId) {
+            throw new Error(`Invalid response from createBooking. Booking ID or Request ID not returned. Response: ${JSON.stringify(result)}`);
           }
 
           const bookingWithServerIds: Booking = { 
               ...booking, 
               bookingServerId: result.id, 
-              requestId: parseInt(bookingRequestId, 10),
+              requestId: bookingRequestId,
               stops: [...booking.stops] // Important: work with a copy
           };
           
           // Map server booking segments back to our local stops.
-          if (result.bookingsegments.length > 0) {
+          if (result.bookingsegments && result.bookingsegments.length > 0) {
               const serverSegments = result.bookingsegments; // [{id, ...}, {id, ...}]
               
               // A simple booking has 1 pickup and 1 dropoff, which is one segment.

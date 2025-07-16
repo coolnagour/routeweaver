@@ -64,16 +64,15 @@ export default function RecentJourneys() {
     // It's a draft, so we generate the payload
     setDebugData(prev => ({ ...prev, [journey.id]: { orderedStops: [], isLoading: true }}));
     try {
-      let placeholderIdCounter = 1000;
         // Use real server IDs if they exist, otherwise generate placeholders for the debug view.
         const tempBookingsForPreview = journey.bookings.map((b, bookingIndex) => ({
           ...b,
           // Use real requestId if available, otherwise a temp one for preview
           requestId: b.requestId || (9000 + bookingIndex), 
-          stops: b.stops.map(s => ({
+          stops: b.stops.map((s, stopIndex) => ({
             ...s,
             // Use real bookingSegmentId if available, otherwise a unique placeholder
-            bookingSegmentId: s.bookingSegmentId || placeholderIdCounter++
+            bookingSegmentId: s.bookingSegmentId || (1000 + (bookingIndex * 10) + stopIndex)
           }))
         }));
 
