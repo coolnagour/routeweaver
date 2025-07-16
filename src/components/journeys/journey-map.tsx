@@ -2,15 +2,14 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { GoogleMap, useLoadScript, Marker } from '@react-google-maps/api';
+import { GoogleMap, useLoadScript, Marker, Polyline } from '@react-google-maps/api';
 import type { Stop, Location } from '@/types';
 import { Loader2, LocateFixed } from 'lucide-react';
 import { useTheme } from 'next-themes';
-import { Button } from '../ui/button';
 import { toast } from '@/hooks/use-toast';
 
 interface JourneyMapProps {
-  stops: Stop[];
+  stops: (Stop & { parentBookingId?: string })[];
   onLocationSelect?: (location: Location) => void;
   isSelectionMode?: boolean;
 }
@@ -108,6 +107,23 @@ const mapStyles = {
     ]
 };
 
+const bookingColors = [
+  '#F44336', '#E91E63', '#9C27B0', '#673AB7', '#3F51B5',
+  '#2196F3', '#03A9F4', '#00BCD4', '#009688', '#4CAF50',
+  '#8BC34A', '#CDDC39', '#FFEB3B', '#FFC107', '#FF9800', '#FF5722'
+];
+
+const getBookingColor = (bookingId: string) => {
+  if (!bookingId) return '#757575'; // Default gray for stops without a booking ID
+  let hash = 0;
+  for (let i = 0; i < bookingId.length; i++) {
+    hash = bookingId.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash % bookingColors.length);
+  return bookingColors[index];
+};
+
+
 export default function JourneyMap({ stops, onLocationSelect, isSelectionMode = false }: JourneyMapProps) {
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
@@ -130,7 +146,7 @@ export default function JourneyMap({ stops, onLocationSelect, isSelectionMode = 
       });
 
       if (!bounds.isEmpty()) {
-        mapRef.current.fitBounds(bounds);
+        mapRef.current.fitBounds(bounds, 100); // 100px padding
       }
     } else if (mapRef.current) {
         // If there are no stops, reset to default view
@@ -175,6 +191,35 @@ export default function JourneyMap({ stops, onLocationSelect, isSelectionMode = 
 
   const validStops = stops.filter(stop => stop.location && stop.location.lat && stop.location.lng);
 
+  const polylinePath = validStops.map(stop => ({
+    lat: stop.location.lat,
+    lng: stop.location.lng,
+  }));
+  
+  const getMarkerIcon = (stop: Stop & { parentBookingId?: string }, index: number) => {
+    const color = getBookingColor(stop.parentBookingId || '');
+    const type = stop.stopType === 'pickup' ? 'P' : 'D';
+    const label = `${index + 1}`;
+
+    const svg = `
+    <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="20" cy="20" r="16" fill="${color}" stroke="white" stroke-width="2"/>
+      <text x="20" y="22" font-family="Arial, sans-serif" font-size="12" fill="white" text-anchor="middle" dominant-baseline="middle" font-weight="bold">
+        ${label}
+      </text>
+      <circle cx="32" cy="8" r="7" fill="${color}" stroke="white" stroke-width="1.5"/>
+      <text x="32" y="9" font-family="Arial, sans-serif" font-size="9" fill="white" text-anchor="middle" dominant-baseline="middle" font-weight="bold">
+        ${type}
+      </text>
+    </svg>`;
+    
+    return {
+      url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
+      scaledSize: new window.google.maps.Size(40, 40),
+      anchor: new window.google.maps.Point(20, 20),
+    };
+  };
+
   return (
     <div style={mapContainerStyle}>
         {isSelectionMode && (
@@ -198,11 +243,22 @@ export default function JourneyMap({ stops, onLocationSelect, isSelectionMode = 
         >
         {validStops.map((stop, index) => (
             <Marker
-            key={`${stop.id}-${index}`}
-            position={{ lat: stop.location.lat, lng: stop.location.lng }}
-            label={(index + 1).toString()}
+                key={`${stop.id}-${index}`}
+                position={{ lat: stop.location.lat, lng: stop.location.lng }}
+                icon={getMarkerIcon(stop, index)}
             />
         ))}
+        {polylinePath.length > 1 && (
+            <Polyline
+                path={polylinePath}
+                options={{
+                    strokeColor: '#007BFF',
+                    strokeOpacity: 0.8,
+                    strokeWeight: 4,
+                    geodesic: true,
+                }}
+            />
+        )}
         </GoogleMap>
     </div>
   );

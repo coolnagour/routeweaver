@@ -156,12 +156,17 @@ const saveJourneyFlow = ai.defineFlow(
           };
         });
         
+        const finalOrderedStops = orderedStops.map(s => {
+          const { parentBookingId, parentBookingServerId, ...stopRest } = s as any;
+          return stopRest;
+        });
+
         return {
             journeyServerId: finalJourneyServerId,
             bookings: finalBookings,
             status: 'Scheduled',
             message: `Journey with ${finalBookings.length} booking(s) was successfully ${journeyServerId ? 'updated' : 'scheduled'}.`,
-            orderedStops: orderedStops,
+            orderedStops: finalOrderedStops,
         };
     } catch (error) {
         console.error('[Journey Flow] Failed to create/update journey:', error);

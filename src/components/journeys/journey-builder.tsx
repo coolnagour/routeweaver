@@ -37,7 +37,7 @@ interface JourneyBuilderProps {
 }
 
 interface JourneyPreviewState {
-  orderedStops: Stop[];
+  orderedStops: (Stop & { parentBookingId?: string })[];
   journeyPayload: any | null;
   bookings: Booking[];
   bookingPayloads: any[];
@@ -88,9 +88,10 @@ function JourneyBuilderInner({
     return JSON.parse(JSON.stringify(data.bookings)).map((b: any) => ({
       ...b,
       id: b.id || uuidv4(),
-      stops: b.stops.map((s: any) => ({
+      stops: b.stops.map((s: any, index: number) => ({
         ...s,
         id: s.id || uuidv4(),
+        order: s.order ?? index,
         dateTime: s.dateTime ? new Date(s.dateTime) : undefined
       }))
     }));
@@ -264,6 +265,7 @@ function JourneyBuilderInner({
         id: b.id,
         stops: b.stops.map(s => ({ 
             id: s.id,
+            order: s.order,
             location: s.location,
             stopType: s.stopType,
             name: s.name,

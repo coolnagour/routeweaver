@@ -34,8 +34,10 @@ const JourneyPayloadInputSchema = z.object({
 });
 export type JourneyPayloadInput = z.infer<typeof JourneyPayloadInputSchema>;
 
+type StopWithParent = Stop & { parentBookingId: string, parentBookingServerId?: number };
+
 // This is no longer a Genkit Flow, but a regular async function.
-export async function generateJourneyPayload(input: JourneyPayloadInput): Promise<JourneyPayloadOutput & { orderedStops: Stop[] }> {
+export async function generateJourneyPayload(input: JourneyPayloadInput): Promise<JourneyPayloadOutput & { orderedStops: StopWithParent[] }> {
     const { bookings, journeyServerId } = input;
     
     const sanitizedBookings = bookings.map(b => ({
@@ -46,13 +48,13 @@ export async function generateJourneyPayload(input: JourneyPayloadInput): Promis
       }))
     }));
 
-    const allStops = sanitizedBookings.flatMap(booking =>
+    const allStops: StopWithParent[] = sanitizedBookings.flatMap(booking =>
         booking.stops.map(stop => ({ ...stop, parentBookingId: booking.id, parentBookingServerId: booking.bookingServerId }))
     );
     const bookingMap = new Map(sanitizedBookings.map(b => [b.id, b]));
     
     let unvisitedStops = [...allStops];
-    const orderedStops: (Stop & { parentBookingId: string, parentBookingServerId?: number })[] = [];
+    const orderedStops: StopWithParent[] = [];
     const passengersInVehicle = new Set<string>();
 
     if (unvisitedStops.length === 0) {
@@ -181,13 +183,8 @@ export async function generateJourneyPayload(input: JourneyPayloadInput): Promis
         }],
     };
 
-    const finalOrderedStops = orderedStops.map(s => {
-        const { parentBookingId, parentBookingServerId, ...stopRest } = s as any;
-        return stopRest;
-    });
-
     return {
         journeyPayload,
-        orderedStops: finalOrderedStops
+        orderedStops: orderedStops // Keep parentBookingId
     }
 }
