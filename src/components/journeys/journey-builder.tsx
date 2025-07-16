@@ -51,7 +51,14 @@ export interface MapSelectionTarget {
 const generateDebugBookingPayloads = (bookings: Booking[], server: any, siteId?: number, accountId?: number) => {
     if (!server || !siteId || !accountId) return [];
     
-    return bookings.map(booking => {
+    // We need to pass the siteId and accountId to the booking object for the formatter
+    const bookingsWithContext = bookings.map(b => ({
+      ...b,
+      siteId: siteId,
+      accountId: accountId
+    }));
+
+    return bookingsWithContext.map(booking => {
         try {
             return formatBookingForApi(booking, server);
         } catch (e) {
@@ -119,19 +126,32 @@ export default function JourneyBuilder({
   };
 
   const handleSetLocationFromMap = (location: Location) => {
-    if (!mapSelectionTarget) return;
+    console.log('[JourneyBuilder] handleSetLocationFromMap triggered with location:', location);
+    if (!mapSelectionTarget) {
+        console.log('[JourneyBuilder] No map selection target, exiting.');
+        return;
+    }
+    console.log('[JourneyBuilder] Current mapSelectionTarget:', mapSelectionTarget);
 
-    // The key change is here. We update the 'bookings' state directly.
     setBookings(currentBookings => {
+        console.log('[JourneyBuilder] Updating bookings state. Current bookings:', currentBookings);
         const newBookings = [...currentBookings];
         const bookingIndex = newBookings.findIndex(b => b.id === mapSelectionTarget.bookingId);
+        console.log(`[JourneyBuilder] Searching for bookingId ${mapSelectionTarget.bookingId}. Found index: ${bookingIndex}`);
         
         if (bookingIndex > -1) {
             const stopIndex = newBookings[bookingIndex].stops.findIndex(s => s.id === mapSelectionTarget.stopId);
+            console.log(`[JourneyBuilder] Searching for stopId ${mapSelectionTarget.stopId} in booking. Found index: ${stopIndex}`);
             if (stopIndex > -1) {
                 newBookings[bookingIndex].stops[stopIndex].location = location;
+                console.log('[JourneyBuilder] Location updated in booking object.');
+            } else {
+                 console.error('[JourneyBuilder] Stop index not found!');
             }
+        } else {
+            console.error('[JourneyBuilder] Booking index not found!');
         }
+        console.log('[JourneyBuilder] New bookings state after update:', newBookings);
         return newBookings;
     });
 
@@ -514,7 +534,10 @@ export default function JourneyBuilder({
           bookings={bookings} 
           setBookings={setBookings} 
           isJourneyPriceSet={hasJourneyLevelPrice}
-          onSetAddressFromMap={setMapSelectionTarget}
+          onSetAddressFromMap={(target) => {
+              console.log('[JourneyBuilder] onSetAddressFromMap called with target:', target);
+              setMapSelectionTarget(target);
+          }}
         />
         
         <Card>
