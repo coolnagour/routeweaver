@@ -63,15 +63,13 @@ export const formatBookingForApi = (booking: Booking, server: ServerConfig) => {
         }));
     }
     
-    // Find the first pickup stop with a valid phone number.
-    const pickupWithPhone = booking.stops.find(s => s.stopType === 'pickup' && s.phone);
-
-    if (pickupWithPhone && pickupWithPhone.phone) {
-        const phoneNumber = parsePhoneNumberFromString(pickupWithPhone.phone, defaultCountry);
+    // Use the phone number from the first stop (primary passenger).
+    if (firstStop.phone) {
+        const phoneNumber = parsePhoneNumberFromString(firstStop.phone, defaultCountry);
         if (phoneNumber && phoneNumber.isValid()) {
             payload.phone = phoneNumber.number;
         } else {
-             console.warn(`Invalid phone number provided: ${pickupWithPhone.phone}. It will be omitted from the API call.`);
+             console.warn(`Invalid phone number provided: ${firstStop.phone}. It will be omitted from the API call.`);
         }
     }
 
