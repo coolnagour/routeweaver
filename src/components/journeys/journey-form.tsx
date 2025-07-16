@@ -64,7 +64,6 @@ interface JourneyFormProps {
   onSave: (booking: Booking) => void;
   onCancel: (bookingId: string) => void;
   isJourneyPriceSet: boolean;
-  onSetMapForSelection: (isSelecting: boolean, stopId?: string) => void;
   locationFromMap?: Location | null;
   onMapLocationHandled: () => void;
 }
@@ -76,7 +75,6 @@ export default function JourneyForm({
     onSave, 
     onCancel, 
     isJourneyPriceSet,
-    onSetMapForSelection,
     locationFromMap,
     onMapLocationHandled,
 }: JourneyFormProps) {
@@ -209,7 +207,8 @@ export default function JourneyForm({
     console.log(`[JourneyForm] Clicked 'Set Address from Map' for stopId: ${stopId}`);
     // Store the target ID in a temporary property on the form instance
     (form as any)._mapSelectionTarget = stopId;
-    onSetMapForSelection(true, stopId);
+    // This prop no longer exists, parent will handle this.
+    // onSetMapForSelection(true, stopId); 
   };
 
 

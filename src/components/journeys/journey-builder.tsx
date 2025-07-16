@@ -120,7 +120,7 @@ export default function JourneyBuilder({
     };
   };
 
-  const handleSetMapForSelection = (isSelecting: boolean) => {
+  const handleSetMapSelectionMode = (isSelecting: boolean) => {
     console.log(`[JourneyBuilder] Setting map selection mode to: ${isSelecting}`);
     setIsMapInSelectionMode(isSelecting);
     if (!isSelecting) {
@@ -517,7 +517,6 @@ export default function JourneyBuilder({
           editingBooking={editingBooking}
           setEditingBooking={setEditingBooking}
           isJourneyPriceSet={hasJourneyLevelPrice}
-          onSetMapForSelection={handleSetMapForSelection}
           locationFromMap={locationFromMap}
           onMapLocationHandled={handleMapLocationHandled}
         />
