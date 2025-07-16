@@ -88,6 +88,20 @@ const SidebarProvider = React.forwardRef<
       },
       [setOpenProp, open]
     )
+    
+    // This reads the cookie to set the initial state of the sidebar.
+    React.useEffect(() => {
+        const cookie = document.cookie
+            .split("; ")
+            .find((row) => row.startsWith(`${SIDEBAR_COOKIE_NAME}=`))
+        
+        if (cookie) {
+            const value = cookie.split("=")[1]
+            if (value === "false") {
+                _setOpen(false)
+            }
+        }
+    }, [])
 
     // Helper to toggle the sidebar.
     const toggleSidebar = React.useCallback(() => {
