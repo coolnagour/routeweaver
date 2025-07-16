@@ -53,8 +53,7 @@ const generateDebugBookingPayloads = (bookings: Booking[], server: any, siteId?:
     
     return bookings.map(booking => {
         try {
-            const bookingWithContext = { ...booking, siteId, accountId };
-            return formatBookingForApi(bookingWithContext, server);
+            return formatBookingForApi(booking, server);
         } catch (e) {
             return { error: `Error generating payload: ${e instanceof Error ? e.message : 'Unknown error'}` };
         }
@@ -83,6 +82,7 @@ export default function JourneyBuilder({
   const [selectedSiteId, setSelectedSiteId] = useState<number | undefined>(initialSiteId || initialData?.siteId);
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(initialAccount || initialData?.account || null);
   const [mapSelectionTarget, setMapSelectionTarget] = useState<MapSelectionTarget | null>(null);
+  const [locationFromMap, setLocationFromMap] = useState<{ target: MapSelectionTarget, location: Location} | null>(null);
   
   const getInitialBookings = (data: Partial<JourneyTemplate | Journey> | null | undefined): Booking[] => {
     if (!data || !data.bookings) return [];
@@ -120,23 +120,16 @@ export default function JourneyBuilder({
   };
 
   const handleSetLocationFromMap = (location: Location) => {
-    console.log("[handleSetLocationFromMap] Called with location:", location);
-    if (!mapSelectionTarget) {
-        console.log("[handleSetLocationFromMap] No target selected. Aborting.");
-        return;
-    }
-    console.log("[handleSetLocationFromMap] Target:", mapSelectionTarget);
+    if (!mapSelectionTarget) return;
 
-    const { bookingId, stopId } = mapSelectionTarget;
-
+    // For local state updates (for the map markers, etc.)
     setBookings(prevBookings => {
-      console.log("[handleSetLocationFromMap] Bookings state BEFORE update:", prevBookings);
       const newBookings = prevBookings.map(booking => {
-        if (booking.id === bookingId) {
+        if (booking.id === mapSelectionTarget.bookingId) {
           return {
             ...booking,
             stops: booking.stops.map(stop => {
-              if (stop.id === stopId) {
+              if (stop.id === mapSelectionTarget.stopId) {
                 return { ...stop, location };
               }
               return stop;
@@ -145,9 +138,11 @@ export default function JourneyBuilder({
         }
         return booking;
       });
-      console.log("[handleSetLocationFromMap] Bookings state AFTER update:", newBookings);
       return newBookings;
     });
+
+    // For updating the form directly
+    setLocationFromMap({ target: mapSelectionTarget, location });
 
     setMapSelectionTarget(null); // Exit map selection mode
     toast({ title: "Address Updated", description: "The address has been set from the map." });
@@ -530,6 +525,7 @@ export default function JourneyBuilder({
           isJourneyPriceSet={hasJourneyLevelPrice}
           onSetAddressFromMap={setMapSelectionTarget}
           mapSelectionTarget={mapSelectionTarget}
+          locationFromMap={locationFromMap}
         />
         
         <Card>

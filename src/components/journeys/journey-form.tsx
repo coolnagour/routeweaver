@@ -20,7 +20,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { CalendarIcon, MapPin, PlusCircle, X, User, Phone, Clock, MessageSquare, ChevronsUpDown, Sparkles, Loader2, Info, Hash, Car, Map, DollarSign, Lock, LocateFixed } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, setHours, setMinutes } from 'date-fns';
-import type { Booking, Stop, SuggestionInput, StopType } from '@/types';
+import type { Booking, Stop, SuggestionInput, StopType, Location } from '@/types';
 import { BookingSchema } from '@/types';
 import ViaStop from './via-stop';
 import AddressAutocomplete from './address-autocomplete';
@@ -68,6 +68,7 @@ interface JourneyFormProps {
   isJourneyPriceSet: boolean;
   onSetAddressFromMap: (target: MapSelectionTarget) => void;
   mapSelectionTarget: MapSelectionTarget | null;
+  locationFromMap: { target: MapSelectionTarget, location: Location } | null;
 }
 
 const emptyLocation = { address: '', lat: 0, lng: 0 };
@@ -79,6 +80,7 @@ export default function JourneyForm({
     isJourneyPriceSet,
     onSetAddressFromMap,
     mapSelectionTarget,
+    locationFromMap,
 }: JourneyFormProps) {
   const { toast } = useToast();
   const [generatingFields, setGeneratingFields] = useState<Record<string, boolean>>({});
@@ -121,16 +123,14 @@ export default function JourneyForm({
   const bookingId = useWatch({ control: form.control, name: 'id' });
 
   // This effect synchronizes the form state when an address is selected on the map.
-  // The 'bookings' state in JourneyBuilder is updated, and the form's initialData prop
-  // gets the new values. We use form.reset() to update the entire form with the new data.
   useEffect(() => {
-    if (initialData) {
-        form.reset({
-            ...initialData,
-            stops: initialData.stops.map(s => ({...s, dateTime: s.dateTime ? new Date(s.dateTime) : undefined }))
-        });
+    if (locationFromMap && locationFromMap.target.bookingId === bookingId) {
+      const stopIndex = form.getValues('stops').findIndex(s => s.id === locationFromMap.target.stopId);
+      if (stopIndex !== -1) {
+        form.setValue(`stops.${stopIndex}.location`, locationFromMap.location, { shouldValidate: true, shouldDirty: true });
+      }
     }
-  }, [initialData, form]);
+  }, [locationFromMap, bookingId, form]);
 
 
   const getAvailablePickups = (currentIndex: number) => {

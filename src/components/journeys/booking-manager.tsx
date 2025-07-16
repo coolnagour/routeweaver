@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import type { Booking, Stop } from '@/types';
+import type { Booking, Stop, Location } from '@/types';
 import JourneyForm from './journey-form';
 import { Edit, MapPin, Package, Trash2, UserPlus, Users, Phone, Clock, MessageSquare, Info, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
@@ -35,6 +35,7 @@ interface BookingManagerProps {
   isJourneyPriceSet: boolean;
   onSetAddressFromMap: (target: MapSelectionTarget) => void;
   mapSelectionTarget: MapSelectionTarget | null;
+  locationFromMap: { target: MapSelectionTarget, location: Location } | null;
 }
 
 const emptyLocation = { address: '', lat: 0, lng: 0 };
@@ -44,7 +45,8 @@ export default function BookingManager({
     setBookings, 
     isJourneyPriceSet,
     onSetAddressFromMap,
-    mapSelectionTarget
+    mapSelectionTarget,
+    locationFromMap
 }: BookingManagerProps) {
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
@@ -138,6 +140,7 @@ export default function BookingManager({
         isJourneyPriceSet={isJourneyPriceSet}
         onSetAddressFromMap={onSetAddressFromMap}
         mapSelectionTarget={mapSelectionTarget}
+        locationFromMap={locationFromMap}
       />
     );
   }

@@ -102,13 +102,7 @@ export default function AddressAutocomplete({ value, onChange, placeholder, clas
   }
 
   useEffect(() => {
-    // This effect ensures that if the value is updated externally (e.g., by the map click),
-    // the input field reflects that change.
-    if (value !== inputValue) {
-        setInputValue(value);
-    }
-    // We only want this to run when the external `value` prop changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setInputValue(value);
   }, [value]);
 
 
