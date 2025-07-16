@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -72,7 +73,21 @@ const SidebarProvider = React.forwardRef<
 
     // This is the internal state of the sidebar.
     // We use openProp and setOpenProp for control from outside the component.
-    const [_open, _setOpen] = React.useState(defaultOpen)
+    const [_open, _setOpen] = React.useState(() => {
+        if (typeof document === 'undefined') {
+            return defaultOpen;
+        }
+        const cookie = document.cookie
+            .split("; ")
+            .find((row) => row.startsWith(`${SIDEBAR_COOKIE_NAME}=`));
+
+        if (cookie) {
+            const value = cookie.split("=")[1];
+            return value === "true";
+        }
+        return defaultOpen;
+    });
+
     const open = openProp ?? _open
     const setOpen = React.useCallback(
       (value: boolean | ((value: boolean) => boolean)) => {
@@ -88,20 +103,6 @@ const SidebarProvider = React.forwardRef<
       },
       [setOpenProp, open]
     )
-    
-    // This reads the cookie to set the initial state of the sidebar.
-    React.useEffect(() => {
-        const cookie = document.cookie
-            .split("; ")
-            .find((row) => row.startsWith(`${SIDEBAR_COOKIE_NAME}=`))
-        
-        if (cookie) {
-            const value = cookie.split("=")[1]
-            if (value === "false") {
-                _setOpen(false)
-            }
-        }
-    }, [])
 
     // Helper to toggle the sidebar.
     const toggleSidebar = React.useCallback(() => {
