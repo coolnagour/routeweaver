@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useFormContext, useWatch, Controller } from 'react-hook-form';
@@ -14,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { MapPin, MinusCircle, User, Phone, MessageSquare, ChevronsUpDown, CalendarIcon, Clock, Sparkles, Loader2, Lock, LocateFixed } from 'lucide-react';
+import { MapPin, MinusCircle, User, Phone, MessageSquare, ChevronsUpDown, CalendarIcon, Clock, Sparkles, Loader2, Lock } from 'lucide-react';
 import type { Stop, SuggestionInput, StopType } from '@/types';
 import { cn } from '@/lib/utils';
 import { format, setHours, setMinutes } from 'date-fns';
@@ -34,7 +35,7 @@ interface ViaStopProps {
     stopType?: StopType
   ) => void;
   generatingFields: Record<string, boolean>;
-  onSetAddressFromMap: (stopId: string) => void;
+  allStops: Stop[]; // For map context
 }
 
 export default function ViaStop({ 
@@ -46,7 +47,7 @@ export default function ViaStop({
     isDestination = false,
     onGenerateField,
     generatingFields,
-    onSetAddressFromMap,
+    allStops,
 }: ViaStopProps) {
   const { setValue } = useFormContext();
   const stopType = useWatch({ control, name: `stops.${index}.stopType` });
@@ -86,26 +87,15 @@ export default function ViaStop({
                      render={({ field, fieldState }) => (
                         <FormItem>
                             <FormLabel>Address</FormLabel>
-                            <div className="flex items-center gap-2">
-                                <FormControl className="flex-1">
-                                      <AddressAutocomplete 
-                                         value={field.value.address}
-                                         onChange={field.onChange}
-                                         placeholder={isPickup ? 'Pickup location' : 'Drop-off location'}
-                                         className={'bg-background'}
-                                      />
-                                </FormControl>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="icon"
-                                    onClick={() => onSetAddressFromMap(stopId)}
-                                    className="shrink-0"
-                                    title="Set address from map"
-                                >
-                                    <LocateFixed className="h-4 w-4"/>
-                                </Button>
-                            </div>
+                            <FormControl>
+                                  <AddressAutocomplete 
+                                     value={field.value.address}
+                                     onChange={field.onChange}
+                                     placeholder={isPickup ? 'Pickup location' : 'Drop-off location'}
+                                     className={'bg-background'}
+                                     stopsForMapContext={allStops}
+                                  />
+                            </FormControl>
                             <FormMessage>{fieldState.error?.message}</FormMessage>
                         </FormItem>
                      )}

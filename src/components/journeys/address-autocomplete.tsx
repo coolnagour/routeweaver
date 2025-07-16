@@ -3,12 +3,15 @@
 
 import { Autocomplete, useLoadScript } from "@react-google-maps/api";
 import { Input } from "@/components/ui/input";
-import { MapPin } from "lucide-react";
+import { MapPin, LocateFixed } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
-import type { Location } from "@/types";
+import type { Location, Stop } from "@/types";
 import { useServer } from "@/context/server-context";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
+import { Button } from "../ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../ui/dialog";
+import JourneyMap from "./journey-map";
 
 interface AddressAutocompleteProps {
   value: string;
@@ -16,11 +19,11 @@ interface AddressAutocompleteProps {
   placeholder: string;
   className?: string;
   disabled?: boolean;
+  stopsForMapContext?: Stop[]; // Pass all stops for map context
 }
 
 const libraries: ("places")[] = ["places"];
 
-// Styles for the Google Places Autocomplete dropdown
 const darkThemeStyles = `
   .pac-container {
     background-color: hsl(var(--popover));
@@ -45,7 +48,14 @@ const darkThemeStyles = `
   }
 `;
 
-export default function AddressAutocomplete({ value, onChange, placeholder, className, disabled = false }: AddressAutocompleteProps) {
+export default function AddressAutocomplete({ 
+  value, 
+  onChange, 
+  placeholder, 
+  className, 
+  disabled = false,
+  stopsForMapContext = []
+}: AddressAutocompleteProps) {
   const { server } = useServer();
   const { theme } = useTheme();
   const { isLoaded } = useLoadScript({
@@ -55,6 +65,7 @@ export default function AddressAutocomplete({ value, onChange, placeholder, clas
 
   const [autocomplete, setAutocomplete] = useState<google.maps.places.Autocomplete | null>(null);
   const [inputValue, setInputValue] = useState(value);
+  const [isMapDialogOpen, setIsMapDialogOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   
   useEffect(() => {
@@ -95,10 +106,15 @@ export default function AddressAutocomplete({ value, onChange, placeholder, clas
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(e.target.value);
-    // To handle manual edits, we can pass a partial location object
     if (e.target.value === '') {
         onChange({ address: '', lat: 0, lng: 0 });
     }
+  }
+
+  const handleLocationSelectFromMap = (location: Location) => {
+    setInputValue(location.address);
+    onChange(location);
+    setIsMapDialogOpen(false);
   }
 
   useEffect(() => {
@@ -120,28 +136,57 @@ export default function AddressAutocomplete({ value, onChange, placeholder, clas
   }
 
   return (
-    <Autocomplete
-      key={server?.companyId} // Force re-render when server changes
-      onLoad={onLoad}
-      onPlaceChanged={onPlaceChanged}
-      options={{
-        types: ['address'],
-        componentRestrictions: server && server.countryCodes ? { country: server.countryCodes } : undefined,
-      }}
-      disabled={disabled}
-    >
-      <div className="relative">
-        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          ref={inputRef}
-          type="text"
-          placeholder={placeholder}
-          value={inputValue}
-          onChange={handleInputChange}
-          className={cn(`pl-10`, className)}
-          disabled={disabled}
-        />
-      </div>
-    </Autocomplete>
+    <div className="flex items-center gap-2">
+      <Autocomplete
+        key={server?.companyId}
+        onLoad={onLoad}
+        onPlaceChanged={onPlaceChanged}
+        options={{
+          types: ['address'],
+          componentRestrictions: server && server.countryCodes ? { country: server.countryCodes } : undefined,
+        }}
+        disabled={disabled}
+        className="w-full"
+      >
+        <div className="relative">
+          <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            ref={inputRef}
+            type="text"
+            placeholder={placeholder}
+            value={inputValue}
+            onChange={handleInputChange}
+            className={cn(`pl-10`, className)}
+            disabled={disabled}
+          />
+        </div>
+      </Autocomplete>
+      <Dialog open={isMapDialogOpen} onOpenChange={setIsMapDialogOpen}>
+        <DialogTrigger asChild>
+            <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="shrink-0"
+                title="Set address from map"
+                disabled={disabled}
+            >
+                <LocateFixed className="h-4 w-4"/>
+            </Button>
+        </DialogTrigger>
+        <DialogContent className="max-w-3xl h-[80vh]">
+             <DialogHeader>
+                <DialogTitle>Select Address from Map</DialogTitle>
+             </DialogHeader>
+             <div className="h-full w-full py-4">
+                <JourneyMap 
+                    stops={stopsForMapContext} 
+                    onLocationSelect={handleLocationSelectFromMap} 
+                    isSelectionMode={true}
+                />
+             </div>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

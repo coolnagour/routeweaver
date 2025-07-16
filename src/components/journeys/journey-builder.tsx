@@ -83,9 +83,6 @@ export default function JourneyBuilder({
   const [selectedSiteId, setSelectedSiteId] = useState<number | undefined>(initialSiteId || initialData?.siteId);
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(initialAccount || initialData?.account || null);
   
-  const [isMapInSelectionMode, setIsMapInSelectionMode] = useState(false);
-  const [locationFromMap, setLocationFromMap] = useState<Location | null>(null);
-  
   const getInitialBookings = (data: Partial<JourneyTemplate | Journey> | null | undefined): Booking[] => {
     if (!data || !data.bookings) return [];
     return JSON.parse(JSON.stringify(data.bookings)).map((b: any) => ({
@@ -119,24 +116,6 @@ export default function JourneyBuilder({
       timeoutId = setTimeout(() => func(...args), delay);
     };
   };
-
-  const handleSetMapForSelection = (isSelecting: boolean) => {
-    console.log(`[JourneyBuilder] Received request to set map selection mode: ${isSelecting}`);
-    setIsMapInSelectionMode(isSelecting);
-  };
-  
-  const handleLocationSelectFromMap = (location: Location) => {
-    console.log('[JourneyBuilder] Location selected from map:', location);
-    setLocationFromMap(location);
-    setIsMapInSelectionMode(false);
-    toast({ title: "Address Selected", description: "The address has been set from the map." });
-  };
-  
-  const handleMapLocationHandled = () => {
-    console.log('[JourneyBuilder] JourneyForm has handled the map location. Clearing state.');
-    setLocationFromMap(null);
-  };
-
 
   const fetchPreview = useCallback(async (currentBookings: Booking[], journey: Journey | null, siteId?: number, accountId?: number) => {
     if (currentBookings.length === 0 || currentBookings.flatMap(b => b.stops).length < 2) {
@@ -514,9 +493,6 @@ export default function JourneyBuilder({
           editingBooking={editingBooking}
           setEditingBooking={setEditingBooking}
           isJourneyPriceSet={hasJourneyLevelPrice}
-          onSetMapForSelection={handleSetMapForSelection}
-          locationFromMap={locationFromMap}
-          onMapLocationHandled={handleMapLocationHandled}
         />
         
         <Card>
@@ -659,13 +635,9 @@ export default function JourneyBuilder({
       </div>
       <div className="lg:h-[calc(100vh-10rem)] lg:sticky lg:top-20">
         <JourneyMap 
-          stops={journeyPreview.orderedStops} 
-          onLocationSelect={handleLocationSelectFromMap} 
-          isSelectionMode={isMapInSelectionMode}
+          stops={journeyPreview.orderedStops}
         />
       </div>
     </div>
   );
 }
-
-    

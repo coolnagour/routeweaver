@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -131,8 +132,12 @@ export default function JourneyMap({ stops, onLocationSelect, isSelectionMode = 
       if (!bounds.isEmpty()) {
         mapRef.current.fitBounds(bounds);
       }
+    } else if (mapRef.current) {
+        // If there are no stops, reset to default view
+        mapRef.current.setCenter(center);
+        mapRef.current.setZoom(10);
     }
-  }, [stops]);
+  }, [stops, center]);
   
   const handleMapLoad = (map: google.maps.Map) => {
     mapRef.current = map;

@@ -35,9 +35,6 @@ interface BookingManagerProps {
   editingBooking: Booking | null;
   setEditingBooking: React.Dispatch<React.SetStateAction<Booking | null>>;
   isJourneyPriceSet: boolean;
-  onSetMapForSelection: (isSelecting: boolean) => void;
-  locationFromMap: Location | null;
-  onMapLocationHandled: () => void;
 }
 
 const emptyLocation = { address: '', lat: 0, lng: 0 };
@@ -48,9 +45,6 @@ export default function BookingManager({
     editingBooking,
     setEditingBooking,
     isJourneyPriceSet,
-    onSetMapForSelection,
-    locationFromMap,
-    onMapLocationHandled
 }: BookingManagerProps) {
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const { server } = useServer();
@@ -140,9 +134,7 @@ export default function BookingManager({
         onSave={handleSaveBooking}
         onCancel={handleCancelEdit}
         isJourneyPriceSet={isJourneyPriceSet}
-        onSetMapForSelection={onSetMapForSelection}
-        locationFromMap={locationFromMap}
-        onMapLocationHandled={onMapLocationHandled}
+        allStops={bookings.flatMap(b => b.stops)}
       />
     );
   }
@@ -252,5 +244,3 @@ export default function BookingManager({
     </Card>
   );
 }
-
-    

@@ -18,7 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { CalendarIcon, MapPin, PlusCircle, X, User, Phone, Clock, MessageSquare, ChevronsUpDown, Sparkles, Loader2, Info, Hash, Car, Map, DollarSign, Lock, LocateFixed } from 'lucide-react';
+import { CalendarIcon, MapPin, PlusCircle, X, User, Phone, Clock, MessageSquare, ChevronsUpDown, Sparkles, Loader2, Info, Hash, Car, Map, DollarSign, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, setHours, setMinutes } from 'date-fns';
 import type { Booking, Stop, SuggestionInput, StopType, Location } from '@/types';
@@ -65,9 +65,7 @@ interface JourneyFormProps {
   onSave: (booking: Booking) => void;
   onCancel: (bookingId: string) => void;
   isJourneyPriceSet: boolean;
-  onSetMapForSelection: (isSelecting: boolean) => void;
-  locationFromMap: Location | null;
-  onMapLocationHandled: () => void;
+  allStops: Stop[]; // All stops from all bookings for map context
 }
 
 const emptyLocation = { address: '', lat: 0, lng: 0 };
@@ -77,14 +75,11 @@ export default function JourneyForm({
     onSave, 
     onCancel, 
     isJourneyPriceSet,
-    onSetMapForSelection,
-    locationFromMap,
-    onMapLocationHandled,
+    allStops
 }: JourneyFormProps) {
   const { toast } = useToast();
   const [generatingFields, setGeneratingFields] = useState<Record<string, boolean>>({});
   const [isScheduled, setIsScheduled] = useState(!!initialData?.stops?.find(s => s.stopType === 'pickup')?.dateTime);
-  const [localMapSelectionTarget, setLocalMapSelectionTarget] = useState<string | null>(null);
   
   const form = useForm<BookingFormData>({
     resolver: zodResolver(FormBookingSchema),
@@ -102,25 +97,6 @@ export default function JourneyForm({
       stops: initialData.stops.map(s => ({ ...s, dateTime: s.dateTime ? new Date(s.dateTime) : undefined }))
     });
   }, [initialData, form]);
-  
-  // Effect to update form when a location is selected from the map
-  useEffect(() => {
-    if (locationFromMap && localMapSelectionTarget) {
-      console.log(`[JourneyForm] Received location from map for stop ${localMapSelectionTarget}:`, locationFromMap);
-      const stops = form.getValues('stops');
-      const stopIndex = stops.findIndex(s => s.id === localMapSelectionTarget);
-
-      if (stopIndex !== -1) {
-          console.log(`[JourneyForm] Found stop at index ${stopIndex}, setting location.`);
-          form.setValue(`stops.${stopIndex}.location`, locationFromMap, { shouldValidate: true, shouldDirty: true });
-      } else {
-        console.error('[JourneyForm] Could not find stop index for target:', localMapSelectionTarget);
-      }
-      onMapLocationHandled();
-      setLocalMapSelectionTarget(null); // Reset target after use
-    }
-  }, [locationFromMap, localMapSelectionTarget, form, onMapLocationHandled]);
-
 
   const currentStops = useWatch({ control: form.control, name: 'stops' });
 
@@ -195,13 +171,6 @@ export default function JourneyForm({
         }
     }
   }
-
-  const handleSetAddressFromMap = (stopId: string) => {
-    console.log(`[JourneyForm] Setting map selection for stop ${stopId}`);
-    setLocalMapSelectionTarget(stopId);
-    onSetMapForSelection(true);
-  };
-
 
   const firstStop = stopFields[0];
   const lastStop = stopFields[stopFields.length - 1];
@@ -312,26 +281,15 @@ export default function JourneyForm({
                         render={({ field, fieldState }) => (
                             <FormItem>
                                 <FormLabel>Address</FormLabel>
-                                <div className="flex items-center gap-2">
-                                    <FormControl className="flex-1">
-                                         <AddressAutocomplete 
-                                            value={field.value.address}
-                                            onChange={field.onChange}
-                                            placeholder="Pickup location"
-                                            className={"bg-background"}
-                                         />
-                                    </FormControl>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="icon"
-                                        onClick={() => handleSetAddressFromMap(firstStop.id)}
-                                        className="shrink-0"
-                                        title="Set address from map"
-                                    >
-                                        <LocateFixed className="h-4 w-4"/>
-                                    </Button>
-                                </div>
+                                <FormControl>
+                                    <AddressAutocomplete 
+                                        value={field.value.address}
+                                        onChange={field.onChange}
+                                        placeholder="Pickup location"
+                                        className={"bg-background"}
+                                        stopsForMapContext={allStops}
+                                    />
+                                </FormControl>
                                  <FormMessage>{fieldState.error?.message}</FormMessage>
                             </FormItem>
                         )}
@@ -407,8 +365,8 @@ export default function JourneyForm({
                         getAvailablePickups={getAvailablePickups}
                         onGenerateField={handleGenerateField}
                         generatingFields={generatingFields}
-                        onSetAddressFromMap={handleSetAddressFromMap}
                         stopId={stop.id}
+                        allStops={allStops}
                     />
                 ))}
 
@@ -427,8 +385,8 @@ export default function JourneyForm({
                     getAvailablePickups={getAvailablePickups}
                     onGenerateField={handleGenerateField}
                     generatingFields={generatingFields}
-                    onSetAddressFromMap={handleSetAddressFromMap}
                     stopId={lastStop.id}
+                    allStops={allStops}
                 />
                 
                 <Collapsible className="mt-4">
@@ -569,5 +527,3 @@ export default function JourneyForm({
       </Card>
   );
 }
-
-    
