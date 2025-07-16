@@ -122,8 +122,8 @@ export default function JourneyForm({ initialData, onSave, onCancel, isJourneyPr
 
   const handleGenerateField = async (
     fieldType: SuggestionInput['type'],
-    fieldNameToUpdate: `stops.${number}.${'name' | 'phone' | 'instructions'}`,
-    fieldIndex: number,
+    fieldNameToUpdate: `stops.${number}.${'name' | 'phone' | 'instructions'}` | 'instructions',
+    fieldIndex?: number,
     stopType?: StopType
   ) => {
     const fieldKey = `${fieldNameToUpdate}-${fieldType}`;
@@ -414,7 +414,10 @@ export default function JourneyForm({ initialData, onSave, onCancel, isJourneyPr
                                 <FormControl>
                                     <div className="relative flex items-center">
                                         <MessageSquare className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                                        <Textarea placeholder="e.g., Customer requires an accessible vehicle." {...field} className="pl-10 bg-background"/>
+                                        <Textarea placeholder="e.g., Customer requires an accessible vehicle." {...field} className="pl-10 pr-10 bg-background"/>
+                                        <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1.5 h-8 w-8 text-primary" onClick={() => handleGenerateField('instructions', 'instructions')} disabled={generatingFields['instructions-instructions']}>
+                                            {generatingFields['instructions-instructions'] ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                                        </Button>
                                     </div>
                                 </FormControl>
                                 <FormMessage />
