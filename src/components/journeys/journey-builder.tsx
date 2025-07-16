@@ -552,23 +552,25 @@ function JourneyBuilderInner({
         
         <Card>
             <CardFooter className="flex flex-wrap justify-between items-center bg-muted/50 p-4 rounded-b-lg gap-4">
-                <div className="flex flex-col gap-2 flex-grow min-w-[250px]">
-                  <Label htmlFor="template-name" className="text-xs">Template Name</Label>
-                  <Input
-                    id="template-name"
-                    type="text"
-                    placeholder={isEditingTemplate ? "Template Name" : "Enter name to save as template..."}
-                    value={templateName}
-                    onChange={(e) => setTemplateName(e.target.value)}
-                    className="border p-2 rounded-md bg-background"
-                  />
-                  <Button variant="outline" onClick={handleSaveTemplate} disabled={bookings.length === 0 || !templateName} className="w-full sm:w-auto">
-                      <Save className="mr-2 h-4 w-4" /> {isEditingTemplate ? 'Update Template' : 'Save as Template'}
-                  </Button>
+                <div className="flex flex-col gap-2 flex-grow min-w-[250px] w-full sm:w-auto">
+                    <Label htmlFor="template-name" className="text-xs">Template Name</Label>
+                    <div className="flex items-center gap-2">
+                        <Input
+                            id="template-name"
+                            type="text"
+                            placeholder={isEditingTemplate ? "Template Name" : "Enter name to save..."}
+                            value={templateName}
+                            onChange={(e) => setTemplateName(e.target.value)}
+                            className="bg-background flex-grow"
+                        />
+                        <Button variant="outline" onClick={handleSaveTemplate} disabled={bookings.length === 0 || !templateName}>
+                            <Save className="mr-2 h-4 w-4" /> {isEditingTemplate ? 'Update' : 'Save as Template'}
+                        </Button>
+                    </div>
                 </div>
                 
                 {!isEditingTemplate && (
-                  <div className="flex flex-col gap-2 flex-grow min-w-[250px]">
+                  <div className="flex flex-col gap-2 flex-grow min-w-[250px] w-full sm:w-auto">
                       <Label className="text-xs">Journey Actions</Label>
                       <div className="flex gap-2">
                         <Button variant="outline" onClick={handleSaveJourneyLocally} disabled={bookings.length === 0} className="flex-1">
