@@ -94,8 +94,6 @@ export default function JourneyForm({ initialData, onSave, onCancel, isJourneyPr
   const [generatingFields, setGeneratingFields] = useState<Record<string, boolean>>({});
   const [isScheduled, setIsScheduled] = useState(!!initialData?.stops?.find(s => s.stopType === 'pickup')?.dateTime);
   
-  const isBookingLocked = !!initialData?.bookingServerId;
-
   const form = useForm<BookingFormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -222,10 +220,10 @@ export default function JourneyForm({ initialData, onSave, onCancel, isJourneyPr
                 </div>
                 <CardDescription>
                     {initialData?.id ? 'Modify the details below and click "Update Booking".' : 'Fill in the details for the new booking.'}
-                    {isBookingLocked && (
+                    {initialData?.bookingServerId && (
                         <span className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                             <Lock className="h-3 w-3" />
-                            Primary pickup details are locked as this booking is saved on the server.
+                            Editing a booking that has been saved to the server.
                         </span>
                     )}
                 </CardDescription>
@@ -247,7 +245,7 @@ export default function JourneyForm({ initialData, onSave, onCancel, isJourneyPr
                                         <Label htmlFor="schedule-switch" className="text-sm font-normal">
                                             Schedule for later
                                         </Label>
-                                        <Switch id="schedule-switch" checked={isScheduled} onCheckedChange={handleScheduledToggle} disabled={isBookingLocked} />
+                                        <Switch id="schedule-switch" checked={isScheduled} onCheckedChange={handleScheduledToggle} />
                                     </div>
                                 </div>
                                 <div className="flex gap-2">
@@ -260,7 +258,7 @@ export default function JourneyForm({ initialData, onSave, onCancel, isJourneyPr
                                             'w-[calc(50%-0.25rem)] justify-start text-left font-normal bg-background',
                                             !field.value && 'text-muted-foreground'
                                         )}
-                                        disabled={!isScheduled || isBookingLocked}
+                                        disabled={!isScheduled}
                                         >
                                         <CalendarIcon className="mr-2 h-4 w-4" />
                                         {isScheduled
@@ -298,7 +296,7 @@ export default function JourneyForm({ initialData, onSave, onCancel, isJourneyPr
                                             const newDate = setMinutes(setHours(field.value || new Date(), hours), minutes);
                                             field.onChange(newDate);
                                         }}
-                                        disabled={!isScheduled || isBookingLocked}
+                                        disabled={!isScheduled}
                                     />
                                 </div>
                                 </div>
@@ -318,8 +316,7 @@ export default function JourneyForm({ initialData, onSave, onCancel, isJourneyPr
                                         value={field.value.address}
                                         onChange={field.onChange}
                                         placeholder="Pickup location"
-                                        className={isBookingLocked ? "bg-muted" : "bg-background"}
-                                        disabled={isBookingLocked}
+                                        className={"bg-background"}
                                      />
                                 </FormControl>
                                  <FormMessage>{fieldState.error?.address?.message}</FormMessage>
@@ -336,8 +333,8 @@ export default function JourneyForm({ initialData, onSave, onCancel, isJourneyPr
                                 <FormControl>
                                     <div className="relative flex items-center">
                                         <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                        <Input placeholder="e.g. Jane Doe" {...field} className={cn("pl-10 pr-10", isBookingLocked ? "bg-muted" : "bg-background")} disabled={isBookingLocked} />
-                                        <Button type="button" variant="ghost" size="icon" className="absolute right-1 h-8 w-8 text-primary" onClick={() => handleGenerateField('name', 'stops.0.name', 0)} disabled={generatingFields['stops.0.name-name'] || isBookingLocked}>
+                                        <Input placeholder="e.g. Jane Doe" {...field} className="pl-10 pr-10 bg-background" />
+                                        <Button type="button" variant="ghost" size="icon" className="absolute right-1 h-8 w-8 text-primary" onClick={() => handleGenerateField('name', 'stops.0.name', 0)} disabled={generatingFields['stops.0.name-name']}>
                                             {generatingFields['stops.0.name-name'] ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                                         </Button>
                                     </div>
@@ -355,8 +352,8 @@ export default function JourneyForm({ initialData, onSave, onCancel, isJourneyPr
                                 <FormControl>
                                     <div className="relative flex items-center">
                                         <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                        <Input placeholder="e.g. 555-1234" {...field} className={cn("pl-10 pr-10", isBookingLocked ? "bg-muted" : "bg-background")} disabled={isBookingLocked} />
-                                        <Button type="button" variant="ghost" size="icon" className="absolute right-1 h-8 w-8 text-primary" onClick={() => handleGenerateField('phone', 'stops.0.phone', 0)} disabled={generatingFields['stops.0.phone-phone'] || isBookingLocked}>
+                                        <Input placeholder="e.g. 555-1234" {...field} className="pl-10 pr-10 bg-background" />
+                                        <Button type="button" variant="ghost" size="icon" className="absolute right-1 h-8 w-8 text-primary" onClick={() => handleGenerateField('phone', 'stops.0.phone', 0)} disabled={generatingFields['stops.0.phone-phone']}>
                                             {generatingFields['stops.0.phone-phone'] ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                                         </Button>
                                     </div>
@@ -403,7 +400,7 @@ export default function JourneyForm({ initialData, onSave, onCancel, isJourneyPr
                                     <FormControl>
                                         <div className="relative flex items-center">
                                             <Info className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                            <Input placeholder="Enter customer ID" {...field} className="pl-10 bg-background" disabled={isBookingLocked} />
+                                            <Input placeholder="Enter customer ID" {...field} className="pl-10 bg-background" />
                                         </div>
                                     </FormControl>
                                     <FormMessage />
@@ -419,7 +416,7 @@ export default function JourneyForm({ initialData, onSave, onCancel, isJourneyPr
                                     <FormControl>
                                         <div className="relative flex items-center">
                                             <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                            <Input placeholder="Enter external ID" {...field} className="pl-10 bg-background" disabled={isBookingLocked} />
+                                            <Input placeholder="Enter external ID" {...field} className="pl-10 bg-background" />
                                         </div>
                                     </FormControl>
                                     <FormMessage />
@@ -435,7 +432,7 @@ export default function JourneyForm({ initialData, onSave, onCancel, isJourneyPr
                                     <FormControl>
                                         <div className="relative flex items-center">
                                             <Car className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                            <Input placeholder="e.g., Sedan, MPV" {...field} className="pl-10 bg-background" disabled={isBookingLocked} />
+                                            <Input placeholder="e.g., Sedan, MPV" {...field} className="pl-10 bg-background" />
                                         </div>
                                     </FormControl>
                                     <FormMessage />
@@ -451,7 +448,7 @@ export default function JourneyForm({ initialData, onSave, onCancel, isJourneyPr
                                     <FormControl>
                                         <div className="relative flex items-center">
                                             <Map className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                            <Input placeholder="Enter area code" {...field} className="pl-10 bg-background" disabled={isBookingLocked} />
+                                            <Input placeholder="Enter area code" {...field} className="pl-10 bg-background" />
                                         </div>
                                     </FormControl>
                                     <FormMessage />
@@ -467,7 +464,7 @@ export default function JourneyForm({ initialData, onSave, onCancel, isJourneyPr
                                     <FormControl>
                                         <div className="relative flex items-center">
                                             <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                            <Input type="number" placeholder="e.g. 25.50" {...field} disabled={isJourneyPriceSet || isBookingLocked} className="pl-10 bg-background" />
+                                            <Input type="number" placeholder="e.g. 25.50" {...field} disabled={isJourneyPriceSet} className="pl-10 bg-background" />
                                         </div>
                                     </FormControl>
                                     <FormMessage />
@@ -483,7 +480,7 @@ export default function JourneyForm({ initialData, onSave, onCancel, isJourneyPr
                                     <FormControl>
                                         <div className="relative flex items-center">
                                             <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                            <Input type="number" placeholder="e.g. 10.00" {...field} disabled={isJourneyPriceSet || isBookingLocked} className="pl-10 bg-background" />
+                                            <Input type="number" placeholder="e.g. 10.00" {...field} disabled={isJourneyPriceSet} className="pl-10 bg-background" />
                                         </div>
                                     </FormControl>
                                     <FormMessage />
@@ -501,22 +498,19 @@ export default function JourneyForm({ initialData, onSave, onCancel, isJourneyPr
                         key={stop.id}
                         control={form.control}
                         index={index + 1}
-                        removeStop={isBookingLocked ? undefined : removeStop}
+                        removeStop={removeStop}
                         getAvailablePickups={getAvailablePickups}
                         onGenerateField={handleGenerateField}
                         generatingFields={generatingFields}
-                        isLocked={!!stop.bookingSegmentId}
                     />
                 ))}
 
                 {/* Add Stop Button */}
-                {!isBookingLocked && (
-                    <div className="flex justify-center my-4">
-                        <Button type="button" variant="link" size="sm" onClick={() => insertStop(stopFields.length - 1, { id: uuidv4(), location: emptyLocation, stopType: 'pickup', name: '', phone: '', instructions: ''})}>
-                            <PlusCircle className="mr-2 h-4 w-4"/> Add Stop
-                        </Button>
-                    </div>
-                )}
+                <div className="flex justify-center my-4">
+                    <Button type="button" variant="link" size="sm" onClick={() => insertStop(stopFields.length - 1, { id: uuidv4(), location: emptyLocation, stopType: 'pickup', name: '', phone: '', instructions: ''})}>
+                        <PlusCircle className="mr-2 h-4 w-4"/> Add Stop
+                    </Button>
+                </div>
 
                 {/* Destination Section */}
                 <ViaStop
@@ -526,7 +520,6 @@ export default function JourneyForm({ initialData, onSave, onCancel, isJourneyPr
                     getAvailablePickups={getAvailablePickups}
                     onGenerateField={handleGenerateField}
                     generatingFields={generatingFields}
-                    isLocked={isBookingLocked}
                 />
 
                  <div className="flex justify-end gap-2 mt-4">
