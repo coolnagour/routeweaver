@@ -1,12 +1,14 @@
 
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { GoogleMap, useLoadScript, Marker, Polyline } from '@react-google-maps/api';
 import type { Stop, Location } from '@/types';
-import { Loader2, LocateFixed } from 'lucide-react';
+import { Loader2, LocateFixed, Maximize } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { toast } from '@/hooks/use-toast';
+import { Button } from '../ui/button';
+import { cn } from '@/lib/utils';
 
 interface JourneyMapProps {
   stops: (Stop & { parentBookingId?: string })[];
@@ -135,25 +137,33 @@ export default function JourneyMap({ stops, onLocationSelect, isSelectionMode = 
   const { theme } = useTheme();
   
   const [center, setCenter] = useState({ lat: 53.3498, lng: -6.2603 }); // Default to Dublin
+  
+  const fitBounds = useCallback(() => {
+      if (mapRef.current && stops && stops.length > 0) {
+        const bounds = new google.maps.LatLngBounds();
+        stops.forEach(stop => {
+          if (stop.location && stop.location.lat && stop.location.lng) {
+            bounds.extend(new google.maps.LatLng(stop.location.lat, stop.location.lng));
+          }
+        });
+
+        if (!bounds.isEmpty()) {
+          mapRef.current.fitBounds(bounds, 100); // 100px padding
+        } else {
+            mapRef.current.setCenter(center);
+            mapRef.current.setZoom(10);
+        }
+      } else if (mapRef.current) {
+          // If there are no stops, reset to default view
+          mapRef.current.setCenter(center);
+          mapRef.current.setZoom(10);
+      }
+  }, [stops, center]);
 
   useEffect(() => {
-    if (mapRef.current && stops && stops.length > 0) {
-      const bounds = new google.maps.LatLngBounds();
-      stops.forEach(stop => {
-        if (stop.location && stop.location.lat && stop.location.lng) {
-          bounds.extend(new google.maps.LatLng(stop.location.lat, stop.location.lng));
-        }
-      });
-
-      if (!bounds.isEmpty()) {
-        mapRef.current.fitBounds(bounds, 100); // 100px padding
-      }
-    } else if (mapRef.current) {
-        // If there are no stops, reset to default view
-        mapRef.current.setCenter(center);
-        mapRef.current.setZoom(10);
-    }
-  }, [stops, center]);
+    // Automatically fit bounds when stops change
+    fitBounds();
+  }, [stops, fitBounds]);
   
   const handleMapLoad = (map: google.maps.Map) => {
     mapRef.current = map;
@@ -228,6 +238,16 @@ export default function JourneyMap({ stops, onLocationSelect, isSelectionMode = 
             Click on the map to set the address
           </div>
         )}
+        <Button 
+            variant="secondary" 
+            size="icon" 
+            onClick={fitBounds} 
+            disabled={stops.length < 2}
+            className="absolute top-2 right-2 z-10 h-10 w-10 shadow-md"
+            title="Fit all stops on screen"
+        >
+            <Maximize className="h-5 w-5" />
+        </Button>
         <GoogleMap
             mapContainerStyle={{ width: '100%', height: '100%', borderRadius: '0.5rem' }}
             center={center}
