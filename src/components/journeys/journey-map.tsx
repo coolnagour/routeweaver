@@ -17,16 +17,6 @@ interface JourneyMapProps {
   countryCode?: string;
 }
 
-// A simple lookup for country coordinates
-const countryCoordinates: Record<string, { lat: number, lng: number }> = {
-    'us': { lat: 39.8283, lng: -98.5795 }, // United States
-    'ca': { lat: 56.1304, lng: -106.3468 }, // Canada
-    'gb': { lat: 55.3781, lng: -3.4360 }, // United Kingdom
-    'ie': { lat: 53.4129, lng: -8.2439 }, // Ireland
-    'au': { lat: -25.2744, lng: 133.7751 }, // Australia
-    // Add more countries as needed
-};
-
 const libraries: ('places')[] = ['places'];
 const mapContainerStyle = {
   width: '100%',
@@ -147,13 +137,7 @@ export default function JourneyMap({ stops, onLocationSelect, isSelectionMode = 
   const geocoderRef = useRef<google.maps.Geocoder | null>(null);
   const { theme } = useTheme();
   
-  const [center, setCenter] = useState(() => {
-    const code = countryCode?.toLowerCase();
-    if (code && countryCoordinates[code]) {
-      return countryCoordinates[code];
-    }
-    return { lat: 51.5074, lng: -0.1278 }; // Default to London if no country code
-  });
+  const [center, setCenter] = useState({ lat: 51.5074, lng: -0.1278 });
   
   const fitBounds = useCallback(() => {
       if (mapRef.current && stops && stops.length > 0) {
@@ -165,27 +149,37 @@ export default function JourneyMap({ stops, onLocationSelect, isSelectionMode = 
         });
 
         if (!bounds.isEmpty()) {
-          mapRef.current.fitBounds(bounds, 40); // Use smaller padding for better zoom
-        } else {
-            mapRef.current.setCenter(center);
-            mapRef.current.setZoom(10);
+          mapRef.current.fitBounds(bounds, 40);
         }
-      } else if (mapRef.current) {
-          // If there are no stops, reset to default view
-          mapRef.current.setCenter(center);
-          mapRef.current.setZoom(10);
       }
-  }, [stops, center]);
+  }, [stops]);
 
   useEffect(() => {
     // Automatically fit bounds when stops change
     fitBounds();
   }, [stops, fitBounds]);
   
-  const handleMapLoad = (map: google.maps.Map) => {
+  const handleMapLoad = useCallback((map: google.maps.Map) => {
     mapRef.current = map;
     geocoderRef.current = new google.maps.Geocoder();
-  };
+
+    if (stops.length === 0 && countryCode) {
+        geocoderRef.current.geocode({ 'address': countryCode }, (results, status) => {
+            if (status === 'OK' && results && results[0]) {
+                if(results[0].geometry.viewport) {
+                    map.fitBounds(results[0].geometry.viewport);
+                } else {
+                    map.setCenter(results[0].geometry.location);
+                    map.setZoom(6);
+                }
+            } else {
+                console.warn(`Geocoding failed for country code ${countryCode}: ${status}`);
+            }
+        });
+    } else if (stops.length > 0) {
+        fitBounds();
+    }
+  }, [countryCode, stops, fitBounds]);
   
   const handleInternalMapClick = (e: google.maps.MapMouseEvent) => {
     if (!onLocationSelect || !isSelectionMode || !geocoderRef.current || !e.latLng) return;
