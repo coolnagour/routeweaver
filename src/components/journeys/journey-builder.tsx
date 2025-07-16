@@ -54,7 +54,7 @@ const generateDebugBookingPayloads = (bookings: Booking[], server: any, siteId?:
     return bookings.map(booking => {
         try {
             const bookingWithContext = { ...booking, siteId, accountId };
-            return formatBookingForApi(bookingWithContext);
+            return formatBookingForApi(bookingWithContext, server);
         } catch (e) {
             return { error: `Error generating payload: ${e instanceof Error ? e.message : 'Unknown error'}` };
         }
@@ -120,12 +120,18 @@ export default function JourneyBuilder({
   };
 
   const handleSetLocationFromMap = (location: Location) => {
-    if (!mapSelectionTarget) return;
+    console.log("[handleSetLocationFromMap] Called with location:", location);
+    if (!mapSelectionTarget) {
+        console.log("[handleSetLocationFromMap] No target selected. Aborting.");
+        return;
+    }
+    console.log("[handleSetLocationFromMap] Target:", mapSelectionTarget);
 
     const { bookingId, stopId } = mapSelectionTarget;
 
-    setBookings(prevBookings => 
-      prevBookings.map(booking => {
+    setBookings(prevBookings => {
+      console.log("[handleSetLocationFromMap] Bookings state BEFORE update:", prevBookings);
+      const newBookings = prevBookings.map(booking => {
         if (booking.id === bookingId) {
           return {
             ...booking,
@@ -138,8 +144,11 @@ export default function JourneyBuilder({
           };
         }
         return booking;
-      })
-    );
+      });
+      console.log("[handleSetLocationFromMap] Bookings state AFTER update:", newBookings);
+      return newBookings;
+    });
+
     setMapSelectionTarget(null); // Exit map selection mode
     toast({ title: "Address Updated", description: "The address has been set from the map." });
   };
