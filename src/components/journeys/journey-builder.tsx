@@ -109,7 +109,8 @@ function JourneyBuilderInner({
   const hasBookingLevelPrice = bookings.some(b => b.price || b.cost);
   const hasJourneyLevelPrice = journeyPrice || journeyCost;
 
-  const { isMapInSelectionMode, startSelection, selectedLocation, clearSelection, activeCallback, setActiveCallback } = useMapSelection();
+  const { isMapInSelectionMode, setSelectedLocation } = useMapSelection();
+
 
   const debounce = <F extends (...args: any[]) => void>(func: F, delay: number) => {
     let timeoutId: ReturnType<typeof setTimeout>;
@@ -393,10 +394,7 @@ function JourneyBuilderInner({
   };
 
   const handleLocationSelectedFromMap = (location: Location) => {
-    if (activeCallback) {
-        activeCallback(location);
-        clearSelection();
-    }
+    setSelectedLocation(location);
   };
 
   const title = getTitle();
