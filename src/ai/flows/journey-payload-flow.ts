@@ -147,8 +147,17 @@ export async function generateJourneyPayload(input: JourneyPayloadInput): Promis
         const idToUse = isFinalStopOfBooking ? parentBooking.requestId : stop.bookingSegmentId;
         const idType = isFinalStopOfBooking ? 'request_id' : 'bookingsegment_id';
 
+        // When updating a journey, new stops won't have a bookingSegmentId.
+        // Also, if a booking is already created, it will have a requestId.
+        // The API expects a bookingsegment_id for intermediate stops.
+        // For new stops in an existing journey, we can't provide this, so we must skip them.
+        if (!idToUse && journeyServerId) {
+            console.log(`[Journey Payload] Skipping new stop in existing journey because it lacks a server-side ID. Address: ${stop.location.address}`);
+            continue;
+        }
+
         if (!idToUse) {
-            throw new Error(`Missing identifier for stop. StopType: ${stop.stopType}, isFinal: ${isFinalStopOfBooking}, Address: ${stop.location.address}`);
+            throw new Error(`Missing identifier for stop. StopType: ${stop.stopType}, isFinal: ${isFinalStopOfBooking}, Address: ${stop.location.address}, JourneyID: ${journeyServerId}`);
         }
         
         const firstPickupOfBooking = parentBooking.stops.find(s => s.stopType === 'pickup');

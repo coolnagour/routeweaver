@@ -104,7 +104,7 @@ export default function BookingManager({ bookings, setBookings, isJourneyPriceSe
           bookings.map(booking => {
               const pickups = getPassengersFromStops(booking.stops);
               const bookingDateTime = getBookingDateTime(booking);
-              const isLocked = !!booking.bookingServerId;
+              const isLockedForDeletion = !!booking.bookingServerId;
               return (
                   <Card key={booking.id} className="p-3">
                       <div className="flex justify-between items-start">
@@ -147,17 +147,11 @@ export default function BookingManager({ bookings, setBookings, isJourneyPriceSe
                           })}
                       </div>
                       <div className="flex items-center">
-                          {isLocked ? (
-                              <Button variant="ghost" size="icon" disabled>
-                                <Lock className="h-4 w-4" />
-                              </Button>
-                          ) : (
-                              <Button variant="ghost" size="icon" onClick={() => handleEditBooking(booking)}>
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                          )}
-                          <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleRemoveBooking(booking.id)} disabled={isLocked}>
-                            <Trash2 className="h-4 w-4" />
+                          <Button variant="ghost" size="icon" onClick={() => handleEditBooking(booking)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleRemoveBooking(booking.id)} disabled={isLockedForDeletion}>
+                            {isLockedForDeletion ? <Lock className="h-4 w-4" /> : <Trash2 className="h-4 w-4" />}
                           </Button>
                       </div>
                       </div>

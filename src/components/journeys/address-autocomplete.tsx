@@ -14,6 +14,7 @@ interface AddressAutocompleteProps {
   onChange: (location: Location) => void;
   placeholder: string;
   className?: string;
+  disabled?: boolean;
 }
 
 const libraries: ("places")[] = ["places"];
@@ -43,7 +44,7 @@ const darkThemeStyles = `
   }
 `;
 
-export default function AddressAutocomplete({ value, onChange, placeholder, className }: AddressAutocompleteProps) {
+export default function AddressAutocomplete({ value, onChange, placeholder, className, disabled = false }: AddressAutocompleteProps) {
   const { server } = useServer();
   const { theme } = useTheme();
   const { isLoaded } = useLoadScript({
@@ -98,6 +99,10 @@ export default function AddressAutocomplete({ value, onChange, placeholder, clas
     }
   }
 
+  useEffect(() => {
+    setInputValue(value);
+  }, [value]);
+
 
   if (!isLoaded) {
     return (
@@ -121,6 +126,7 @@ export default function AddressAutocomplete({ value, onChange, placeholder, clas
         types: ['address'],
         componentRestrictions: server && server.countryCodes ? { country: server.countryCodes } : undefined,
       }}
+      disabled={disabled}
     >
       <div className="relative">
         <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -129,7 +135,8 @@ export default function AddressAutocomplete({ value, onChange, placeholder, clas
           placeholder={placeholder}
           value={inputValue}
           onChange={handleInputChange}
-          className={`pl-10 bg-background ${className}`}
+          className={cn(`pl-10`, className)}
+          disabled={disabled}
         />
       </div>
     </Autocomplete>

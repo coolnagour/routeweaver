@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { MapPin, MinusCircle, User, Phone, MessageSquare, ChevronsUpDown, CalendarIcon, Clock, Sparkles, Loader2 } from 'lucide-react';
+import { MapPin, MinusCircle, User, Phone, MessageSquare, ChevronsUpDown, CalendarIcon, Clock, Sparkles, Loader2, Lock } from 'lucide-react';
 import type { Stop, SuggestionInput, StopType } from '@/types';
 import { cn } from '@/lib/utils';
 import { format, setHours, setMinutes } from 'date-fns';
@@ -35,6 +35,7 @@ interface ViaStopProps {
     stopType?: StopType
   ) => void;
   generatingFields: Record<string, boolean>;
+  isLocked?: boolean;
 }
 
 export default function ViaStop({ 
@@ -44,7 +45,8 @@ export default function ViaStop({
     getAvailablePickups, 
     isDestination = false,
     onGenerateField,
-    generatingFields
+    generatingFields,
+    isLocked = false
 }: ViaStopProps) {
   const { setValue } = useFormContext();
   const stopType = useWatch({ control, name: `stops.${index}.stopType` });
@@ -62,11 +64,16 @@ export default function ViaStop({
       setValue(`stops.${index}.dateTime`, undefined);
     }
   };
+  
+  const isAddressLocked = isLocked && (isDestination || isPickup);
 
   return (
     <div className="p-4 border rounded-lg space-y-3 bg-muted/20 relative">
         <div className="flex justify-between items-center">
-             <h3 className="font-semibold text-lg text-primary">{isDestination ? 'Destination' : 'Via Stop'}</h3>
+             <div className="flex items-center gap-2">
+                {isAddressLocked && <Lock className="h-4 w-4 text-muted-foreground" />}
+                <h3 className="font-semibold text-lg text-primary">{isDestination ? 'Destination' : 'Via Stop'}</h3>
+             </div>
             {!isDestination && removeStop && (
                 <Button type="button" variant="ghost" size="icon" className="h-9 w-9 text-destructive" onClick={() => removeStop(index)}>
                     <MinusCircle className="h-4 w-4"/>
@@ -87,6 +94,8 @@ export default function ViaStop({
                                      value={field.value.address}
                                      onChange={field.onChange}
                                      placeholder={isPickup ? 'Pickup location' : 'Drop-off location'}
+                                     disabled={isAddressLocked}
+                                     className={isAddressLocked ? 'bg-muted' : 'bg-background'}
                                   />
                              </FormControl>
                              <FormMessage>{fieldState.error?.message}</FormMessage>
@@ -108,6 +117,7 @@ export default function ViaStop({
                                          variant="outline" 
                                          className="w-full bg-background" 
                                          onClick={() => handleStopTypeChange(field.value === 'pickup' ? 'dropoff' : 'pickup')}
+                                         disabled={isLocked}
                                      >
                                          {field.value === 'pickup' ? 'Pickup' : 'Drop-off'}
                                      </Button>
@@ -130,8 +140,8 @@ export default function ViaStop({
                      <FormControl>
                          <div className="relative flex items-center">
                              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                             <Input placeholder="e.g. John Smith" {...field} className="pl-10 pr-10 bg-background" />
-                             <Button type="button" variant="ghost" size="icon" className="absolute right-1 h-8 w-8 text-primary" onClick={() => onGenerateField('name', `stops.${index}.name`, index)} disabled={generatingFields[`stops.${index}.name-name`]}>
+                             <Input placeholder="e.g. John Smith" {...field} className={cn("pl-10 pr-10", isLocked ? 'bg-muted' : 'bg-background')} disabled={isLocked} />
+                             <Button type="button" variant="ghost" size="icon" className="absolute right-1 h-8 w-8 text-primary" onClick={() => onGenerateField('name', `stops.${index}.name`, index)} disabled={generatingFields[`stops.${index}.name-name`] || isLocked}>
                                 {generatingFields[`stops.${index}.name-name`] ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                             </Button>
                          </div>
@@ -149,8 +159,8 @@ export default function ViaStop({
                      <FormControl>
                          <div className="relative flex items-center">
                              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                             <Input placeholder="e.g. 555-5678" {...field} className="pl-10 pr-10 bg-background" />
-                             <Button type="button" variant="ghost" size="icon" className="absolute right-1 h-8 w-8 text-primary" onClick={() => onGenerateField('phone', `stops.${index}.phone`, index)} disabled={generatingFields[`stops.${index}.phone-phone`]}>
+                             <Input placeholder="e.g. 555-5678" {...field} className={cn("pl-10 pr-10", isLocked ? 'bg-muted' : 'bg-background')} disabled={isLocked} />
+                             <Button type="button" variant="ghost" size="icon" className="absolute right-1 h-8 w-8 text-primary" onClick={() => onGenerateField('phone', `stops.${index}.phone`, index)} disabled={generatingFields[`stops.${index}.phone-phone`] || isLocked}>
                                 {generatingFields[`stops.${index}.phone-phone`] ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                              </Button>
                          </div>
@@ -167,7 +177,7 @@ export default function ViaStop({
                  render={({ field, fieldState }) => (
                  <FormItem>
                      <FormLabel>Passenger to Drop Off</FormLabel>
-                     <Select onValueChange={field.onChange} defaultValue={field.value}>
+                     <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLocked}>
                          <FormControl>
                              <SelectTrigger className="bg-background">
                                  <SelectValue placeholder="Select a passenger" />
@@ -214,6 +224,7 @@ export default function ViaStop({
                                         'w-[calc(50%-0.25rem)] justify-start text-left font-normal bg-background',
                                         !field.value && 'text-muted-foreground'
                                     )}
+                                    disabled={isLocked}
                                     >
                                     <CalendarIcon className="mr-2 h-4 w-4" />
                                     {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
@@ -246,6 +257,7 @@ export default function ViaStop({
                                         const newDate = setMinutes(setHours(field.value || new Date(), hours), minutes);
                                         field.onChange(newDate);
                                     }}
+                                    disabled={isLocked}
                                 />
                             </div>
                             </div>
