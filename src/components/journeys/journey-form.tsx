@@ -22,6 +22,7 @@ import { CalendarIcon, MapPin, PlusCircle, X, User, Phone, Clock, MessageSquare,
 import { cn } from '@/lib/utils';
 import { format, setHours, setMinutes } from 'date-fns';
 import type { Booking, Stop, SuggestionInput, StopType } from '@/types';
+import { StopSchema } from '@/types';
 import ViaStop from './via-stop';
 import AddressAutocomplete from './address-autocomplete';
 import { generateSuggestion } from '@/ai/flows/suggestion-flow';
@@ -31,22 +32,9 @@ import { v4 as uuidv4 } from 'uuid';
 import { Switch } from '../ui/switch';
 import { Label } from '../ui/label';
 
-const locationSchema = z.object({
-    address: z.string().min(2, { message: 'Address is required.' }),
-    lat: z.number(),
-    lng: z.number(),
-});
-
-const stopSchema = z.object({
-  id: z.string().optional(),
-  location: locationSchema,
-  stopType: z.enum(['pickup', 'dropoff']),
+// Use the main StopSchema and override dateTime for form handling (Date object instead of string)
+const FormStopSchema = StopSchema.extend({
   dateTime: z.date().optional(),
-  name: z.string().optional(),
-  phone: z.string().optional(),
-  pickupStopId: z.string().optional(),
-  instructions: z.string().optional(),
-  bookingSegmentId: z.number().optional(), // Added field
 }).refine(data => {
     // If it's a dropoff, it MUST have a pickupStopId
     if (data.stopType === 'dropoff') {
@@ -60,8 +48,8 @@ const stopSchema = z.object({
 
 const formSchema = z.object({
   id: z.string().optional(),
-  bookingServerId: z.number().optional(), // Added to know if it's a saved booking
-  stops: z.array(stopSchema).min(2, 'At least two stops are required.'),
+  bookingServerId: z.number().optional(),
+  stops: z.array(FormStopSchema).min(2, 'At least two stops are required.'),
   customerId: z.string().optional(),
   externalBookingId: z.string().optional(),
   vehicleType: z.string().optional(),
@@ -114,7 +102,7 @@ export default function JourneyForm({ initialData, onSave, onCancel, isJourneyPr
           phone: s.phone || '',
           instructions: s.instructions || '',
           pickupStopId: s.pickupStopId || '',
-          bookingSegmentId: s.bookingSegmentId, // Ensure segment ID is preserved
+          bookingSegmentId: s.bookingSegmentId,
       })) : [
         { id: uuidv4(), location: emptyLocation, stopType: 'pickup', name: '', phone: '', dateTime: undefined, instructions: '' },
         { id: uuidv4(), location: emptyLocation, stopType: 'dropoff', pickupStopId: '', instructions: '' }
@@ -130,15 +118,12 @@ export default function JourneyForm({ initialData, onSave, onCancel, isJourneyPr
   const currentStops = useWatch({ control: form.control, name: 'stops' });
 
   const getAvailablePickups = (currentIndex: number) => {
-    // All pickups defined before the current stop's index
     const previousPickups = currentStops.slice(0, currentIndex).filter(s => s.stopType === 'pickup' && s.name);
     
-    // All pickup IDs that have already been assigned to a dropoff (excluding the current one)
     const assignedPickupIds = currentStops
         .filter((s, i) => i !== currentIndex && s.stopType === 'dropoff' && s.pickupStopId)
         .map(s => s.pickupStopId);
 
-    // Return pickups that are not yet assigned
     return previousPickups.filter(p => !assignedPickupIds.includes(p.id!));
   };
 
@@ -179,7 +164,6 @@ export default function JourneyForm({ initialData, onSave, onCancel, isJourneyPr
     const bookingToSave: Booking = { ...values, stops: [] };
     
     bookingToSave.stops = values.stops.map(stop => {
-      // If the booking is not scheduled (ASAP), ensure no pickup stops have a time.
       if (!isScheduled && stop.stopType === 'pickup') {
         return { ...stop, dateTime: undefined };
       }
