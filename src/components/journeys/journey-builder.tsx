@@ -21,6 +21,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '../ui/collapsible';
 import { cn } from '@/lib/utils';
 import { Label } from '../ui/label';
+import parsePhoneNumberFromString from 'libphonenumber-js';
 
 interface JourneyBuilderProps {
   initialData?: Partial<JourneyTemplate> | null;
@@ -37,8 +38,78 @@ interface JourneyPreviewState {
   orderedStops: Stop[];
   journeyPayload: any | null;
   bookings: Booking[];
+  bookingPayloads: any[];
   isLoading: boolean;
 }
+
+// Client-side utility to generate booking payloads for debugging, mirroring server logic.
+const generateDebugBookingPayloads = (bookings: Booking[], server: any, siteId?: number, accountId?: number) => {
+    if (!server || !siteId || !accountId) return [];
+    
+    return bookings.map(booking => {
+        try {
+            if (booking.stops.length < 2) return { error: 'Booking must have at least a pickup and a dropoff.' };
+
+            const pickupStop = booking.stops.find(s => s.stopType === 'pickup');
+            if (!pickupStop) return { error: 'Booking must contain a pickup stop.' };
+
+            const firstStop = booking.stops[0];
+            const lastStop = booking.stops[booking.stops.length - 1];
+            const viaStops = booking.stops.slice(1, -1);
+            const defaultCountry = server.countryCodes?.[0]?.toUpperCase();
+
+            const payload: any = {
+                date: pickupStop.dateTime?.toISOString() || new Date().toISOString(),
+                source: "DISPATCH",
+                name: pickupStop.name || 'N/A',
+                address: {
+                    lat: firstStop.location.lat.toString(),
+                    lng: firstStop.location.lng.toString(),
+                    formatted: firstStop.location.address,
+                    driver_instructions: firstStop.instructions || "",
+                },
+                destination: {
+                    lat: lastStop.location.lat.toString(),
+                    lng: lastStop.location.lng.toString(),
+                    formatted: lastStop.location.address,
+                    driver_instructions: lastStop.instructions || "",
+                },
+                account_id: accountId,
+                site_id: siteId,
+                customer_id: booking.customerId,
+                external_booking_id: booking.externalBookingId,
+                vehicle_type: booking.vehicleType,
+                external_area_code: booking.externalAreaCode,
+                with_bookingsegments: true,
+            };
+
+            if (viaStops.length > 0) {
+                payload.vias = viaStops.map(stop => ({
+                    lat: stop.location.lat.toString(),
+                    lng: stop.location.lng.toString(),
+                    formatted: stop.location.address,
+                    driver_instructions: stop.instructions || "",
+                }));
+            }
+
+            if (pickupStop.phone) {
+                const phoneNumber = parsePhoneNumberFromString(pickupStop.phone, defaultCountry);
+                if (phoneNumber && phoneNumber.isValid()) {
+                    payload.phone = phoneNumber.number;
+                }
+            }
+
+            if ((booking.price && booking.price > 0) || (booking.cost && booking.cost > 0)) {
+                payload.payment = { price: booking.price || 0, cost: booking.cost || 0, fixed: 1 };
+            }
+
+            return payload;
+        } catch (e) {
+            return { error: `Error generating payload: ${e instanceof Error ? e.message : 'Unknown error'}` };
+        }
+    });
+};
+
 
 export default function JourneyBuilder({ 
   initialData, 
@@ -79,7 +150,7 @@ export default function JourneyBuilder({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentJourney, setCurrentJourney] = useState<Journey | null>(null);
 
-  const [journeyPreview, setJourneyPreview] = useState<JourneyPreviewState>({ orderedStops: [], journeyPayload: null, bookings: [], isLoading: false });
+  const [journeyPreview, setJourneyPreview] = useState<JourneyPreviewState>({ orderedStops: [], journeyPayload: null, bookings: [], bookingPayloads: [], isLoading: false });
 
   const [journeyPrice, setJourneyPrice] = useState<number | undefined>(undefined);
   const [journeyCost, setJourneyCost] = useState<number | undefined>(undefined);
@@ -96,9 +167,9 @@ export default function JourneyBuilder({
     };
   };
 
-  const fetchPreview = useCallback(async (currentBookings: Booking[], journey: Journey | null) => {
+  const fetchPreview = useCallback(async (currentBookings: Booking[], journey: Journey | null, siteId?: number, accountId?: number) => {
     if (currentBookings.length === 0 || currentBookings.flatMap(b => b.stops).length < 2) {
-      setJourneyPreview({ orderedStops: [], journeyPayload: null, isLoading: false, bookings: currentBookings });
+      setJourneyPreview({ orderedStops: [], journeyPayload: null, isLoading: false, bookings: currentBookings, bookingPayloads: [] });
       return;
     }
     
@@ -106,11 +177,9 @@ export default function JourneyBuilder({
     try {
         const tempBookingsForPreview = currentBookings.map((b, bookingIndex) => ({
           ...b,
-          // Use real bookingServerId if available, otherwise a temp one for preview
           bookingServerId: b.bookingServerId || (9000 + bookingIndex), 
           stops: b.stops.map((s, stopIndex) => ({
             ...s,
-            // Use real bookingSegmentId if available, otherwise a unique placeholder
             bookingSegmentId: s.bookingSegmentId || (1000 + (bookingIndex * 10) + stopIndex)
           }))
         }));
@@ -119,19 +188,22 @@ export default function JourneyBuilder({
             bookings: tempBookingsForPreview, 
             journeyServerId: journey?.journeyServerId 
         });
-        setJourneyPreview({ orderedStops, journeyPayload, isLoading: false, bookings: currentBookings });
+
+        const debugBookingPayloads = generateDebugBookingPayloads(currentBookings, server, siteId, accountId);
+
+        setJourneyPreview({ orderedStops, journeyPayload, isLoading: false, bookings: currentBookings, bookingPayloads: debugBookingPayloads });
     } catch (e) {
         console.error("Error generating journey preview:", e);
-        setJourneyPreview({ orderedStops: [], journeyPayload: null, isLoading: false, bookings: currentBookings });
+        setJourneyPreview({ orderedStops: [], journeyPayload: null, isLoading: false, bookings: currentBookings, bookingPayloads: [] });
         toast({ title: "Error generating preview", description: (e as Error).message, variant: "destructive" });
     }
-  }, [toast]);
+  }, [toast, server]);
 
   const debouncedFetchPreview = useCallback(debounce(fetchPreview, 750), [fetchPreview]);
 
   useEffect(() => {
-    debouncedFetchPreview(bookings, currentJourney);
-  }, [bookings, currentJourney, debouncedFetchPreview]);
+    debouncedFetchPreview(bookings, currentJourney, selectedSiteId, selectedAccount?.id);
+  }, [bookings, currentJourney, debouncedFetchPreview, selectedSiteId, selectedAccount]);
   
   useEffect(() => {
     if (journeyId) {
@@ -151,7 +223,6 @@ export default function JourneyBuilder({
         } else {
           setTemplateName(''); // Clear template name when loading from template
         }
-        // When loading a template for a new journey OR editing a template, prioritize initialData
         setSelectedSiteId(initialData?.siteId || initialSiteId);
         setSelectedAccount(initialData?.account || initialAccount || null);
         setCurrentJourney(null);
@@ -191,10 +262,10 @@ export default function JourneyBuilder({
       const updatedJourneyData: Journey = {
         ...currentJourney,
         bookings: bookings,
-        status: currentJourney.status, // Keep existing status on local save
+        status: currentJourney.status, 
         siteId: selectedSiteId,
         account: selectedAccount,
-        orderedStops: currentJourney.orderedStops, // Preserve ordered stops on local save
+        orderedStops: currentJourney.orderedStops, 
         price: journeyPrice,
         cost: journeyCost,
       };
@@ -311,7 +382,7 @@ export default function JourneyBuilder({
           server, 
           siteId: selectedSiteId, 
           accountId: selectedAccount.id,
-          journeyServerId: journeyToPublish.journeyServerId, // Pass existing journey ID
+          journeyServerId: journeyToPublish.journeyServerId, 
           price: journeyToPublish.price,
           cost: journeyToPublish.cost,
         });
@@ -572,13 +643,28 @@ export default function JourneyBuilder({
                 ) : journeyPreview.journeyPayload || journeyPreview.bookings.length > 0 ? (
                   <>
                     <div>
+                        <h4 className="font-semibold text-foreground mb-2">Individual Booking API Payloads</h4>
+                        {journeyPreview.bookingPayloads.length > 0 ? (
+                           journeyPreview.bookingPayloads.map((payload, index) => (
+                               <div key={index} className="mb-2">
+                                   <h5 className="font-medium text-sm text-foreground mb-1">Booking {index + 1} Payload</h5>
+                                   <pre className="text-xs whitespace-pre-wrap break-all bg-background p-2 rounded">
+                                       {JSON.stringify(payload, null, 2)}
+                                   </pre>
+                               </div>
+                           ))
+                        ) : (
+                            <p className="text-xs text-center text-muted-foreground p-2">Select a site and account to generate booking payloads.</p>
+                        )}
+                    </div>
+                    <div>
                       <h4 className="font-semibold text-foreground mb-2">Journey API Payload</h4>
                       <pre className="text-xs whitespace-pre-wrap break-all bg-background p-2 rounded">
                           {JSON.stringify(journeyPreview.journeyPayload, null, 2)}
                       </pre>
                     </div>
                     <div>
-                      <h4 className="font-semibold text-foreground mb-2">Bookings Data (Input)</h4>
+                      <h4 className="font-semibold text-foreground mb-2">Bookings Data (Client State)</h4>
                        <pre className="text-xs whitespace-pre-wrap break-all bg-background p-2 rounded">
                           {JSON.stringify(journeyPreview.bookings, (key, value) => key === 'dateTime' && value ? new Date(value).toISOString() : value, 2)}
                       </pre>
