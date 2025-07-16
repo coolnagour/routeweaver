@@ -16,9 +16,10 @@ const formatBookingForIcabbi = (booking: Booking, server: ServerConfig) => {
     if (booking.stops.length < 2) {
         throw new Error("Booking must have at least a pickup and a dropoff stop.");
     }
-    const pickupStop = booking.stops.find(s => s.stopType === 'pickup');
-    if (!pickupStop) {
-        throw new Error("Booking must contain at least one pickup stop.");
+    
+    const firstStop = booking.stops[0];
+    if (firstStop.stopType !== 'pickup') {
+        throw new Error("The first stop must be a pickup.");
     }
     
     if (!booking.siteId) {
@@ -29,16 +30,15 @@ const formatBookingForIcabbi = (booking: Booking, server: ServerConfig) => {
         throw new Error("Account ID is required for booking.");
     }
 
-    const firstStop = booking.stops[0];
     const lastStop = booking.stops[booking.stops.length - 1];
     const viaStops = booking.stops.slice(1, -1);
     
     const defaultCountry = server.countryCodes?.[0]?.toUpperCase() as any;
     
     const payload: any = {
-        date: pickupStop.dateTime?.toISOString() || new Date().toISOString(),
+        date: firstStop.dateTime?.toISOString() || new Date().toISOString(),
         source: "DISPATCH",
-        name: pickupStop.name || 'N/A',
+        name: firstStop.name || 'N/A',
         address: {
             lat: firstStop.location.lat.toString(),
             lng: firstStop.location.lng.toString(),
@@ -69,12 +69,12 @@ const formatBookingForIcabbi = (booking: Booking, server: ServerConfig) => {
         }));
     }
     
-    if (pickupStop.phone) {
-        const phoneNumber = parsePhoneNumberFromString(pickupStop.phone, defaultCountry);
+    if (firstStop.phone) {
+        const phoneNumber = parsePhoneNumberFromString(firstStop.phone, defaultCountry);
         if (phoneNumber && phoneNumber.isValid()) {
             payload.phone = phoneNumber.number;
         } else {
-             console.warn(`Invalid phone number provided: ${pickupStop.phone}. It will be omitted from the API call.`);
+             console.warn(`Invalid phone number provided: ${firstStop.phone}. It will be omitted from the API call.`);
         }
     }
 
