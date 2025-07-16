@@ -85,8 +85,6 @@ export default function JourneyForm({
   
   const form = useForm<BookingFormData>({
     resolver: zodResolver(FormBookingSchema),
-    // The key on the parent Card now handles re-initialization.
-    // We can rely on defaultValues being correct on mount.
     defaultValues: {
       ...initialData,
       stops: initialData.stops.map(s => ({
@@ -104,7 +102,8 @@ export default function JourneyForm({
   const currentStops = useWatch({ control: form.control, name: 'stops' });
   
   // This effect listens for changes to initialData and resets the form.
-  // This is crucial for reflecting updates from map clicks.
+  // This is crucial for reflecting updates from map clicks and ensuring the form
+  // has the latest state, including correct stop IDs.
   useEffect(() => {
     form.reset({
       ...initialData,
