@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import type { Booking, Stop, Location } from '@/types';
+import type { Booking, Stop } from '@/types';
 import JourneyForm from './journey-form';
 import { Edit, MapPin, Package, Trash2, UserPlus, Users, Phone, Clock, MessageSquare, Info, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
@@ -34,8 +34,6 @@ interface BookingManagerProps {
   setBookings: React.Dispatch<React.SetStateAction<Booking[]>>;
   isJourneyPriceSet: boolean;
   onSetAddressFromMap: (target: MapSelectionTarget) => void;
-  mapSelectionTarget: MapSelectionTarget | null;
-  locationFromMap: { target: MapSelectionTarget, location: Location } | null;
 }
 
 const emptyLocation = { address: '', lat: 0, lng: 0 };
@@ -44,9 +42,7 @@ export default function BookingManager({
     bookings, 
     setBookings, 
     isJourneyPriceSet,
-    onSetAddressFromMap,
-    mapSelectionTarget,
-    locationFromMap
+    onSetAddressFromMap
 }: BookingManagerProps) {
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
@@ -138,9 +134,10 @@ export default function BookingManager({
         onSave={handleSaveBooking}
         onCancel={handleCancelEdit}
         isJourneyPriceSet={isJourneyPriceSet}
-        onSetAddressFromMap={onSetAddressFromMap}
-        mapSelectionTarget={mapSelectionTarget}
-        locationFromMap={locationFromMap}
+        onSetAddressFromMap={(target) => {
+            // This ensures we pass the booking ID even for a new booking
+            onSetAddressFromMap({ ...target, bookingId: editingBooking.id });
+        }}
       />
     );
   }

@@ -19,13 +19,11 @@ import type { Stop, SuggestionInput, StopType } from '@/types';
 import { cn } from '@/lib/utils';
 import { format, setHours, setMinutes } from 'date-fns';
 import AddressAutocomplete from './address-autocomplete';
-import { v4 as uuidv4 } from 'uuid';
 import type { MapSelectionTarget } from './journey-builder';
 
 interface ViaStopProps {
   control: any;
   index: number;
-  bookingId: string;
   stopId: string;
   removeStop?: (index: number) => void;
   getAvailablePickups: (currentIndex: number) => Stop[];
@@ -37,14 +35,12 @@ interface ViaStopProps {
     stopType?: StopType
   ) => void;
   generatingFields: Record<string, boolean>;
-  onSetAddressFromMap: (target: MapSelectionTarget) => void;
-  mapSelectionTarget: MapSelectionTarget | null;
+  onSetAddressFromMap: (target: Omit<MapSelectionTarget, 'bookingId'>) => void;
 }
 
 export default function ViaStop({ 
     control, 
     index,
-    bookingId,
     stopId,
     removeStop, 
     getAvailablePickups, 
@@ -52,7 +48,6 @@ export default function ViaStop({
     onGenerateField,
     generatingFields,
     onSetAddressFromMap,
-    mapSelectionTarget,
 }: ViaStopProps) {
   const { setValue } = useFormContext();
   const stopType = useWatch({ control, name: `stops.${index}.stopType` });
@@ -105,8 +100,8 @@ export default function ViaStop({
                                     type="button"
                                     variant="outline"
                                     size="icon"
-                                    onClick={() => onSetAddressFromMap({ bookingId, stopId })}
-                                    className={cn("shrink-0", mapSelectionTarget?.stopId === stopId && "ring-2 ring-primary")}
+                                    onClick={() => onSetAddressFromMap({ stopId })}
+                                    className="shrink-0"
                                     title="Set address from map"
                                 >
                                     <LocateFixed className="h-4 w-4"/>

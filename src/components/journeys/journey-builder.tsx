@@ -82,7 +82,6 @@ export default function JourneyBuilder({
   const [selectedSiteId, setSelectedSiteId] = useState<number | undefined>(initialSiteId || initialData?.siteId);
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(initialAccount || initialData?.account || null);
   const [mapSelectionTarget, setMapSelectionTarget] = useState<MapSelectionTarget | null>(null);
-  const [locationFromMap, setLocationFromMap] = useState<{ target: MapSelectionTarget, location: Location} | null>(null);
   
   const getInitialBookings = (data: Partial<JourneyTemplate | Journey> | null | undefined): Booking[] => {
     if (!data || !data.bookings) return [];
@@ -120,15 +119,21 @@ export default function JourneyBuilder({
   };
 
   const handleSetLocationFromMap = (location: Location) => {
-    console.log('[JourneyBuilder] handleSetLocationFromMap called with location:', location);
-    if (!mapSelectionTarget) {
-      console.log('[JourneyBuilder] No map selection target, exiting.');
-      return;
-    }
+    if (!mapSelectionTarget) return;
 
-    console.log('[JourneyBuilder] Setting locationFromMap state for target:', mapSelectionTarget);
-    // Pass the target and location down to the form
-    setLocationFromMap({ target: mapSelectionTarget, location });
+    // The key change is here. We update the 'bookings' state directly.
+    setBookings(currentBookings => {
+        const newBookings = [...currentBookings];
+        const bookingIndex = newBookings.findIndex(b => b.id === mapSelectionTarget.bookingId);
+        
+        if (bookingIndex > -1) {
+            const stopIndex = newBookings[bookingIndex].stops.findIndex(s => s.id === mapSelectionTarget.stopId);
+            if (stopIndex > -1) {
+                newBookings[bookingIndex].stops[stopIndex].location = location;
+            }
+        }
+        return newBookings;
+    });
 
     setMapSelectionTarget(null); // Exit map selection mode
     toast({ title: "Address Updated", description: "The address has been set from the map." });
@@ -510,8 +515,6 @@ export default function JourneyBuilder({
           setBookings={setBookings} 
           isJourneyPriceSet={hasJourneyLevelPrice}
           onSetAddressFromMap={setMapSelectionTarget}
-          mapSelectionTarget={mapSelectionTarget}
-          locationFromMap={locationFromMap}
         />
         
         <Card>

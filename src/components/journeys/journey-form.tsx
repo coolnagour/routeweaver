@@ -20,7 +20,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { CalendarIcon, MapPin, PlusCircle, X, User, Phone, Clock, MessageSquare, ChevronsUpDown, Sparkles, Loader2, Info, Hash, Car, Map, DollarSign, Lock, LocateFixed } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, setHours, setMinutes } from 'date-fns';
-import type { Booking, Stop, SuggestionInput, StopType, Location } from '@/types';
+import type { Booking, Stop, SuggestionInput, StopType } from '@/types';
 import { BookingSchema } from '@/types';
 import ViaStop from './via-stop';
 import AddressAutocomplete from './address-autocomplete';
@@ -66,9 +66,7 @@ interface JourneyFormProps {
   onSave: (booking: Booking) => void;
   onCancel: () => void;
   isJourneyPriceSet: boolean;
-  onSetAddressFromMap: (target: MapSelectionTarget) => void;
-  mapSelectionTarget: MapSelectionTarget | null;
-  locationFromMap: { target: MapSelectionTarget, location: Location } | null;
+  onSetAddressFromMap: (target: Omit<MapSelectionTarget, 'bookingId'>) => void;
 }
 
 const emptyLocation = { address: '', lat: 0, lng: 0 };
@@ -79,8 +77,6 @@ export default function JourneyForm({
     onCancel, 
     isJourneyPriceSet,
     onSetAddressFromMap,
-    mapSelectionTarget,
-    locationFromMap,
 }: JourneyFormProps) {
   const { toast } = useToast();
   const [generatingFields, setGeneratingFields] = useState<Record<string, boolean>>({});
@@ -120,21 +116,14 @@ export default function JourneyForm({
   });
 
   const currentStops = useWatch({ control: form.control, name: 'stops' });
-  const bookingId = useWatch({ control: form.control, name: 'id' });
-
-  // This effect synchronizes the form state when an address is selected on the map.
+  
+  // This effect synchronizes the form with initialData when it changes (e.g., from map click)
   useEffect(() => {
-    console.log('[JourneyForm] locationFromMap prop changed:', locationFromMap);
-    if (locationFromMap && locationFromMap.target.bookingId === bookingId) {
-      const stopIndex = form.getValues('stops').findIndex(s => s.id === locationFromMap.target.stopId);
-      console.log(`[JourneyForm] Target booking matches. Stop index found: ${stopIndex}`);
-      if (stopIndex !== -1) {
-        console.log(`[JourneyForm] Updating form field 'stops.${stopIndex}.location' with value:`, locationFromMap.location);
-        form.setValue(`stops.${stopIndex}.location`, locationFromMap.location, { shouldValidate: true, shouldDirty: true });
-      }
-    }
-  }, [locationFromMap, bookingId, form]);
-
+    form.reset({
+      ...initialData,
+      stops: initialData?.stops.map(s => ({ ...s, dateTime: s.dateTime ? new Date(s.dateTime) : undefined }))
+    });
+  }, [initialData, form]);
 
   const getAvailablePickups = (currentIndex: number) => {
     const previousPickups = currentStops.slice(0, currentIndex).filter(s => s.stopType === 'pickup' && s.name);
@@ -217,7 +206,7 @@ export default function JourneyForm({
   const firstPickupIndex = stopFields.findIndex(s => s.stopType === 'pickup');
 
   return (
-      <Card>
+      <Card key={initialData?.id || 'new-booking'}>
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)}>
             <CardHeader>
@@ -333,8 +322,8 @@ export default function JourneyForm({
                                         type="button"
                                         variant="outline"
                                         size="icon"
-                                        onClick={() => onSetAddressFromMap({ bookingId, stopId: firstStop.id })}
-                                        className={cn("shrink-0", mapSelectionTarget?.stopId === firstStop.id && "ring-2 ring-primary")}
+                                        onClick={() => onSetAddressFromMap({ stopId: firstStop.id })}
+                                        className="shrink-0"
                                         title="Set address from map"
                                     >
                                         <LocateFixed className="h-4 w-4"/>
@@ -416,9 +405,7 @@ export default function JourneyForm({
                         onGenerateField={handleGenerateField}
                         generatingFields={generatingFields}
                         onSetAddressFromMap={onSetAddressFromMap}
-                        bookingId={bookingId}
                         stopId={stop.id}
-                        mapSelectionTarget={mapSelectionTarget}
                     />
                 ))}
 
@@ -438,9 +425,7 @@ export default function JourneyForm({
                     onGenerateField={handleGenerateField}
                     generatingFields={generatingFields}
                     onSetAddressFromMap={onSetAddressFromMap}
-                    bookingId={bookingId}
                     stopId={lastStop.id}
-                    mapSelectionTarget={mapSelectionTarget}
                 />
                 
                 <Collapsible className="mt-4">
