@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils';
 import { Label } from '../ui/label';
 import { formatBookingForApi } from '@/lib/booking-formatter';
 import JourneyMap from './journey-map';
+import { MapSelectionProvider, useMapSelection } from '@/context/map-selection-context';
 
 interface JourneyBuilderProps {
   initialData?: Partial<JourneyTemplate> | null;
@@ -43,11 +44,6 @@ interface JourneyPreviewState {
   isLoading: boolean;
 }
 
-interface MapSelectionTarget {
-    bookingId: string;
-    stopId: string;
-}
-
 const generateDebugBookingPayloads = (bookings: Booking[], server: any, siteId?: number, accountId?: number) => {
     if (!server || !siteId || !accountId) return [];
     
@@ -60,14 +56,13 @@ const generateDebugBookingPayloads = (bookings: Booking[], server: any, siteId?:
     return bookingsWithContext.map(booking => {
         try {
             return formatBookingForApi(booking, server);
-        } catch (e) {
+        } catch (e) => {
             return { error: `Error generating payload: ${e instanceof Error ? e.message : 'Unknown error'}` };
         }
     });
 };
 
-
-export default function JourneyBuilder({ 
+function JourneyBuilderInner({
   initialData, 
   onNewJourneyClick, 
   isEditingTemplate = false,
@@ -111,12 +106,10 @@ export default function JourneyBuilder({
   const [journeyPrice, setJourneyPrice] = useState<number | undefined>(undefined);
   const [journeyCost, setJourneyCost] = useState<number | undefined>(undefined);
   
-  // State for map selection
-  const [isMapInSelectionMode, setIsMapInSelectionMode] = useState(false);
-  const [locationFromMap, setLocationFromMap] = useState<Location | null>(null);
-
   const hasBookingLevelPrice = bookings.some(b => b.price || b.cost);
   const hasJourneyLevelPrice = journeyPrice || journeyCost;
+
+  const { isMapInSelectionMode, setSelectedLocation } = useMapSelection();
 
   const debounce = <F extends (...args: any[]) => void>(func: F, delay: number) => {
     let timeoutId: ReturnType<typeof setTimeout>;
@@ -398,23 +391,7 @@ export default function JourneyBuilder({
     }
     return undefined;
   };
-  
-  const handleLocationSelectFromMap = (location: Location) => {
-    console.log('[JourneyBuilder] Location selected from map:', location);
-    setLocationFromMap(location);
-    setIsMapInSelectionMode(false); // Turn off selection mode after a location is picked
-  };
 
-  const handleSetMapSelection = (isSelecting: boolean) => {
-    console.log(`[JourneyBuilder] Setting map selection mode to: ${isSelecting}`);
-    setIsMapInSelectionMode(isSelecting);
-  };
-  
-  const onMapLocationHandled = () => {
-    console.log('[JourneyBuilder] Resetting locationFromMap state.');
-    setLocationFromMap(null);
-  };
-  
   const title = getTitle();
   const publishButtonText = currentJourney?.status === 'Scheduled' ? 'Update Published Journey' : 'Publish';
 
@@ -518,9 +495,6 @@ export default function JourneyBuilder({
           editingBooking={editingBooking}
           setEditingBooking={setEditingBooking}
           isJourneyPriceSet={hasJourneyLevelPrice}
-          onSetMapSelection={handleSetMapSelection}
-          locationFromMap={locationFromMap}
-          onMapLocationHandled={onMapLocationHandled}
         />
         
         <Card>
@@ -664,10 +638,19 @@ export default function JourneyBuilder({
       <div className="lg:h-[calc(100vh-10rem)] lg:sticky lg:top-20">
         <JourneyMap 
             stops={journeyPreview.orderedStops}
-            onLocationSelect={handleLocationSelectFromMap}
+            onLocationSelect={setSelectedLocation}
             isSelectionMode={isMapInSelectionMode}
         />
       </div>
     </div>
   );
+}
+
+
+export default function JourneyBuilder(props: JourneyBuilderProps) {
+  return (
+    <MapSelectionProvider>
+      <JourneyBuilderInner {...props} />
+    </MapSelectionProvider>
+  )
 }

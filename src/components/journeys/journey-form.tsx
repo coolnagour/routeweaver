@@ -65,9 +65,6 @@ interface JourneyFormProps {
   onSave: (booking: Booking) => void;
   onCancel: (bookingId: string) => void;
   isJourneyPriceSet: boolean;
-  onSetMapSelection: (isSelecting: boolean) => void;
-  locationFromMap: Location | null;
-  onMapLocationHandled: () => void;
 }
 
 const emptyLocation = { address: '', lat: 0, lng: 0 };
@@ -77,14 +74,10 @@ export default function JourneyForm({
     onSave, 
     onCancel, 
     isJourneyPriceSet,
-    onSetMapSelection,
-    locationFromMap,
-    onMapLocationHandled,
 }: JourneyFormProps) {
   const { toast } = useToast();
   const [generatingFields, setGeneratingFields] = useState<Record<string, boolean>>({});
   const [isScheduled, setIsScheduled] = useState(!!initialData?.stops?.find(s => s.stopType === 'pickup')?.dateTime);
-  const [localMapSelectionTarget, setLocalMapSelectionTarget] = useState<string | null>(null);
   
   const form = useForm<BookingFormData>({
     resolver: zodResolver(FormBookingSchema),
@@ -102,24 +95,6 @@ export default function JourneyForm({
       stops: initialData.stops.map(s => ({ ...s, dateTime: s.dateTime ? new Date(s.dateTime) : undefined }))
     });
   }, [initialData, form]);
-  
-  useEffect(() => {
-    if (locationFromMap && localMapSelectionTarget) {
-      console.log(`[JourneyForm] Received location for target stop ${localMapSelectionTarget}:`, locationFromMap);
-      
-      const stops = form.getValues('stops');
-      const stopIndex = stops.findIndex(s => s.id === localMapSelectionTarget);
-
-      if (stopIndex !== -1) {
-          console.log(`[JourneyForm] Found stop at index ${stopIndex}, updating form value.`);
-          form.setValue(`stops.${stopIndex}.location`, locationFromMap, { shouldValidate: true, shouldDirty: true });
-      } else {
-        console.error('[JourneyForm] Could not find stop index for target:', localMapSelectionTarget);
-      }
-      onMapLocationHandled();
-      setLocalMapSelectionTarget(null); // Reset target after update
-    }
-  }, [locationFromMap, localMapSelectionTarget, onMapLocationHandled, form]);
 
   const currentStops = useWatch({ control: form.control, name: 'stops' });
 
@@ -194,13 +169,6 @@ export default function JourneyForm({
         }
     }
   }
-
-  const handleSetAddressFromMap = (stopId: string) => {
-    console.log(`[JourneyForm] Setting map selection for booking ${initialData.id}, stop ${stopId}`);
-    setLocalMapSelectionTarget(stopId);
-    onSetMapSelection(true);
-  };
-
 
   const firstStop = stopFields[0];
   const lastStop = stopFields[stopFields.length - 1];
@@ -315,7 +283,6 @@ export default function JourneyForm({
                                     <AddressAutocomplete 
                                         value={field.value.address}
                                         onChange={field.onChange}
-                                        onSetAddressFromMap={() => handleSetAddressFromMap(firstStop.id)}
                                         placeholder="Pickup location"
                                         className={"bg-background"}
                                     />
@@ -395,8 +362,6 @@ export default function JourneyForm({
                         getAvailablePickups={getAvailablePickups}
                         onGenerateField={handleGenerateField}
                         generatingFields={generatingFields}
-                        stopId={stop.id}
-                        onSetAddressFromMap={() => handleSetAddressFromMap(stop.id)}
                     />
                 ))}
 
@@ -415,8 +380,6 @@ export default function JourneyForm({
                     getAvailablePickups={getAvailablePickups}
                     onGenerateField={handleGenerateField}
                     generatingFields={generatingFields}
-                    stopId={lastStop.id}
-                    onSetAddressFromMap={() => handleSetAddressFromMap(lastStop.id)}
                 />
                 
                 <Collapsible className="mt-4">

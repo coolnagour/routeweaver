@@ -10,11 +10,11 @@ import { useServer } from "@/context/server-context";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
+import { useMapSelection } from "@/context/map-selection-context";
 
 interface AddressAutocompleteProps {
   value: string;
   onChange: (location: Location) => void;
-  onSetAddressFromMap: () => void;
   placeholder: string;
   className?: string;
   disabled?: boolean;
@@ -49,7 +49,6 @@ const darkThemeStyles = `
 export default function AddressAutocomplete({ 
   value, 
   onChange, 
-  onSetAddressFromMap,
   placeholder, 
   className, 
   disabled = false,
@@ -61,9 +60,11 @@ export default function AddressAutocomplete({
     libraries: libraries,
   });
 
+  const { startSelection, selectedLocation, clearSelection } = useMapSelection();
   const [autocomplete, setAutocomplete] = useState<google.maps.places.Autocomplete | null>(null);
   const [inputValue, setInputValue] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [isMyTurn, setIsMyTurn] = useState(false);
   
   useEffect(() => {
     const styleTagId = 'google-maps-dark-theme';
@@ -83,6 +84,15 @@ export default function AddressAutocomplete({
       }
     }
   }, [theme]);
+  
+  useEffect(() => {
+      if (isMyTurn && selectedLocation) {
+        onChange(selectedLocation);
+        setInputValue(selectedLocation.address);
+        clearSelection();
+        setIsMyTurn(false);
+      }
+  }, [selectedLocation, isMyTurn, onChange, clearSelection]);
 
   const onLoad = (autocompleteInstance: google.maps.places.Autocomplete) => {
     setAutocomplete(autocompleteInstance);
@@ -107,6 +117,12 @@ export default function AddressAutocomplete({
         onChange({ address: '', lat: 0, lng: 0 });
     }
   }
+
+  const handleSetAddressFromMap = () => {
+    setIsMyTurn(true);
+    startSelection();
+  };
+
 
   useEffect(() => {
     setInputValue(value);
@@ -156,7 +172,7 @@ export default function AddressAutocomplete({
                 size="icon"
                 className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-primary"
                 title="Set address from map"
-                onClick={onSetAddressFromMap}
+                onClick={handleSetAddressFromMap}
                 disabled={disabled}
             >
                 <LocateFixed className="h-4 w-4"/>
