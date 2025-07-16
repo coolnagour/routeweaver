@@ -11,9 +11,9 @@ export const formatBookingForApi = (booking: Booking, server: ServerConfig) => {
         throw new Error("Booking must have at least a pickup and a dropoff stop.");
     }
     
-    const firstStop = booking.stops[0];
-    if (firstStop.stopType !== 'pickup') {
-        throw new Error("The first stop must be a pickup.");
+    const firstPickup = booking.stops.find(s => s.stopType === 'pickup');
+    if (!firstPickup) {
+        throw new Error("Booking must have at least one pickup stop.");
     }
     
     if (!booking.siteId) {
@@ -30,14 +30,14 @@ export const formatBookingForApi = (booking: Booking, server: ServerConfig) => {
     const defaultCountry = server.countryCodes?.[0]?.toUpperCase() as any;
     
     const payload: any = {
-        date: firstStop.dateTime?.toISOString() || new Date().toISOString(),
+        date: firstPickup.dateTime?.toISOString() || new Date().toISOString(),
         source: "DISPATCH",
-        name: firstStop.name || 'N/A',
+        name: firstPickup.name || 'N/A',
         address: {
-            lat: firstStop.location.lat.toString(),
-            lng: firstStop.location.lng.toString(),
-            formatted: firstStop.location.address,
-            driver_instructions: firstStop.instructions || "",
+            lat: firstPickup.location.lat.toString(),
+            lng: firstPickup.location.lng.toString(),
+            formatted: firstPickup.location.address,
+            driver_instructions: firstPickup.instructions || "",
         },
         destination: {
             lat: lastStop.location.lat.toString(),
@@ -63,13 +63,13 @@ export const formatBookingForApi = (booking: Booking, server: ServerConfig) => {
         }));
     }
     
-    // Use the phone number from the first stop (primary passenger).
-    if (firstStop.phone) {
-        const phoneNumber = parsePhoneNumberFromString(firstStop.phone, defaultCountry);
+    // Use the phone number from the first pickup stop (primary passenger).
+    if (firstPickup.phone) {
+        const phoneNumber = parsePhoneNumberFromString(firstPickup.phone, defaultCountry);
         if (phoneNumber && phoneNumber.isValid()) {
             payload.phone = phoneNumber.number;
         } else {
-             console.warn(`Invalid phone number provided: ${firstStop.phone}. It will be omitted from the API call.`);
+             console.warn(`Invalid phone number provided: ${firstPickup.phone}. It will be omitted from the API call.`);
         }
     }
 
