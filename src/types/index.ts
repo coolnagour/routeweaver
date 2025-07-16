@@ -1,3 +1,4 @@
+
 import { z } from 'zod';
 
 export const ServerConfigSchema = z.object({
@@ -109,6 +110,7 @@ export type JourneyPayloadOutput = {
   orderedStops: Stop[];
 }
 
+const e164Regex = /^\+[1-9]\d{1,14}$/;
 
 // Schemas for Genkit Flow
 const LocationSchema = z.object({
@@ -124,7 +126,9 @@ export const StopSchema = z.object({
   bookingSegmentId: z.number().optional(),
   dateTime: z.union([z.date(), z.string()]).optional().transform(val => val instanceof Date ? val.toISOString() : val),
   name: z.string().optional(),
-  phone: z.string().optional(),
+  phone: z.string().optional().refine(val => !val || e164Regex.test(val), {
+    message: "Phone number must be in E.164 format (e.g., +15551234567).",
+  }),
   pickupStopId: z.string().optional(),
   instructions: z.string().optional(),
 });

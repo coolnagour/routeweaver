@@ -25,7 +25,7 @@ const StopSchema = z.object({
     location: LocationSchema,
     stopType: z.enum(['pickup', 'dropoff']),
     name: z.string().optional().describe("A plausible passenger name, e.g., 'Jane Doe', only for 'pickup' stops."),
-    phone: z.string().optional().describe("A plausible 10-digit phone number, only for 'pickup' stops."),
+    phone: z.string().optional().describe("A plausible phone number in E.164 format (e.g., +15551234567), only for 'pickup' stops."),
     instructions: z.string().optional().describe("Brief, plausible instructions for the stop."),
     pickupStopId: z.string().optional().describe("If stopType is 'dropoff', this MUST be the ID of the corresponding 'pickup' stop within the same booking."),
     dateTime: z.string().optional().describe("A plausible ISO 8601 date-time string for a pickup."),
@@ -82,7 +82,7 @@ Then, generate the journey details based on the user's request (e.g., 'two booki
 - Each template must contain one or more bookings.
 - Each booking must contain at least one pickup and one dropoff.
 - For each stop, you must generate a unique 'id' (e.g., 'stop-1').
-- For each 'pickup' stop, provide a realistic-sounding but fake address, name, and phone number.
+- For each 'pickup' stop, provide a realistic-sounding but fake address, name, and phone number. Phone numbers MUST be in E.164 format (e.g., +15551234567).
 - For each 'dropoff' stop, you MUST set the 'pickupStopId' field to the 'id' of the corresponding pickup stop from the same booking.
 - Do not use real people's names or addresses.
 - Ensure the output is a valid JSON object matching the requested schema.

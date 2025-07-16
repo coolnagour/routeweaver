@@ -151,7 +151,7 @@ export default function ViaStop({
                      <FormControl>
                          <div className="relative flex items-center">
                              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                             <Input placeholder="e.g. 555-5678" {...field} className="pl-10 pr-10 bg-background" />
+                             <Input placeholder="e.g. +15551234567" {...field} className="pl-10 pr-10 bg-background" />
                              <Button type="button" variant="ghost" size="icon" className="absolute right-1 h-8 w-8 text-primary" onClick={() => onGenerateField('phone', `stops.${index}.phone`, index)} disabled={generatingFields[`stops.${index}.phone-phone`]}>
                                 {generatingFields[`stops.${index}.phone-phone`] ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                              </Button>

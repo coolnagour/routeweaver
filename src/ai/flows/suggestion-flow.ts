@@ -35,7 +35,7 @@ The following values are already in use, so please generate a different one:
 {{/if}}
 
 Example for 'name': Jane Doe
-Example for 'phone': 555-123-4567
+Example for 'phone': +15551234567
 Example for 'instructions' (pickup): Meet at the main entrance by the fountain.
 Example for 'instructions' (dropoff): Gate code is #1234, leave at front desk.
 
