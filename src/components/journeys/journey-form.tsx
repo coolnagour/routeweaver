@@ -25,7 +25,7 @@ import { BookingSchema } from '@/types';
 import ViaStop from './via-stop';
 import AddressAutocomplete from './address-autocomplete';
 import { generateSuggestion } from '@/ai/flows/suggestion-flow';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { v4 as uuidv4 } from 'uuid';
 import { Switch } from '../ui/switch';
@@ -120,18 +120,17 @@ export default function JourneyForm({
   const currentStops = useWatch({ control: form.control, name: 'stops' });
   const bookingId = useWatch({ control: form.control, name: 'id' });
 
-  // When an address is updated by the map, we need to manually tell react-hook-form
-  // because the change happens outside of its control.
-  const stopLocations = useWatch({ control: form.control, name: 'stops' }).map(s => s.location);
-  
   // This effect synchronizes the form state when an address is selected on the map.
-  // The 'bookings' state in JourneyBuilder is updated, and this component (JourneyForm)
-  // is a child of it. The form's initialData prop gets the new values.
-  // We use reset to update the entire form with the new data from `initialData`.
-  // This is simpler than trying to find and update just one field in the form array.
-  useState(() => {
-    form.reset(initialData || undefined);
-  });
+  // The 'bookings' state in JourneyBuilder is updated, and the form's initialData prop
+  // gets the new values. We use form.reset() to update the entire form with the new data.
+  useEffect(() => {
+    if (initialData) {
+        form.reset({
+            ...initialData,
+            stops: initialData.stops.map(s => ({...s, dateTime: s.dateTime ? new Date(s.dateTime) : undefined }))
+        });
+    }
+  }, [initialData, form]);
 
 
   const getAvailablePickups = (currentIndex: number) => {
