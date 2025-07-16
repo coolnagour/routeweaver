@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -20,7 +21,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { CalendarIcon, MapPin, PlusCircle, X, User, Phone, Clock, MessageSquare, ChevronsUpDown, Sparkles, Loader2, Info, Hash, Car, Map, DollarSign, Lock, LocateFixed } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, setHours, setMinutes } from 'date-fns';
-import type { Booking, Stop, SuggestionInput, StopType } from '@/types';
+import type { Booking, Stop, SuggestionInput, StopType, Location } from '@/types';
 import { BookingSchema } from '@/types';
 import ViaStop from './via-stop';
 import AddressAutocomplete from './address-autocomplete';
@@ -66,6 +67,9 @@ interface JourneyFormProps {
   onCancel: (bookingId: string) => void;
   isJourneyPriceSet: boolean;
   onSetAddressFromMap: (target: Omit<MapSelectionTarget, 'bookingId'>) => void;
+  locationFromMap: Location | null;
+  onMapLocationHandled: () => void;
+  mapSelectionTarget: MapSelectionTarget | null;
 }
 
 const emptyLocation = { address: '', lat: 0, lng: 0 };
@@ -76,6 +80,9 @@ export default function JourneyForm({
     onCancel, 
     isJourneyPriceSet,
     onSetAddressFromMap,
+    locationFromMap,
+    onMapLocationHandled,
+    mapSelectionTarget,
 }: JourneyFormProps) {
   const { toast } = useToast();
   const [generatingFields, setGeneratingFields] = useState<Record<string, boolean>>({});
@@ -83,21 +90,13 @@ export default function JourneyForm({
   
   const form = useForm<BookingFormData>({
     resolver: zodResolver(FormBookingSchema),
-    defaultValues: {
-      ...initialData,
-      stops: initialData.stops.map(s => ({
-        ...s,
-        dateTime: s.dateTime ? new Date(s.dateTime) : undefined,
-      })),
-    },
+    defaultValues: initialData,
   });
   
   const { fields: stopFields, insert: insertStop, remove: removeStop } = useFieldArray({
     control: form.control,
     name: "stops"
   });
-
-  const currentStops = useWatch({ control: form.control, name: 'stops' });
   
   useEffect(() => {
     form.reset({
@@ -105,6 +104,22 @@ export default function JourneyForm({
       stops: initialData.stops.map(s => ({ ...s, dateTime: s.dateTime ? new Date(s.dateTime) : undefined }))
     });
   }, [initialData, form]);
+  
+  // Effect to update form when a location is selected from the map
+  useEffect(() => {
+    if (locationFromMap && mapSelectionTarget && mapSelectionTarget.bookingId === initialData.id) {
+      const stops = form.getValues('stops');
+      const stopIndex = stops.findIndex(s => s.id === mapSelectionTarget.stopId);
+
+      if (stopIndex !== -1) {
+        form.setValue(`stops.${stopIndex}.location`, locationFromMap, { shouldValidate: true, shouldDirty: true });
+        onMapLocationHandled(); // Signal that we've handled the update
+      }
+    }
+  }, [locationFromMap, mapSelectionTarget, initialData.id, form, onMapLocationHandled]);
+
+
+  const currentStops = useWatch({ control: form.control, name: 'stops' });
 
   const getAvailablePickups = (currentIndex: number) => {
     const previousPickups = currentStops.slice(0, currentIndex).filter(s => s.stopType === 'pickup' && s.name);

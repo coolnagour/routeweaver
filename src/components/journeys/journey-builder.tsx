@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -86,7 +87,10 @@ export default function JourneyBuilder({
   const [isFetchingSites, setIsFetchingSites] = useState(false);
   const [selectedSiteId, setSelectedSiteId] = useState<number | undefined>(initialSiteId || initialData?.siteId);
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(initialAccount || initialData?.account || null);
+  
+  // State for map interactions
   const [mapSelectionTarget, setMapSelectionTarget] = useState<MapSelectionTarget | null>(null);
+  const [locationFromMap, setLocationFromMap] = useState<Location | null>(null);
   
   const getInitialBookings = (data: Partial<JourneyTemplate | Journey> | null | undefined): Booking[] => {
     if (!data || !data.bookings) return [];
@@ -122,20 +126,10 @@ export default function JourneyBuilder({
     };
   };
 
-  const handleSetLocationFromMap = (location: Location) => {
-    if (!mapSelectionTarget || !editingBooking) return;
-
-    const updatedStops = editingBooking.stops.map(stop => {
-      if (stop.id === mapSelectionTarget.stopId) {
-        return { ...stop, location };
-      }
-      return stop;
-    });
-
-    setEditingBooking({ ...editingBooking, stops: updatedStops });
-
-    setMapSelectionTarget(null);
+  const handleLocationSelectFromMap = (location: Location) => {
+    setLocationFromMap(location);
     toast({ title: "Address Updated", description: "The address has been set from the map." });
+    // The JourneyForm will now pick this up via useEffect
   };
 
 
@@ -516,6 +510,8 @@ export default function JourneyBuilder({
           setEditingBooking={setEditingBooking}
           isJourneyPriceSet={hasJourneyLevelPrice}
           setMapSelectionTarget={setMapSelectionTarget}
+          locationFromMap={locationFromMap}
+          onMapLocationHandled={() => setLocationFromMap(null)}
         />
         
         <Card>
@@ -659,7 +655,7 @@ export default function JourneyBuilder({
       <div className="lg:h-[calc(100vh-10rem)] lg:sticky lg:top-20">
         <JourneyMap 
           stops={journeyPreview.orderedStops} 
-          onLocationSelect={handleSetLocationFromMap} 
+          onLocationSelect={handleLocationSelectFromMap} 
           isSelectionMode={!!mapSelectionTarget}
         />
       </div>
