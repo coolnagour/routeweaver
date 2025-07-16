@@ -62,15 +62,18 @@ const saveJourneyFlow = ai.defineFlow(
           const bookingWithContext = { ...booking, siteId, accountId };
           const result = await createBooking(server, bookingWithContext);
           
-          const bookingRequestId = result?.request_id ? parseInt(result.request_id, 10) : undefined;
+          // The API response for createBooking has `id` at the top level, which is the request_id.
+          // The actual booking's persistent ID is in `result.booking.id`.
+          const bookingRequestId = result?.id ? parseInt(result.id, 10) : undefined;
+          const serverBookingId = result?.booking?.id ? parseInt(result.booking.id, 10) : undefined;
           
-          if (!result || !result.id || !bookingRequestId) {
+          if (!serverBookingId || !bookingRequestId) {
             throw new Error(`Invalid response from createBooking. Booking ID or Request ID not returned. Response: ${JSON.stringify(result)}`);
           }
 
           const bookingWithServerIds: Booking = { 
               ...booking, 
-              bookingServerId: result.id, 
+              bookingServerId: serverBookingId, 
               requestId: bookingRequestId,
               stops: [...booking.stops] // Important: work with a copy
           };
@@ -99,7 +102,7 @@ const saveJourneyFlow = ai.defineFlow(
           }
           
           processedBookings.push(bookingWithServerIds);
-          console.log(`[Journey Flow] Successfully processed booking with API ID: ${result.id} and Request ID: ${bookingRequestId}`);
+          console.log(`[Journey Flow] Successfully processed booking with API ID: ${serverBookingId} and Request ID: ${bookingRequestId}`);
         }
 
       } catch (error) {
