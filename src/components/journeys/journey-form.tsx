@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -59,19 +60,15 @@ const FormBookingSchema = BookingSchema.extend({
 
 type BookingFormData = z.infer<typeof FormBookingSchema>;
 
-interface MapSelectionTarget {
-  bookingId: string;
-  stopId: string;
-}
 interface JourneyFormProps {
   initialData: Booking;
   onSave: (booking: Booking) => void;
   onCancel: (bookingId: string) => void;
   isJourneyPriceSet: boolean;
   locationFromMap: Location | null;
-  mapSelectionTarget: MapSelectionTarget | null;
+  mapSelectionTarget: { bookingId: string, stopId: string } | null;
+  onSetMapForSelection: (bookingId: string, stopId: string) => void;
   onMapLocationHandled: () => void;
-  onSetMapForSelection: (target: MapSelectionTarget | null) => void;
 }
 
 const emptyLocation = { address: '', lat: 0, lng: 0 };
@@ -83,8 +80,8 @@ export default function JourneyForm({
     isJourneyPriceSet,
     locationFromMap,
     mapSelectionTarget,
-    onMapLocationHandled,
     onSetMapForSelection,
+    onMapLocationHandled,
 }: JourneyFormProps) {
   const { toast } = useToast();
   const [generatingFields, setGeneratingFields] = useState<Record<string, boolean>>({});
@@ -110,11 +107,15 @@ export default function JourneyForm({
   // Effect to update form when a location is selected from the map
   useEffect(() => {
     if (locationFromMap && mapSelectionTarget && mapSelectionTarget.bookingId === initialData.id) {
+      console.log(`[JourneyForm] Received location from map for booking ${initialData.id} and stop ${mapSelectionTarget.stopId}:`, locationFromMap);
       const stops = form.getValues('stops');
       const stopIndex = stops.findIndex(s => s.id === mapSelectionTarget.stopId);
 
       if (stopIndex !== -1) {
+          console.log(`[JourneyForm] Found stop at index ${stopIndex}, setting location.`);
           form.setValue(`stops.${stopIndex}.location`, locationFromMap, { shouldValidate: true, shouldDirty: true });
+      } else {
+        console.error('[JourneyForm] Could not find stop index for target:', mapSelectionTarget.stopId);
       }
       onMapLocationHandled();
     }
@@ -196,7 +197,8 @@ export default function JourneyForm({
   }
 
   const handleSetAddressFromMap = (stopId: string) => {
-    onSetMapForSelection({ bookingId: initialData.id, stopId });
+    console.log(`[JourneyForm] Setting map selection for booking ${initialData.id}, stop ${stopId}`);
+    onSetMapForSelection(initialData.id, stopId);
   };
 
 
@@ -398,7 +400,7 @@ export default function JourneyForm({
                 {viaStops.map((stop, index) => (
                     <ViaStop 
                         key={stop.id}
-                        control={control}
+                        control={form.control}
                         index={index + 1}
                         removeStop={removeStop}
                         getAvailablePickups={getAvailablePickups}
@@ -418,7 +420,7 @@ export default function JourneyForm({
 
                 {/* Destination Section */}
                 <ViaStop
-                    control={control}
+                    control={form.control}
                     index={stopFields.length - 1}
                     isDestination
                     getAvailablePickups={getAvailablePickups}
