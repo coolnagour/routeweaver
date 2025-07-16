@@ -1,10 +1,9 @@
-
 'use client';
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import type { Booking, Stop, Location } from '@/types';
+import type { Booking, Stop } from '@/types';
 import JourneyForm from './journey-form';
 import { Edit, MapPin, Package, Trash2, UserPlus, Users, Phone, Clock, MessageSquare, Info, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
@@ -23,7 +22,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import type { MapSelectionTarget } from './journey-builder';
 
 
 const getPassengersFromStops = (stops: Stop[]) => {
@@ -36,9 +34,7 @@ interface BookingManagerProps {
   editingBooking: Booking | null;
   setEditingBooking: React.Dispatch<React.SetStateAction<Booking | null>>;
   isJourneyPriceSet: boolean;
-  setMapSelectionTarget: (target: MapSelectionTarget | null) => void;
-  locationFromMap: Location | null;
-  onMapLocationHandled: () => void;
+  setMapForSelection: (target: any) => void;
 }
 
 const emptyLocation = { address: '', lat: 0, lng: 0 };
@@ -49,9 +45,7 @@ export default function BookingManager({
     editingBooking,
     setEditingBooking,
     isJourneyPriceSet,
-    setMapSelectionTarget,
-    locationFromMap,
-    onMapLocationHandled,
+    setMapForSelection,
 }: BookingManagerProps) {
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const { server } = useServer();
@@ -141,9 +135,7 @@ export default function BookingManager({
         onSave={handleSaveBooking}
         onCancel={handleCancelEdit}
         isJourneyPriceSet={isJourneyPriceSet}
-        onSetAddressFromMap={setMapSelectionTarget}
-        locationFromMap={locationFromMap}
-        onMapLocationHandled={onMapLocationHandled}
+        setMapForSelection={setMapForSelection}
       />
     );
   }

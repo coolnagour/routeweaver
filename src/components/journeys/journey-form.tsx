@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -32,7 +31,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { Switch } from '../ui/switch';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
-import type { MapSelectionTarget } from './journey-builder';
 
 // Create a form-specific schema by extending the base BookingSchema to handle Date objects
 const FormBookingSchema = BookingSchema.extend({
@@ -66,10 +64,8 @@ interface JourneyFormProps {
   onSave: (booking: Booking) => void;
   onCancel: (bookingId: string) => void;
   isJourneyPriceSet: boolean;
-  onSetAddressFromMap: (target: Omit<MapSelectionTarget, 'bookingId'>) => void;
-  locationFromMap: Location | null;
-  onMapLocationHandled: () => void;
-  mapSelectionTarget: MapSelectionTarget | null;
+  setMapForSelection: (isSelecting: boolean) => void;
+  locationFromMap?: Location | null;
 }
 
 const emptyLocation = { address: '', lat: 0, lng: 0 };
@@ -79,14 +75,13 @@ export default function JourneyForm({
     onSave, 
     onCancel, 
     isJourneyPriceSet,
-    onSetAddressFromMap,
+    setMapForSelection,
     locationFromMap,
-    onMapLocationHandled,
-    mapSelectionTarget,
 }: JourneyFormProps) {
   const { toast } = useToast();
   const [generatingFields, setGeneratingFields] = useState<Record<string, boolean>>({});
   const [isScheduled, setIsScheduled] = useState(!!initialData?.stops?.find(s => s.stopType === 'pickup')?.dateTime);
+  const [mapSelectionTarget, setMapSelectionTarget] = useState<string | null>(null);
   
   const form = useForm<BookingFormData>({
     resolver: zodResolver(FormBookingSchema),
@@ -107,16 +102,16 @@ export default function JourneyForm({
   
   // Effect to update form when a location is selected from the map
   useEffect(() => {
-    if (locationFromMap && mapSelectionTarget && mapSelectionTarget.bookingId === initialData.id) {
+    if (locationFromMap && mapSelectionTarget) {
       const stops = form.getValues('stops');
-      const stopIndex = stops.findIndex(s => s.id === mapSelectionTarget.stopId);
+      const stopIndex = stops.findIndex(s => s.id === mapSelectionTarget);
 
       if (stopIndex !== -1) {
         form.setValue(`stops.${stopIndex}.location`, locationFromMap, { shouldValidate: true, shouldDirty: true });
-        onMapLocationHandled(); // Signal that we've handled the update
+        setMapSelectionTarget(null); // Clear target after update
       }
     }
-  }, [locationFromMap, mapSelectionTarget, initialData.id, form, onMapLocationHandled]);
+  }, [locationFromMap, mapSelectionTarget, form]);
 
 
   const currentStops = useWatch({ control: form.control, name: 'stops' });
@@ -192,6 +187,11 @@ export default function JourneyForm({
         }
     }
   }
+
+  const handleSetAddressFromMap = (stopId: string) => {
+    setMapSelectionTarget(stopId);
+    setMapForSelection(true);
+  };
 
 
   const firstStop = stopFields[0];
@@ -316,7 +316,7 @@ export default function JourneyForm({
                                         type="button"
                                         variant="outline"
                                         size="icon"
-                                        onClick={() => onSetAddressFromMap({ stopId: firstStop.id })}
+                                        onClick={() => handleSetAddressFromMap(firstStop.id)}
                                         className="shrink-0"
                                         title="Set address from map"
                                     >
@@ -398,7 +398,7 @@ export default function JourneyForm({
                         getAvailablePickups={getAvailablePickups}
                         onGenerateField={handleGenerateField}
                         generatingFields={generatingFields}
-                        onSetAddressFromMap={onSetAddressFromMap}
+                        onSetAddressFromMap={handleSetAddressFromMap}
                         stopId={stop.id}
                     />
                 ))}
@@ -418,7 +418,7 @@ export default function JourneyForm({
                     getAvailablePickups={getAvailablePickups}
                     onGenerateField={handleGenerateField}
                     generatingFields={generatingFields}
-                    onSetAddressFromMap={onSetAddressFromMap}
+                    onSetAddressFromMap={handleSetAddressFromMap}
                     stopId={lastStop.id}
                 />
                 

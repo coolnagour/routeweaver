@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -43,11 +42,6 @@ interface JourneyPreviewState {
   isLoading: boolean;
 }
 
-export interface MapSelectionTarget {
-  bookingId: string;
-  stopId: string;
-}
-
 const generateDebugBookingPayloads = (bookings: Booking[], server: any, siteId?: number, accountId?: number) => {
     if (!server || !siteId || !accountId) return [];
     
@@ -89,7 +83,7 @@ export default function JourneyBuilder({
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(initialAccount || initialData?.account || null);
   
   // State for map interactions
-  const [mapSelectionTarget, setMapSelectionTarget] = useState<MapSelectionTarget | null>(null);
+  const [isMapInSelectionMode, setIsMapInSelectionMode] = useState(false);
   const [locationFromMap, setLocationFromMap] = useState<Location | null>(null);
   
   const getInitialBookings = (data: Partial<JourneyTemplate | Journey> | null | undefined): Booking[] => {
@@ -126,10 +120,17 @@ export default function JourneyBuilder({
     };
   };
 
+  const setMapForSelection = (isSelecting: boolean) => {
+    setIsMapInSelectionMode(isSelecting);
+    if (!isSelecting) {
+      setLocationFromMap(null);
+    }
+  };
+
   const handleLocationSelectFromMap = (location: Location) => {
     setLocationFromMap(location);
-    toast({ title: "Address Updated", description: "The address has been set from the map." });
-    // The JourneyForm will now pick this up via useEffect
+    setIsMapInSelectionMode(false);
+    toast({ title: "Address Selected", description: "The address has been set from the map." });
   };
 
 
@@ -509,9 +510,7 @@ export default function JourneyBuilder({
           editingBooking={editingBooking}
           setEditingBooking={setEditingBooking}
           isJourneyPriceSet={hasJourneyLevelPrice}
-          setMapSelectionTarget={setMapSelectionTarget}
-          locationFromMap={locationFromMap}
-          onMapLocationHandled={() => setLocationFromMap(null)}
+          setMapForSelection={setMapForSelection}
         />
         
         <Card>
@@ -656,7 +655,7 @@ export default function JourneyBuilder({
         <JourneyMap 
           stops={journeyPreview.orderedStops} 
           onLocationSelect={handleLocationSelectFromMap} 
-          isSelectionMode={!!mapSelectionTarget}
+          isSelectionMode={isMapInSelectionMode}
         />
       </div>
     </div>

@@ -19,7 +19,6 @@ import type { Stop, SuggestionInput, StopType } from '@/types';
 import { cn } from '@/lib/utils';
 import { format, setHours, setMinutes } from 'date-fns';
 import AddressAutocomplete from './address-autocomplete';
-import type { MapSelectionTarget } from './journey-builder';
 
 interface ViaStopProps {
   control: any;
@@ -35,7 +34,7 @@ interface ViaStopProps {
     stopType?: StopType
   ) => void;
   generatingFields: Record<string, boolean>;
-  onSetAddressFromMap: (target: Omit<MapSelectionTarget, 'bookingId'>) => void;
+  onSetAddressFromMap: (stopId: string) => void;
 }
 
 export default function ViaStop({ 
@@ -100,7 +99,7 @@ export default function ViaStop({
                                     type="button"
                                     variant="outline"
                                     size="icon"
-                                    onClick={() => onSetAddressFromMap({ stopId })}
+                                    onClick={() => onSetAddressFromMap(stopId)}
                                     className="shrink-0"
                                     title="Set address from map"
                                 >
