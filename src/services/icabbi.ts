@@ -85,6 +85,10 @@ const formatBookingForIcabbi = (booking: Booking, server: ServerConfig) => {
             fixed: 1,
         };
     }
+    
+    if (lastStop.instructions) {
+        payload.instructions = lastStop.instructions;
+    }
 
     return payload;
 };
