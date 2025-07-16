@@ -113,7 +113,6 @@ export default function JourneyBuilder({
   
   // State for map selection
   const [isMapInSelectionMode, setIsMapInSelectionMode] = useState(false);
-  const [mapSelectionTarget, setMapSelectionTarget] = useState<MapSelectionTarget | null>(null);
   const [locationFromMap, setLocationFromMap] = useState<Location | null>(null);
 
   const hasBookingLevelPrice = bookings.some(b => b.price || b.cost);
@@ -400,24 +399,20 @@ export default function JourneyBuilder({
     return undefined;
   };
   
-  const handleSetMapForSelection = (target: MapSelectionTarget) => {
-    console.log('[JourneyBuilder] Activating map selection mode for target:', target);
-    setMapSelectionTarget(target);
-    setIsMapInSelectionMode(true);
+  const handleLocationSelectFromMap = (location: Location) => {
+    console.log('[JourneyBuilder] Location selected from map:', location);
+    setLocationFromMap(location);
+    setIsMapInSelectionMode(false); // Turn off selection mode after a location is picked
   };
 
-  const handleLocationSelectFromMap = (location: Location) => {
-    console.log('[JourneyBuilder] Location selected from map:', location, 'Target:', mapSelectionTarget);
-    if (mapSelectionTarget) {
-      setLocationFromMap(location);
-    }
-    setIsMapInSelectionMode(false); // Turn off selection mode after a location is picked
+  const handleSetMapSelection = (isSelecting: boolean) => {
+    console.log(`[JourneyBuilder] Setting map selection mode to: ${isSelecting}`);
+    setIsMapInSelectionMode(isSelecting);
   };
   
   const onMapLocationHandled = () => {
     console.log('[JourneyBuilder] Resetting locationFromMap state.');
     setLocationFromMap(null);
-    setMapSelectionTarget(null);
   };
   
   const title = getTitle();
@@ -523,10 +518,9 @@ export default function JourneyBuilder({
           editingBooking={editingBooking}
           setEditingBooking={setEditingBooking}
           isJourneyPriceSet={hasJourneyLevelPrice}
-          onSetMapForSelection={handleSetMapForSelection}
+          onSetMapSelection={handleSetMapSelection}
           locationFromMap={locationFromMap}
           onMapLocationHandled={onMapLocationHandled}
-          mapSelectionTarget={mapSelectionTarget}
         />
         
         <Card>
