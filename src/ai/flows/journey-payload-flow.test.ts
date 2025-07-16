@@ -41,14 +41,12 @@ async function runTest() {
         id: 'b1',
         stops: [p1, d1],
         bookingServerId: 101,
-        requestId: 201, 
     };
 
     const booking2: Booking = {
         id: 'b2',
         stops: [p2, d2],
         bookingServerId: 102,
-        requestId: 202, 
     };
 
     const input = {

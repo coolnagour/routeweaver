@@ -47,12 +47,12 @@ export async function generateJourneyPayload(input: JourneyPayloadInput): Promis
     }));
 
     const allStops = sanitizedBookings.flatMap(booking =>
-        booking.stops.map(stop => ({ ...stop, parentBookingId: booking.id, parentBookingRequestId: booking.requestId }))
+        booking.stops.map(stop => ({ ...stop, parentBookingId: booking.id, parentBookingServerId: booking.bookingServerId }))
     );
     const bookingMap = new Map(sanitizedBookings.map(b => [b.id, b]));
     
     let unvisitedStops = [...allStops];
-    const orderedStops: (Stop & { parentBookingId: string, parentBookingRequestId?: number })[] = [];
+    const orderedStops: (Stop & { parentBookingId: string, parentBookingServerId?: number })[] = [];
     const passengersInVehicle = new Set<string>();
 
     if (unvisitedStops.length === 0) {
@@ -144,11 +144,11 @@ export async function generateJourneyPayload(input: JourneyPayloadInput): Promis
             );
         }
 
-        const idToUse = isFinalStopOfBooking ? parentBooking.requestId : stop.bookingSegmentId;
+        const idToUse = isFinalStopOfBooking ? parentBooking.bookingServerId : stop.bookingSegmentId;
         const idType = isFinalStopOfBooking ? 'request_id' : 'bookingsegment_id';
 
         // When updating a journey, new stops won't have a bookingSegmentId.
-        // Also, if a booking is already created, it will have a requestId.
+        // Also, if a booking is already created, it will have a bookingServerId.
         // The API expects a bookingsegment_id for intermediate stops.
         // For new stops in an existing journey, we can't provide this, so we must skip them.
         if (!idToUse && journeyServerId) {
@@ -182,7 +182,7 @@ export async function generateJourneyPayload(input: JourneyPayloadInput): Promis
     };
 
     const finalOrderedStops = orderedStops.map(s => {
-        const { parentBookingId, parentBookingRequestId, ...stopRest } = s as any;
+        const { parentBookingId, parentBookingServerId, ...stopRest } = s as any;
         return stopRest;
     });
 

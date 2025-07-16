@@ -106,9 +106,11 @@ export default function JourneyBuilder({
     try {
         const tempBookingsForPreview = currentBookings.map((b, bookingIndex) => ({
           ...b,
-          requestId: b.requestId || (9000 + bookingIndex), 
+          // Use real bookingServerId if available, otherwise a temp one for preview
+          bookingServerId: b.bookingServerId || (9000 + bookingIndex), 
           stops: b.stops.map((s, stopIndex) => ({
             ...s,
+            // Use real bookingSegmentId if available, otherwise a unique placeholder
             bookingSegmentId: s.bookingSegmentId || (1000 + (bookingIndex * 10) + stopIndex)
           }))
         }));
@@ -578,7 +580,7 @@ export default function JourneyBuilder({
                     <div>
                       <h4 className="font-semibold text-foreground mb-2">Bookings Data (Input)</h4>
                        <pre className="text-xs whitespace-pre-wrap break-all bg-background p-2 rounded">
-                          {JSON.stringify(journeyPreview.bookings, null, 2)}
+                          {JSON.stringify(journeyPreview.bookings, (key, value) => key === 'dateTime' && value ? new Date(value).toISOString() : value, 2)}
                       </pre>
                     </div>
                   </>

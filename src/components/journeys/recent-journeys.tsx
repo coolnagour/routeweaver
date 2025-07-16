@@ -67,8 +67,8 @@ export default function RecentJourneys() {
         // Use real server IDs if they exist, otherwise generate placeholders for the debug view.
         const tempBookingsForPreview = journey.bookings.map((b, bookingIndex) => ({
           ...b,
-          // Use real requestId if available, otherwise a temp one for preview
-          requestId: b.requestId || (9000 + bookingIndex), 
+          // Use real bookingServerId if available, otherwise a temp one for preview
+          bookingServerId: b.bookingServerId || (9000 + bookingIndex), 
           stops: b.stops.map((s, stopIndex) => ({
             ...s,
             // Use real bookingSegmentId if available, otherwise a unique placeholder
@@ -292,10 +292,9 @@ export default function RecentJourneys() {
                                                       <CardDescription>{pickups.length} passenger(s)</CardDescription>
                                                   </div>
                                                   <div className="flex flex-col items-end gap-1">
-                                                      {(booking.bookingServerId || booking.requestId) && (
+                                                      {booking.bookingServerId && (
                                                           <div className="text-right text-[10px] font-mono text-muted-foreground space-y-0.5">
                                                               {booking.bookingServerId && <div>Booking ID: {booking.bookingServerId}</div>}
-                                                              {booking.requestId && <div>Request ID: {booking.requestId}</div>}
                                                           </div>
                                                       )}
                                                       <div className="flex flex-wrap gap-1 justify-end">

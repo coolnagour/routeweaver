@@ -67,7 +67,6 @@ const saveJourneyFlow = ai.defineFlow(
           result = await createBooking(server, bookingWithContext);
         }
           
-        const bookingRequestId = result?.request_id ? parseInt(result.request_id, 10) : booking.requestId;
         // Use perma_id from the response for the bookingServerId.
         const serverBookingId = result?.perma_id ? parseInt(result.perma_id, 10) : booking.bookingServerId;
           
@@ -77,8 +76,7 @@ const saveJourneyFlow = ai.defineFlow(
 
         const bookingWithServerIds: Booking = { 
             ...booking, 
-            bookingServerId: serverBookingId, 
-            requestId: bookingRequestId,
+            bookingServerId: serverBookingId,
             stops: [...booking.stops] // Important: work with a copy
         };
           
@@ -102,7 +100,7 @@ const saveJourneyFlow = ai.defineFlow(
         }
           
         processedBookings.push(bookingWithServerIds);
-        console.log(`[Journey Flow] Successfully processed booking with API ID: ${serverBookingId} and Request ID: ${bookingRequestId}`);
+        console.log(`[Journey Flow] Successfully processed booking with API ID: ${serverBookingId}`);
 
       } catch (error) {
         const passengerName = booking.stops.find(s => s.stopType === 'pickup')?.name || 'Unknown';
