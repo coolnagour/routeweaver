@@ -64,8 +64,9 @@ interface JourneyFormProps {
   onSave: (booking: Booking) => void;
   onCancel: (bookingId: string) => void;
   isJourneyPriceSet: boolean;
-  setMapForSelection: (isSelecting: boolean) => void;
+  onSetMapForSelection: (isSelecting: boolean, stopId?: string) => void;
   locationFromMap?: Location | null;
+  onMapLocationHandled: () => void;
 }
 
 const emptyLocation = { address: '', lat: 0, lng: 0 };
@@ -75,13 +76,13 @@ export default function JourneyForm({
     onSave, 
     onCancel, 
     isJourneyPriceSet,
-    setMapForSelection,
+    onSetMapForSelection,
     locationFromMap,
+    onMapLocationHandled,
 }: JourneyFormProps) {
   const { toast } = useToast();
   const [generatingFields, setGeneratingFields] = useState<Record<string, boolean>>({});
   const [isScheduled, setIsScheduled] = useState(!!initialData?.stops?.find(s => s.stopType === 'pickup')?.dateTime);
-  const [mapSelectionTarget, setMapSelectionTarget] = useState<string | null>(null);
   
   const form = useForm<BookingFormData>({
     resolver: zodResolver(FormBookingSchema),
@@ -102,16 +103,32 @@ export default function JourneyForm({
   
   // Effect to update form when a location is selected from the map
   useEffect(() => {
-    if (locationFromMap && mapSelectionTarget) {
+    if (locationFromMap) {
+      console.log('[JourneyForm] Received location from map:', locationFromMap);
+      
       const stops = form.getValues('stops');
-      const stopIndex = stops.findIndex(s => s.id === mapSelectionTarget);
+      // The target is now stored in the form component itself
+      const mapSelectionTarget = (form as any)._mapSelectionTarget;
+      console.log('[JourneyForm] Current map selection target:', mapSelectionTarget);
 
-      if (stopIndex !== -1) {
-        form.setValue(`stops.${stopIndex}.location`, locationFromMap, { shouldValidate: true, shouldDirty: true });
-        setMapSelectionTarget(null); // Clear target after update
+      if (mapSelectionTarget) {
+          const stopIndex = stops.findIndex(s => s.id === mapSelectionTarget);
+          console.log('[JourneyForm] Found stop index:', stopIndex);
+
+          if (stopIndex !== -1) {
+              console.log(`[JourneyForm] Updating form value for stops.${stopIndex}.location`);
+              form.setValue(`stops.${stopIndex}.location`, locationFromMap, { shouldValidate: true, shouldDirty: true });
+          } else {
+              console.error('[JourneyForm] Could not find the stop to update in the form.');
+          }
+          // Clear target and notify parent
+          (form as any)._mapSelectionTarget = null;
+          onMapLocationHandled();
+      } else {
+        console.warn('[JourneyForm] locationFromMap was received, but there was no target stop ID.');
       }
     }
-  }, [locationFromMap, mapSelectionTarget, form]);
+  }, [locationFromMap, form, onMapLocationHandled]);
 
 
   const currentStops = useWatch({ control: form.control, name: 'stops' });
@@ -189,8 +206,10 @@ export default function JourneyForm({
   }
 
   const handleSetAddressFromMap = (stopId: string) => {
-    setMapSelectionTarget(stopId);
-    setMapForSelection(true);
+    console.log(`[JourneyForm] Clicked 'Set Address from Map' for stopId: ${stopId}`);
+    // Store the target ID in a temporary property on the form instance
+    (form as any)._mapSelectionTarget = stopId;
+    onSetMapForSelection(true, stopId);
   };
 
 

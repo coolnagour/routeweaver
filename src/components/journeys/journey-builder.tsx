@@ -120,7 +120,8 @@ export default function JourneyBuilder({
     };
   };
 
-  const setMapForSelection = (isSelecting: boolean) => {
+  const handleSetMapForSelection = (isSelecting: boolean) => {
+    console.log(`[JourneyBuilder] Setting map selection mode to: ${isSelecting}`);
     setIsMapInSelectionMode(isSelecting);
     if (!isSelecting) {
       setLocationFromMap(null);
@@ -128,9 +129,15 @@ export default function JourneyBuilder({
   };
 
   const handleLocationSelectFromMap = (location: Location) => {
+    console.log('[JourneyBuilder] Location selected from map:', location);
     setLocationFromMap(location);
     setIsMapInSelectionMode(false);
     toast({ title: "Address Selected", description: "The address has been set from the map." });
+  };
+  
+  const handleMapLocationHandled = () => {
+    console.log('[JourneyBuilder] JourneyForm has handled the map location. Clearing locationFromMap.');
+    setLocationFromMap(null);
   };
 
 
@@ -510,7 +517,9 @@ export default function JourneyBuilder({
           editingBooking={editingBooking}
           setEditingBooking={setEditingBooking}
           isJourneyPriceSet={hasJourneyLevelPrice}
-          setMapForSelection={setMapForSelection}
+          onSetMapForSelection={handleSetMapForSelection}
+          locationFromMap={locationFromMap}
+          onMapLocationHandled={handleMapLocationHandled}
         />
         
         <Card>
