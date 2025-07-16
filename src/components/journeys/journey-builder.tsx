@@ -23,7 +23,7 @@ import { cn } from '@/lib/utils';
 import { Label } from '../ui/label';
 import { formatBookingForApi } from '@/lib/booking-formatter';
 import JourneyMap from './journey-map';
-import { useMapSelection } from '@/context/map-selection-context';
+import { MapSelectionProvider, useMapSelection } from '@/context/map-selection-context';
 
 interface JourneyBuilderProps {
   initialData?: Partial<JourneyTemplate> | null;
@@ -109,7 +109,7 @@ function JourneyBuilderInner({
   const hasBookingLevelPrice = bookings.some(b => b.price || b.cost);
   const hasJourneyLevelPrice = journeyPrice || journeyCost;
 
-  const { selectedLocation, clearSelection, isMapInSelectionMode, startSelection } = useMapSelection();
+  const { setSelectedLocation, isMapInSelectionMode } = useMapSelection();
 
 
   const debounce = <F extends (...args: any[]) => void>(func: F, delay: number) => {
@@ -394,10 +394,7 @@ function JourneyBuilderInner({
   };
 
   const handleLocationSelectedFromMap = (location: Location) => {
-    // Pass the selected location to the context, which will then be picked up
-    // by the waiting AddressAutocomplete component.
-    startSelection()(location);
-    clearSelection();
+    setSelectedLocation(location);
   };
 
   const title = getTitle();
@@ -664,5 +661,3 @@ export default function JourneyBuilder(props: JourneyBuilderProps) {
     </MapSelectionProvider>
   )
 }
-
-    
