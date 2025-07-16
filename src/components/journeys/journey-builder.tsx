@@ -663,7 +663,7 @@ function JourneyBuilderInner({
             </div>
             
             {/* Desktop Layout: Map on the side */}
-            <div className="hidden lg:block lg:h-[calc(100vh-10rem)] lg:sticky lg:top-20">
+            <div className="hidden lg:block lg:h-[calc(100vh-4rem)] lg:sticky lg:top-8">
                 {journeyMapComponent}
             </div>
         </div>
