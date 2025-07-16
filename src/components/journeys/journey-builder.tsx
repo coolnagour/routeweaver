@@ -87,7 +87,6 @@ export default function JourneyBuilder({
   const [selectedSiteId, setSelectedSiteId] = useState<number | undefined>(initialSiteId || initialData?.siteId);
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(initialAccount || initialData?.account || null);
   
-  // State for map interactions
   const [isMapInSelectionMode, setIsMapInSelectionMode] = useState(false);
   const [locationFromMap, setLocationFromMap] = useState<Location | null>(null);
   const [mapSelectionTarget, setMapSelectionTarget] = useState<MapSelectionTarget | null>(null);
@@ -126,14 +125,14 @@ export default function JourneyBuilder({
     };
   };
 
-  const handleSetMapForSelection = (stopId: string) => {
-    if (!editingBooking) {
-      console.error("[JourneyBuilder] Tried to set map for selection, but no booking is being edited.");
-      return;
+  const handleSetMapForSelection = (isSelecting: boolean, bookingId: string, stopId: string) => {
+    console.log(`[JourneyBuilder] Received request to set map selection mode: ${isSelecting} for booking ${bookingId}, stop ${stopId}`);
+    setIsMapInSelectionMode(isSelecting);
+    if (isSelecting) {
+      setMapSelectionTarget({ bookingId, stopId });
+    } else {
+      setMapSelectionTarget(null);
     }
-    console.log(`[JourneyBuilder] Received request to enter map selection mode for stopId: ${stopId}`);
-    setMapSelectionTarget({ bookingId: editingBooking.id, stopId });
-    setIsMapInSelectionMode(true);
   };
   
   const handleLocationSelectFromMap = (location: Location) => {
@@ -526,9 +525,9 @@ export default function JourneyBuilder({
           editingBooking={editingBooking}
           setEditingBooking={setEditingBooking}
           isJourneyPriceSet={hasJourneyLevelPrice}
+          onSetMapForSelection={handleSetMapForSelection}
           locationFromMap={locationFromMap}
           mapSelectionTarget={mapSelectionTarget}
-          onSetMapForSelection={handleSetMapForSelection}
           onMapLocationHandled={handleMapLocationHandled}
         />
         

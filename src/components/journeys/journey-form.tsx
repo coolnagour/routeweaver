@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -59,15 +58,19 @@ const FormBookingSchema = BookingSchema.extend({
 
 
 type BookingFormData = z.infer<typeof FormBookingSchema>;
+interface MapSelectionTarget {
+  bookingId: string;
+  stopId: string;
+}
 
 interface JourneyFormProps {
   initialData: Booking;
   onSave: (booking: Booking) => void;
   onCancel: (bookingId: string) => void;
   isJourneyPriceSet: boolean;
+  onSetMapForSelection: (isSelecting: boolean, bookingId: string, stopId: string) => void;
   locationFromMap: Location | null;
-  mapSelectionTarget: { bookingId: string, stopId: string } | null;
-  onSetMapForSelection: (bookingId: string, stopId: string) => void;
+  mapSelectionTarget: MapSelectionTarget | null;
   onMapLocationHandled: () => void;
 }
 
@@ -78,9 +81,9 @@ export default function JourneyForm({
     onSave, 
     onCancel, 
     isJourneyPriceSet,
+    onSetMapForSelection,
     locationFromMap,
     mapSelectionTarget,
-    onSetMapForSelection,
     onMapLocationHandled,
 }: JourneyFormProps) {
   const { toast } = useToast();
@@ -198,7 +201,7 @@ export default function JourneyForm({
 
   const handleSetAddressFromMap = (stopId: string) => {
     console.log(`[JourneyForm] Setting map selection for booking ${initialData.id}, stop ${stopId}`);
-    onSetMapForSelection(initialData.id, stopId);
+    onSetMapForSelection(true, initialData.id, stopId);
   };
 
 

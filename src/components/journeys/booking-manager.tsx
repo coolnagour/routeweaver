@@ -38,9 +38,10 @@ interface BookingManagerProps {
   editingBooking: Booking | null;
   setEditingBooking: React.Dispatch<React.SetStateAction<Booking | null>>;
   isJourneyPriceSet: boolean;
+  onSetMapForSelection: (isSelecting: boolean, bookingId: string, stopId: string) => void;
   locationFromMap: Location | null;
+  mapSelectionTarget: MapSelectionTarget | null;
   onMapLocationHandled: () => void;
-  onSetMapForSelection: (stopId: string) => void;
 }
 
 const emptyLocation = { address: '', lat: 0, lng: 0 };
@@ -51,8 +52,9 @@ export default function BookingManager({
     editingBooking,
     setEditingBooking,
     isJourneyPriceSet,
-    locationFromMap,
     onSetMapForSelection,
+    locationFromMap,
+    mapSelectionTarget,
     onMapLocationHandled
 }: BookingManagerProps) {
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
@@ -118,7 +120,7 @@ export default function BookingManager({
   const handleCancelEdit = (bookingId: string) => {
     const booking = bookings.find(b => b.id === bookingId);
     // If it was a new booking that was cancelled, remove it from the array
-    if (booking && !booking.bookingServerId) {
+    if (booking && !booking.bookingServerId && !booking.stops.some(s => s.location.address)) {
         setBookings(prev => prev.filter(b => b.id !== bookingId));
     }
     setEditingBooking(null);
@@ -143,9 +145,10 @@ export default function BookingManager({
         onSave={handleSaveBooking}
         onCancel={handleCancelEdit}
         isJourneyPriceSet={isJourneyPriceSet}
-        locationFromMap={locationFromMap}
-        onMapLocationHandled={onMapLocationHandled}
         onSetMapForSelection={onSetMapForSelection}
+        locationFromMap={locationFromMap}
+        mapSelectionTarget={mapSelectionTarget}
+        onMapLocationHandled={onMapLocationHandled}
       />
     );
   }
