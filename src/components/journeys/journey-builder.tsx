@@ -401,258 +401,271 @@ function JourneyBuilderInner({
 
   const title = getTitle();
   const publishButtonText = currentJourney?.status === 'Scheduled' ? 'Update Published Journey' : 'Publish';
+  
+  const journeyMapComponent = (
+      <JourneyMap 
+          stops={journeyPreview.orderedStops}
+          onLocationSelect={handleLocationSelectedFromMap}
+          isSelectionMode={isMapInSelectionMode}
+      />
+  );
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 py-8 h-full">
-      <div className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="font-headline text-2xl">{title}</CardTitle>
-            <CardDescription>A journey is made up of one or more bookings. Add or edit bookings below.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label className="text-sm font-medium mb-2 block">Site</label>
-                    <Select 
-                        value={selectedSiteId?.toString()}
-                        onValueChange={(value) => setSelectedSiteId(Number(value))} 
-                        disabled={isFetchingSites}
-                    >
-                        <SelectTrigger>
-                            {isFetchingSites ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Building className="mr-2 h-4 w-4" />}
-                            <SelectValue placeholder={isFetchingSites ? "Loading sites..." : "Select a site"} />
-                        </SelectTrigger>
-                        <SelectContent>
-                        {sites.length > 0 ? (
-                            sites.map(site => (
-                                <SelectItem key={site.id} value={site.id.toString()}>
-                                    <span className="font-medium mr-2">{site.ref}</span>
-                                    <span className="text-muted-foreground">{site.name}</span>
-                                </SelectItem>
-                            ))
-                        ) : (
-                            <div className="p-2 text-sm text-muted-foreground">No sites available.</div>
-                        )}
-                        </SelectContent>
-                    </Select>
-                </div>
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Account</label>
-                    <AccountAutocomplete 
-                        onAccountSelect={setSelectedAccount}
-                        initialAccount={selectedAccount}
-                    />
-                </div>
-            </div>
-            <Collapsible className="mt-4">
-              <CollapsibleTrigger asChild>
-                  <Button variant="link" size="sm" className="p-0 h-auto">
-                      <ChevronsUpDown className="h-4 w-4 mr-2" />
-                      Extra Information
-                  </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="space-y-4 pt-4">
-                  <div className="grid grid-cols-2 gap-4">
-                      <div>
-                          <Label htmlFor="journey-price">Journey Price</Label>
-                          <div className="relative flex items-center">
-                              <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                              <Input
-                                  id="journey-price"
-                                  type="number"
-                                  placeholder="e.g., 50.00"
-                                  value={journeyPrice || ''}
-                                  onChange={(e) => setJourneyPrice(e.target.value ? parseFloat(e.target.value) : undefined)}
-                                  disabled={hasBookingLevelPrice}
-                                  className="pl-10 bg-background"
-                              />
-                          </div>
-                      </div>
-                      <div>
-                          <Label htmlFor="journey-cost">Journey Cost</Label>
-                          <div className="relative flex items-center">
-                              <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                              <Input
-                                  id="journey-cost"
-                                  type="number"
-                                  placeholder="e.g., 20.00"
-                                  value={journeyCost || ''}
-                                  onChange={(e) => setJourneyCost(e.target.value ? parseFloat(e.target.value) : undefined)}
-                                  disabled={hasBookingLevelPrice}
-                                  className="pl-10 bg-background"
-                              />
-                          </div>
-                      </div>
-                  </div>
-                  {hasBookingLevelPrice && (
-                      <p className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Info className="h-3 w-3" />
-                          Journey-level price/cost is disabled because one or more bookings have individual pricing.
-                      </p>
-                  )}
-              </CollapsibleContent>
-            </Collapsible>
-          </CardContent>
-        </Card>
+    <div className="py-4 lg:py-8 h-full">
+        {/* Mobile Layout: Map on top */}
+        <div className="lg:hidden h-64 sticky top-0 z-10 p-4 -m-4 bg-background">
+            {journeyMapComponent}
+        </div>
 
-        <BookingManager 
-          bookings={bookings} 
-          setBookings={setBookings}
-          editingBooking={editingBooking}
-          setEditingBooking={setEditingBooking}
-          isJourneyPriceSet={hasJourneyLevelPrice}
-        />
-        
-        <Card>
-            <CardHeader>
-               <CardTitle className="font-headline text-lg">Journey Stop Order</CardTitle>
-               <CardDescription>This is a preview of the optimized stop order that will be sent to the API.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <div className="bg-background rounded-lg border p-4 space-y-4">
-                  {journeyPreview.isLoading ? (
-                    <div className="flex items-center justify-center p-4">
-                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                      <span className="ml-2">Generating preview...</span>
-                    </div>
-                  ) : journeyPreview.orderedStops.length > 0 ? (
-                    journeyPreview.orderedStops.map((stop, index) => {
-                      const passenger = stop.stopType === 'pickup' ? stop : findPassengerForDropoff(stop);
-                      return (
-                        <div key={`${stop.id}-${index}`} className="flex items-start gap-3">
-                          <div className="flex flex-col items-center">
-                            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">
-                              {index + 1}
-                            </div>
-                            {index < journeyPreview.orderedStops.length - 1 && (
-                              <div className="w-px h-6 bg-border mt-1"></div>
-                            )}
-                          </div>
-                          <div className="flex-1 pt-0.5">
-                            <p className="font-medium">
-                                {stop.location.address}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                                <span className={cn("font-semibold", stop.stopType === 'pickup' ? 'text-green-600' : 'text-red-600')}>
-                                    {stop.stopType.toUpperCase()}
-                                </span>
-                                {passenger?.name && ` - ${passenger.name}`}
-                            </p>
-                          </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="space-y-6">
+                <Card>
+                <CardHeader>
+                    <CardTitle className="font-headline text-2xl">{title}</CardTitle>
+                    <CardDescription>A journey is made up of one or more bookings. Add or edit bookings below.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="text-sm font-medium mb-2 block">Site</label>
+                            <Select 
+                                value={selectedSiteId?.toString()}
+                                onValueChange={(value) => setSelectedSiteId(Number(value))} 
+                                disabled={isFetchingSites}
+                            >
+                                <SelectTrigger>
+                                    {isFetchingSites ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Building className="mr-2 h-4 w-4" />}
+                                    <SelectValue placeholder={isFetchingSites ? "Loading sites..." : "Select a site"} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                {sites.length > 0 ? (
+                                    sites.map(site => (
+                                        <SelectItem key={site.id} value={site.id.toString()}>
+                                            <span className="font-medium mr-2">{site.ref}</span>
+                                            <span className="text-muted-foreground">{site.name}</span>
+                                        </SelectItem>
+                                    ))
+                                ) : (
+                                    <div className="p-2 text-sm text-muted-foreground">No sites available.</div>
+                                )}
+                                </SelectContent>
+                            </Select>
                         </div>
-                      )
-                    })
-                  ) : (
-                    <p className="text-sm text-muted-foreground text-center">Add some bookings to see the journey order.</p>
-                  )}
-                </div>
-              </CardContent>
-        </Card>
-        
-        <Card>
-            <CardFooter className="flex flex-wrap justify-between items-center bg-muted/50 p-4 rounded-b-lg gap-4">
-                <div className="flex flex-col gap-2 flex-grow min-w-[250px] w-full sm:w-auto">
-                    <Label htmlFor="template-name" className="text-xs">Template Name</Label>
-                    <div className="flex items-center gap-2">
-                        <Input
-                            id="template-name"
-                            type="text"
-                            placeholder={isEditingTemplate ? "Template Name" : "Enter name to save..."}
-                            value={templateName}
-                            onChange={(e) => setTemplateName(e.target.value)}
-                            className="bg-background flex-grow"
-                        />
-                        <Button variant="outline" onClick={handleSaveTemplate} disabled={bookings.length === 0 || !templateName}>
-                            <Save className="mr-2 h-4 w-4" /> {isEditingTemplate ? 'Update' : 'Save as Template'}
-                        </Button>
+                        <div>
+                            <label className="text-sm font-medium mb-2 block">Account</label>
+                            <AccountAutocomplete 
+                                onAccountSelect={setSelectedAccount}
+                                initialAccount={selectedAccount}
+                            />
+                        </div>
                     </div>
-                </div>
-                
-                {!isEditingTemplate && (
-                  <div className="flex flex-col gap-2 flex-grow min-w-[250px] w-full sm:w-auto">
-                      <Label className="text-xs">Journey Actions</Label>
-                      <div className="flex gap-2">
-                        <Button variant="outline" onClick={handleSaveJourneyLocally} disabled={bookings.length === 0} className="flex-1">
-                            <Save className="mr-2 h-4 w-4" /> {isEditingJourney ? 'Update Journey' : 'Save Draft'}
+                    <Collapsible className="mt-4">
+                    <CollapsibleTrigger asChild>
+                        <Button variant="link" size="sm" className="p-0 h-auto">
+                            <ChevronsUpDown className="h-4 w-4 mr-2" />
+                            Extra Information
                         </Button>
-                        
-                        <Button onClick={handlePublishJourney} disabled={isSubmitting || !currentJourney || bookings.length === 0 || !selectedSiteId || !selectedAccount} className="flex-1">
-                            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                            {publishButtonText}
-                        </Button>
-                      </div>
-                  </div>
-                )}
-            </CardFooter>
-        </Card>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="space-y-4 pt-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <Label htmlFor="journey-price">Journey Price</Label>
+                                <div className="relative flex items-center">
+                                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        id="journey-price"
+                                        type="number"
+                                        placeholder="e.g., 50.00"
+                                        value={journeyPrice || ''}
+                                        onChange={(e) => setJourneyPrice(e.target.value ? parseFloat(e.target.value) : undefined)}
+                                        disabled={hasBookingLevelPrice}
+                                        className="pl-10 bg-background"
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <Label htmlFor="journey-cost">Journey Cost</Label>
+                                <div className="relative flex items-center">
+                                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        id="journey-cost"
+                                        type="number"
+                                        placeholder="e.g., 20.00"
+                                        value={journeyCost || ''}
+                                        onChange={(e) => setJourneyCost(e.target.value ? parseFloat(e.target.value) : undefined)}
+                                        disabled={hasBookingLevelPrice}
+                                        className="pl-10 bg-background"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                        {hasBookingLevelPrice && (
+                            <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                <Info className="h-3 w-3" />
+                                Journey-level price/cost is disabled because one or more bookings have individual pricing.
+                            </p>
+                        )}
+                    </CollapsibleContent>
+                    </Collapsible>
+                </CardContent>
+                </Card>
 
-        <Collapsible>
-          <Card>
-            <CollapsibleTrigger asChild>
-              <CardHeader className="cursor-pointer flex-row items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Code className="h-5 w-5" />
-                  <CardTitle className="font-headline text-lg">Debug Data</CardTitle>
-                </div>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <ChevronsUpDown className="h-4 w-4" />
-                </Button>
-              </CardHeader>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <CardContent>
-                <div className="bg-muted text-muted-foreground rounded-lg border p-4 space-y-4">
-                   {journeyPreview.isLoading ? (
-                    <div className="flex items-center justify-center p-4">
-                      <Loader2 className="h-6 w-6 animate-spin" />
-                    </div>
-                  ) : journeyPreview.journeyPayload || journeyPreview.bookings.length > 0 ? (
-                    <>
-                      <div>
-                          <h4 className="font-semibold text-foreground mb-2">Individual Booking API Payloads</h4>
-                          {journeyPreview.bookingPayloads.length > 0 ? (
-                             journeyPreview.bookingPayloads.map((payload, index) => (
-                                 <div key={index} className="mb-2">
-                                     <h5 className="font-medium text-sm text-foreground mb-1">Booking {index + 1} Payload</h5>
-                                     <pre className="text-xs whitespace-pre-wrap break-all bg-background p-2 rounded">
-                                         {JSON.stringify(payload, null, 2)}
-                                     </pre>
-                                 </div>
-                             ))
-                          ) : (
-                              <p className="text-xs text-center text-muted-foreground p-2">Select a site and account to generate booking payloads.</p>
-                          )}
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-foreground mb-2">Journey API Payload</h4>
-                        <pre className="text-xs whitespace-pre-wrap break-all bg-background p-2 rounded">
-                            {JSON.stringify(journeyPreview.journeyPayload, null, 2)}
-                        </pre>
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-foreground mb-2">Bookings Data (Client State)</h4>
-                         <pre className="text-xs whitespace-pre-wrap break-all bg-background p-2 rounded">
-                            {JSON.stringify(journeyPreview.bookings, (key, value) => key === 'dateTime' && value ? new Date(value).toISOString() : value, 2)}
-                        </pre>
-                      </div>
-                    </>
-                  ) : (
-                    <p className="text-sm text-center">No debug data to display.</p>
-                  )}
-                </div>
-              </CardContent>
-            </CollapsibleContent>
-          </Card>
-        </Collapsible>
-      </div>
-      <div className="lg:h-[calc(100vh-10rem)] lg:sticky lg:top-20">
-        <JourneyMap 
-            stops={journeyPreview.orderedStops}
-            onLocationSelect={handleLocationSelectedFromMap}
-            isSelectionMode={isMapInSelectionMode}
-        />
-      </div>
+                <BookingManager 
+                bookings={bookings} 
+                setBookings={setBookings}
+                editingBooking={editingBooking}
+                setEditingBooking={setEditingBooking}
+                isJourneyPriceSet={hasJourneyLevelPrice}
+                />
+                
+                <Card>
+                    <CardHeader>
+                    <CardTitle className="font-headline text-lg">Journey Stop Order</CardTitle>
+                    <CardDescription>This is a preview of the optimized stop order that will be sent to the API.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="bg-background rounded-lg border p-4 space-y-4">
+                        {journeyPreview.isLoading ? (
+                            <div className="flex items-center justify-center p-4">
+                            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                            <span className="ml-2">Generating preview...</span>
+                            </div>
+                        ) : journeyPreview.orderedStops.length > 0 ? (
+                            journeyPreview.orderedStops.map((stop, index) => {
+                            const passenger = stop.stopType === 'pickup' ? stop : findPassengerForDropoff(stop);
+                            return (
+                                <div key={`${stop.id}-${index}`} className="flex items-start gap-3">
+                                <div className="flex flex-col items-center">
+                                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">
+                                    {index + 1}
+                                    </div>
+                                    {index < journeyPreview.orderedStops.length - 1 && (
+                                    <div className="w-px h-6 bg-border mt-1"></div>
+                                    )}
+                                </div>
+                                <div className="flex-1 pt-0.5">
+                                    <p className="font-medium">
+                                        {stop.location.address}
+                                    </p>
+                                    <p className="text-sm text-muted-foreground">
+                                        <span className={cn("font-semibold", stop.stopType === 'pickup' ? 'text-green-600' : 'text-red-600')}>
+                                            {stop.stopType.toUpperCase()}
+                                        </span>
+                                        {passenger?.name && ` - ${passenger.name}`}
+                                    </p>
+                                </div>
+                                </div>
+                            )
+                            })
+                        ) : (
+                            <p className="text-sm text-muted-foreground text-center">Add some bookings to see the journey order.</p>
+                        )}
+                        </div>
+                    </CardContent>
+                </Card>
+                
+                <Card>
+                    <CardFooter className="flex flex-wrap justify-between items-center bg-muted/50 p-4 rounded-b-lg gap-4">
+                        <div className="flex items-end gap-2 flex-grow min-w-[250px] w-full sm:w-auto">
+                            <div className="flex-grow">
+                                <Label htmlFor="template-name" className="text-xs">Template Name</Label>
+                                <Input
+                                    id="template-name"
+                                    type="text"
+                                    placeholder={isEditingTemplate ? "Template Name" : "Enter name to save..."}
+                                    value={templateName}
+                                    onChange={(e) => setTemplateName(e.target.value)}
+                                    className="bg-background h-10"
+                                />
+                            </div>
+                            <Button variant="outline" onClick={handleSaveTemplate} disabled={bookings.length === 0 || !templateName}>
+                                <Save className="mr-2 h-4 w-4" /> {isEditingTemplate ? 'Update' : 'Save as Template'}
+                            </Button>
+                        </div>
+                        
+                        {!isEditingTemplate && (
+                        <div className="flex flex-col gap-2 flex-grow min-w-[250px] w-full sm:w-auto">
+                            <Label className="text-xs">Journey Actions</Label>
+                            <div className="flex gap-2">
+                                <Button variant="outline" onClick={handleSaveJourneyLocally} disabled={bookings.length === 0} className="flex-1">
+                                    <Save className="mr-2 h-4 w-4" /> {isEditingJourney ? 'Update Journey' : 'Save Draft'}
+                                </Button>
+                                
+                                <Button onClick={handlePublishJourney} disabled={isSubmitting || !currentJourney || bookings.length === 0 || !selectedSiteId || !selectedAccount} className="flex-1">
+                                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                                    {publishButtonText}
+                                </Button>
+                            </div>
+                        </div>
+                        )}
+                    </CardFooter>
+                </Card>
+
+                <Collapsible>
+                <Card>
+                    <CollapsibleTrigger asChild>
+                    <CardHeader className="cursor-pointer flex-row items-center justify-between">
+                        <div className="flex items-center gap-2">
+                        <Code className="h-5 w-5" />
+                        <CardTitle className="font-headline text-lg">Debug Data</CardTitle>
+                        </div>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <ChevronsUpDown className="h-4 w-4" />
+                        </Button>
+                    </CardHeader>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                    <CardContent>
+                        <div className="bg-muted text-muted-foreground rounded-lg border p-4 space-y-4">
+                        {journeyPreview.isLoading ? (
+                            <div className="flex items-center justify-center p-4">
+                            <Loader2 className="h-6 w-6 animate-spin" />
+                            </div>
+                        ) : journeyPreview.journeyPayload || journeyPreview.bookings.length > 0 ? (
+                            <>
+                            <div>
+                                <h4 className="font-semibold text-foreground mb-2">Individual Booking API Payloads</h4>
+                                {journeyPreview.bookingPayloads.length > 0 ? (
+                                    journeyPreview.bookingPayloads.map((payload, index) => (
+                                        <div key={index} className="mb-2">
+                                            <h5 className="font-medium text-sm text-foreground mb-1">Booking {index + 1} Payload</h5>
+                                            <pre className="text-xs whitespace-pre-wrap break-all bg-background p-2 rounded">
+                                                {JSON.stringify(payload, null, 2)}
+                                            </pre>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <p className="text-xs text-center text-muted-foreground p-2">Select a site and account to generate booking payloads.</p>
+                                )}
+                            </div>
+                            <div>
+                                <h4 className="font-semibold text-foreground mb-2">Journey API Payload</h4>
+                                <pre className="text-xs whitespace-pre-wrap break-all bg-background p-2 rounded">
+                                    {JSON.stringify(journeyPreview.journeyPayload, null, 2)}
+                                </pre>
+                            </div>
+                            <div>
+                                <h4 className="font-semibold text-foreground mb-2">Bookings Data (Client State)</h4>
+                                <pre className="text-xs whitespace-pre-wrap break-all bg-background p-2 rounded">
+                                    {JSON.stringify(journeyPreview.bookings, (key, value) => key === 'dateTime' && value ? new Date(value).toISOString() : value, 2)}
+                                </pre>
+                            </div>
+                            </>
+                        ) : (
+                            <p className="text-sm text-center">No debug data to display.</p>
+                        )}
+                        </div>
+                    </CardContent>
+                    </CollapsibleContent>
+                </Card>
+                </Collapsible>
+            </div>
+            
+            {/* Desktop Layout: Map on the side */}
+            <div className="hidden lg:block lg:h-[calc(100vh-10rem)] lg:sticky lg:top-20">
+                {journeyMapComponent}
+            </div>
+        </div>
     </div>
   );
 }
