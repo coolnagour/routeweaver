@@ -8,6 +8,7 @@ import { useState, useEffect } from "react";
 import type { Location } from "@/types";
 import { useServer } from "@/context/server-context";
 import { useTheme } from "next-themes";
+import { cn } from "@/lib/utils";
 
 interface AddressAutocompleteProps {
   value: string;
