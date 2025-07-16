@@ -164,7 +164,7 @@ export default function JourneyMap({ stops, onLocationSelect, isSelectionMode = 
     geocoderRef.current = new google.maps.Geocoder();
 
     if (stops.length === 0 && countryCode) {
-        geocoderRef.current.geocode({ 'address': countryCode }, (results, status) => {
+        geocoderRef.current.geocode({ 'componentRestrictions': { country: countryCode } }, (results, status) => {
             if (status === 'OK' && results && results[0]) {
                 if(results[0].geometry.viewport) {
                     map.fitBounds(results[0].geometry.viewport);
