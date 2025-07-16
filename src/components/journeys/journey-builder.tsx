@@ -126,18 +126,25 @@ export default function JourneyBuilder({
     };
   };
 
-  const handleSetMapForSelection = (target: MapSelectionTarget | null) => {
-    setMapSelectionTarget(target);
-    setIsMapInSelectionMode(!!target);
+  const handleSetMapForSelection = (stopId: string) => {
+    if (!editingBooking) {
+      console.error("[JourneyBuilder] Tried to set map for selection, but no booking is being edited.");
+      return;
+    }
+    console.log(`[JourneyBuilder] Received request to enter map selection mode for stopId: ${stopId}`);
+    setMapSelectionTarget({ bookingId: editingBooking.id, stopId });
+    setIsMapInSelectionMode(true);
   };
   
   const handleLocationSelectFromMap = (location: Location) => {
+    console.log('[JourneyBuilder] Location selected from map:', location);
     setLocationFromMap(location);
-    setIsMapInSelectionMode(false); // Turn off selection mode after a location is picked
+    setIsMapInSelectionMode(false);
     toast({ title: "Address Selected", description: "The address has been set from the map." });
   };
   
   const handleMapLocationHandled = () => {
+    console.log('[JourneyBuilder] JourneyForm has handled the map location. Clearing state.');
     setLocationFromMap(null);
     setMapSelectionTarget(null);
   };

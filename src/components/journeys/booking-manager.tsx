@@ -39,9 +39,8 @@ interface BookingManagerProps {
   setEditingBooking: React.Dispatch<React.SetStateAction<Booking | null>>;
   isJourneyPriceSet: boolean;
   locationFromMap: Location | null;
-  mapSelectionTarget: MapSelectionTarget | null;
-  onSetMapForSelection: (target: MapSelectionTarget | null) => void;
   onMapLocationHandled: () => void;
+  onSetMapForSelection: (stopId: string) => void;
 }
 
 const emptyLocation = { address: '', lat: 0, lng: 0 };
@@ -53,7 +52,6 @@ export default function BookingManager({
     setEditingBooking,
     isJourneyPriceSet,
     locationFromMap,
-    mapSelectionTarget,
     onSetMapForSelection,
     onMapLocationHandled
 }: BookingManagerProps) {
@@ -148,7 +146,6 @@ export default function BookingManager({
         locationFromMap={locationFromMap}
         onMapLocationHandled={onMapLocationHandled}
         onSetMapForSelection={onSetMapForSelection}
-        mapSelectionTarget={mapSelectionTarget}
       />
     );
   }
