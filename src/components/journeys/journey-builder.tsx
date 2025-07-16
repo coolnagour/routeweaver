@@ -23,7 +23,7 @@ import { cn } from '@/lib/utils';
 import { Label } from '../ui/label';
 import { formatBookingForApi } from '@/lib/booking-formatter';
 import JourneyMap from './journey-map';
-import { MapSelectionProvider, useMapSelection } from '@/context/map-selection-context';
+import { useMapSelection } from '@/context/map-selection-context';
 
 interface JourneyBuilderProps {
   initialData?: Partial<JourneyTemplate> | null;
@@ -109,7 +109,7 @@ function JourneyBuilderInner({
   const hasBookingLevelPrice = bookings.some(b => b.price || b.cost);
   const hasJourneyLevelPrice = journeyPrice || journeyCost;
 
-  const { isMapInSelectionMode, setSelectedLocation } = useMapSelection();
+  const { selectedLocation, clearSelection, isMapInSelectionMode, startSelection } = useMapSelection();
 
 
   const debounce = <F extends (...args: any[]) => void>(func: F, delay: number) => {
@@ -394,7 +394,10 @@ function JourneyBuilderInner({
   };
 
   const handleLocationSelectedFromMap = (location: Location) => {
-    setSelectedLocation(location);
+    // Pass the selected location to the context, which will then be picked up
+    // by the waiting AddressAutocomplete component.
+    startSelection()(location);
+    clearSelection();
   };
 
   const title = getTitle();
@@ -549,35 +552,37 @@ function JourneyBuilderInner({
         </Card>
         
         <Card>
-            <CardFooter className="flex flex-col sm:flex-row justify-between items-center bg-muted/50 p-4 rounded-b-lg gap-4">
-                <div className="flex-grow w-full sm:w-auto">
+            <CardFooter className="flex flex-wrap justify-between items-center bg-muted/50 p-4 rounded-b-lg gap-4">
+                <div className="flex flex-col gap-2 flex-grow min-w-[250px]">
+                  <Label htmlFor="template-name" className="text-xs">Template Name</Label>
                   <Input
+                    id="template-name"
                     type="text"
                     placeholder={isEditingTemplate ? "Template Name" : "Enter name to save as template..."}
                     value={templateName}
                     onChange={(e) => setTemplateName(e.target.value)}
                     className="border p-2 rounded-md bg-background"
                   />
-                </div>
-                
-                <div className="flex w-full sm:w-auto gap-2 justify-end">
-                  <Button variant="outline" onClick={handleSaveTemplate} disabled={bookings.length === 0 || !templateName}>
+                  <Button variant="outline" onClick={handleSaveTemplate} disabled={bookings.length === 0 || !templateName} className="w-full sm:w-auto">
                       <Save className="mr-2 h-4 w-4" /> {isEditingTemplate ? 'Update Template' : 'Save as Template'}
                   </Button>
-                  
-                  {!isEditingTemplate && (
-                    <>
-                      <Button variant="outline" onClick={handleSaveJourneyLocally} disabled={bookings.length === 0}>
-                          <Save className="mr-2 h-4 w-4" /> {isEditingJourney ? 'Update Journey' : 'Save Journey'}
-                      </Button>
-                      
-                      <Button onClick={handlePublishJourney} disabled={isSubmitting || !currentJourney || bookings.length === 0 || !selectedSiteId || !selectedAccount}>
-                          {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                          {publishButtonText}
-                      </Button>
-                    </>
-                  )}
                 </div>
+                
+                {!isEditingTemplate && (
+                  <div className="flex flex-col gap-2 flex-grow min-w-[250px]">
+                      <Label className="text-xs">Journey Actions</Label>
+                      <div className="flex gap-2">
+                        <Button variant="outline" onClick={handleSaveJourneyLocally} disabled={bookings.length === 0} className="flex-1">
+                            <Save className="mr-2 h-4 w-4" /> {isEditingJourney ? 'Update Journey' : 'Save Draft'}
+                        </Button>
+                        
+                        <Button onClick={handlePublishJourney} disabled={isSubmitting || !currentJourney || bookings.length === 0 || !selectedSiteId || !selectedAccount} className="flex-1">
+                            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                            {publishButtonText}
+                        </Button>
+                      </div>
+                  </div>
+                )}
             </CardFooter>
         </Card>
 
@@ -659,3 +664,5 @@ export default function JourneyBuilder(props: JourneyBuilderProps) {
     </MapSelectionProvider>
   )
 }
+
+    
