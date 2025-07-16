@@ -20,6 +20,7 @@ import type { Stop, SuggestionInput, StopType } from '@/types';
 import { cn } from '@/lib/utils';
 import { format, setHours, setMinutes } from 'date-fns';
 import AddressAutocomplete from './address-autocomplete';
+import { useServer } from '@/context/server-context';
 
 interface ViaStopProps {
   control: any;
@@ -46,6 +47,7 @@ export default function ViaStop({
     generatingFields,
 }: ViaStopProps) {
   const { setValue } = useFormContext();
+  const { server } = useServer();
   const stopType = useWatch({ control, name: `stops.${index}.stopType` });
   const isPickup = stopType === 'pickup';
   

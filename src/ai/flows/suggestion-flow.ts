@@ -27,6 +27,10 @@ Requested data type: {{{type}}}
 This is for a '{{{stopType}}}' stop.
 {{/if}}
 
+{{#if countryCode}}
+For phone numbers, generate a valid E.164 format number for the country with code: {{{countryCode}}}.
+{{/if}}
+
 {{#if existingValues}}
 The following values are already in use, so please generate a different one:
 {{#each existingValues}}

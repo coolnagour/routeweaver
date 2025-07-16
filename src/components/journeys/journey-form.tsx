@@ -32,6 +32,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Switch } from '../ui/switch';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
+import { useServer } from '@/context/server-context';
 
 // Create a form-specific schema by extending the base BookingSchema to handle Date objects
 const FormBookingSchema = BookingSchema.extend({
@@ -76,6 +77,7 @@ export default function JourneyForm({
     isJourneyPriceSet,
 }: JourneyFormProps) {
   const { toast } = useToast();
+  const { server } = useServer();
   const [generatingFields, setGeneratingFields] = useState<Record<string, boolean>>({});
   const [isScheduled, setIsScheduled] = useState(!!initialData?.stops?.find(s => s.stopType === 'pickup')?.dateTime);
   
@@ -126,7 +128,8 @@ export default function JourneyForm({
     }
     
     try {
-      const result = await generateSuggestion({ type: fieldType, existingValues, stopType });
+      const countryCode = server?.countryCodes?.[0];
+      const result = await generateSuggestion({ type: fieldType, existingValues, stopType, countryCode });
       form.setValue(fieldNameToUpdate, result.suggestion);
     } catch (error) {
       console.error(`AI ${fieldType} generation failed:`, error);

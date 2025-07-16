@@ -79,6 +79,7 @@ First, analyze the user's prompt for specific tools.
 
 Then, generate the journey details based on the user's request (e.g., 'two bookings', 'airport run').
 - All generated addresses MUST be within the following country: ${input.countryName}.
+- All generated phone numbers MUST be plausible for the country codes provided in the server config: ${input.server.countryCodes.join(', ')}.
 - Each template must contain one or more bookings.
 - Each booking must contain at least one pickup and one dropoff.
 - For each stop, you must generate a unique 'id' (e.g., 'stop-1').

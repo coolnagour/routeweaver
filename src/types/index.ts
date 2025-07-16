@@ -197,6 +197,7 @@ export const SuggestionInputSchema = z.object({
   type: z.enum(['name', 'phone', 'instructions']),
   existingValues: z.array(z.string()).optional().describe("A list of existing values to avoid duplicates."),
   stopType: z.enum(['pickup', 'dropoff']).optional().describe("The type of stop for which the instruction is being generated."),
+  countryCode: z.string().optional().describe("The ISO 3166-1 alpha-2 country code to use for generating phone numbers."),
 });
 export type SuggestionInput = z.infer<typeof SuggestionInputSchema>;
 
