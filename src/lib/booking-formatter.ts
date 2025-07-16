@@ -1,6 +1,6 @@
 
 import type { Booking, ServerConfig } from "@/types";
-import parsePhoneNumberFromString from 'libphonenumber-js';
+import parsePhoneNumberFromString, { getCountryCallingCode } from 'libphonenumber-js';
 
 /**
  * @fileOverview A shared utility to format booking data for the API.
@@ -66,15 +66,22 @@ export const formatBookingForApi = (booking: Booking, server: ServerConfig) => {
         }));
     }
     
-    // Use the phone number from the first pickup stop (primary passenger).
+    // API requires the phone field to be present. Use a valid one if provided, otherwise create a placeholder.
     if (firstPickup.phone) {
         const phoneNumber = parsePhoneNumberFromString(firstPickup.phone, defaultCountry);
         if (phoneNumber && phoneNumber.isValid()) {
             payload.phone = phoneNumber.number;
         } else {
-             console.warn(`Invalid phone number provided: ${firstPickup.phone}. It will be omitted from the API call.`);
+             console.warn(`Invalid phone number provided: ${firstPickup.phone}. A placeholder will be used.`);
+             const countryCode = getCountryCallingCode(defaultCountry);
+             payload.phone = `+${countryCode}0000000000`.slice(0, 15);
         }
+    } else {
+        // If no phone is provided, create a placeholder based on the country code
+        const countryCode = getCountryCallingCode(defaultCountry);
+        payload.phone = `+${countryCode}0000000000`.slice(0, 15);
     }
+
 
     if ((booking.price && booking.price > 0) || (booking.cost && booking.cost > 0)) {
         payload.payment = {
