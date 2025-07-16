@@ -7,7 +7,7 @@ import parsePhoneNumberFromString, { getCountryCallingCode } from 'libphonenumbe
 
 interface IcabbiApiCallOptions {
     server: ServerConfig;
-    method: 'GET' | 'POST' | 'PUT' | 'DELETE';
+    method: 'GET' | 'POST' | 'DELETE';
     endpoint: string;
     body?: any;
 }
@@ -86,8 +86,9 @@ const formatBookingForIcabbi = (booking: Booking, server: ServerConfig) => {
         };
     }
     
-    if (lastStop.instructions) {
-        payload.instructions = lastStop.instructions;
+    // Add booking-level instructions to the payload root
+    if (booking.instructions) {
+        payload.instructions = booking.instructions;
     }
 
     return payload;

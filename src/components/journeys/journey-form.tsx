@@ -31,6 +31,7 @@ import { useToast } from '@/hooks/use-toast';
 import { v4 as uuidv4 } from 'uuid';
 import { Switch } from '../ui/switch';
 import { Label } from '../ui/label';
+import { Textarea } from '../ui/textarea';
 
 // Create a form-specific schema by extending the base BookingSchema to handle Date objects
 // This avoids duplicating the entire schema structure.
@@ -79,6 +80,7 @@ export default function JourneyForm({ initialData, onSave, onCancel, isJourneyPr
     defaultValues: {
       id: initialData?.id || uuidv4(),
       bookingServerId: initialData?.bookingServerId,
+      instructions: initialData?.instructions || '',
       customerId: initialData?.customerId || '',
       externalBookingId: initialData?.externalBookingId || '',
       vehicleType: initialData?.vehicleType || '',
@@ -344,133 +346,25 @@ export default function JourneyForm({ initialData, onSave, onCancel, isJourneyPr
                             )}
                         />
                     </div>
-                    <Collapsible>
-                        <CollapsibleTrigger asChild>
-                            <Button variant="link" size="sm" className="p-0 h-auto">
-                                <ChevronsUpDown className="h-4 w-4 mr-2" />
-                                Extra Information
-                            </Button>
-                        </CollapsibleTrigger>
-                        <CollapsibleContent className="space-y-4 pt-4">
-                             <FormField
-                                control={form.control}
-                                name={`stops.0.instructions`}
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Instructions</FormLabel>
-                                        <FormControl>
-                                            <div className="relative flex items-center">
-                                                <MessageSquare className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                                <Input placeholder="e.g., Gate code #1234" {...field} className="pl-10 pr-10 bg-background"/>
-                                                <Button type="button" variant="ghost" size="icon" className="absolute right-1 h-8 w-8 text-primary" onClick={() => handleGenerateField('instructions', 'stops.0.instructions', 0, 'pickup')} disabled={generatingFields['stops.0.instructions-instructions']}>
-                                                    {generatingFields['stops.0.instructions-instructions'] ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                                                </Button>
-                                            </div>
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <div className="grid grid-cols-2 gap-4">
-                             <FormField
-                                control={form.control}
-                                name="customerId"
-                                render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Customer ID (Optional)</FormLabel>
-                                    <FormControl>
-                                        <div className="relative flex items-center">
-                                            <Info className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                            <Input placeholder="Enter customer ID" {...field} className="pl-10 bg-background" />
-                                        </div>
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                                )}
-                            />
-                             <FormField
-                                control={form.control}
-                                name="externalBookingId"
-                                render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>External Booking ID (Optional)</FormLabel>
-                                    <FormControl>
-                                        <div className="relative flex items-center">
-                                            <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                            <Input placeholder="Enter external ID" {...field} className="pl-10 bg-background" />
-                                        </div>
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="vehicleType"
-                                render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Vehicle Type (Optional)</FormLabel>
-                                    <FormControl>
-                                        <div className="relative flex items-center">
-                                            <Car className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                            <Input placeholder="e.g., Sedan, MPV" {...field} className="pl-10 bg-background" />
-                                        </div>
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="externalAreaCode"
-                                render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>External Area Code (Optional)</FormLabel>
-                                    <FormControl>
-                                        <div className="relative flex items-center">
-                                            <Map className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                            <Input placeholder="Enter area code" {...field} className="pl-10 bg-background" />
-                                        </div>
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                                )}
-                            />
-                             <FormField
-                                control={form.control}
-                                name="price"
-                                render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Price (Optional)</FormLabel>
-                                    <FormControl>
-                                        <div className="relative flex items-center">
-                                            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                            <Input type="number" placeholder="e.g. 25.50" {...field} disabled={isJourneyPriceSet} className="pl-10 bg-background" />
-                                        </div>
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                                )}
-                            />
-                             <FormField
-                                control={form.control}
-                                name="cost"
-                                render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Cost (Optional)</FormLabel>
-                                    <FormControl>
-                                        <div className="relative flex items-center">
-                                            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                            <Input type="number" placeholder="e.g. 10.00" {...field} disabled={isJourneyPriceSet} className="pl-10 bg-background" />
-                                        </div>
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                                )}
-                            />
-                            </div>
-                        </CollapsibleContent>
-                     </Collapsible>
+                     <FormField
+                        control={form.control}
+                        name={`stops.0.instructions`}
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Pickup Instructions</FormLabel>
+                                <FormControl>
+                                    <div className="relative flex items-center">
+                                        <MessageSquare className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input placeholder="e.g., Gate code #1234" {...field} className="pl-10 pr-10 bg-background"/>
+                                        <Button type="button" variant="ghost" size="icon" className="absolute right-1 h-8 w-8 text-primary" onClick={() => handleGenerateField('instructions', 'stops.0.instructions', 0, 'pickup')} disabled={generatingFields['stops.0.instructions-instructions']}>
+                                            {generatingFields['stops.0.instructions-instructions'] ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                                        </Button>
+                                    </div>
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
                 </div>
 
                 {/* Via Stops Section */}
@@ -502,6 +396,131 @@ export default function JourneyForm({ initialData, onSave, onCancel, isJourneyPr
                     onGenerateField={handleGenerateField}
                     generatingFields={generatingFields}
                 />
+                
+                <Collapsible className="mt-4">
+                    <CollapsibleTrigger asChild>
+                        <Button variant="link" size="sm" className="p-0 h-auto">
+                            <ChevronsUpDown className="h-4 w-4 mr-2" />
+                            Extra Booking Information
+                        </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="space-y-4 pt-4">
+                        <FormField
+                            control={form.control}
+                            name="instructions"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Booking Instructions (from customer)</FormLabel>
+                                <FormControl>
+                                    <div className="relative flex items-center">
+                                        <MessageSquare className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                                        <Textarea placeholder="e.g., Customer requires an accessible vehicle." {...field} className="pl-10 bg-background"/>
+                                    </div>
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                        <div className="grid grid-cols-2 gap-4">
+                            <FormField
+                            control={form.control}
+                            name="customerId"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Customer ID (Optional)</FormLabel>
+                                <FormControl>
+                                    <div className="relative flex items-center">
+                                        <Info className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input placeholder="Enter customer ID" {...field} className="pl-10 bg-background" />
+                                    </div>
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                            <FormField
+                            control={form.control}
+                            name="externalBookingId"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>External Booking ID (Optional)</FormLabel>
+                                <FormControl>
+                                    <div className="relative flex items-center">
+                                        <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input placeholder="Enter external ID" {...field} className="pl-10 bg-background" />
+                                    </div>
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="vehicleType"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Vehicle Type (Optional)</FormLabel>
+                                <FormControl>
+                                    <div className="relative flex items-center">
+                                        <Car className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input placeholder="e.g., Sedan, MPV" {...field} className="pl-10 bg-background" />
+                                    </div>
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="externalAreaCode"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>External Area Code (Optional)</FormLabel>
+                                <FormControl>
+                                    <div className="relative flex items-center">
+                                        <Map className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input placeholder="Enter area code" {...field} className="pl-10 bg-background" />
+                                    </div>
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                            <FormField
+                            control={form.control}
+                            name="price"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Price (Optional)</FormLabel>
+                                <FormControl>
+                                    <div className="relative flex items-center">
+                                        <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input type="number" placeholder="e.g. 25.50" {...field} disabled={isJourneyPriceSet} className="pl-10 bg-background" />
+                                    </div>
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                            <FormField
+                            control={form.control}
+                            name="cost"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Cost (Optional)</FormLabel>
+                                <FormControl>
+                                    <div className="relative flex items-center">
+                                        <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input type="number" placeholder="e.g. 10.00" {...field} disabled={isJourneyPriceSet} className="pl-10 bg-background" />
+                                    </div>
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                        </div>
+                    </CollapsibleContent>
+                    </Collapsible>
 
                  <div className="flex justify-end gap-2 mt-4">
                     <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>

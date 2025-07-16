@@ -45,6 +45,7 @@ export interface Booking {
   externalAreaCode?: string; // Optional free text field
   price?: number; // Optional numeric field
   cost?: number; // Optional numeric field
+  instructions?: string; // Booking-level instructions
 }
 
 export interface Account {
@@ -140,6 +141,7 @@ export const BookingSchema = z.object({
   externalAreaCode: z.string().optional(),
   price: z.number().optional(),
   cost: z.number().optional(),
+  instructions: z.string().optional(), // Booking-level instructions
 });
 
 export const AccountSchema = z.object({
@@ -189,7 +191,7 @@ export type JourneyOutput = z.infer<typeof JourneyOutputSchema>;
 // Schemas for Suggestion Flow
 export const SuggestionInputSchema = z.object({
   type: z.enum(['name', 'phone', 'instructions']),
-  existingValues: z.array(z.string()).optional().describe("A list of existing values to avoid generating duplicates."),
+  existingValues: z.array(z.string()).optional().describe("A list of existing values to avoid duplicates."),
   stopType: z.enum(['pickup', 'dropoff']).optional().describe("The type of stop for which the instruction is being generated."),
 });
 export type SuggestionInput = z.infer<typeof SuggestionInputSchema>;

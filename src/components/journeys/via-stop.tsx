@@ -196,7 +196,7 @@ export default function ViaStop({
              <CollapsibleTrigger asChild>
                  <Button variant="link" size="sm" className="p-0 h-auto">
                      <ChevronsUpDown className="h-4 w-4 mr-2" />
-                     Extra Information
+                     Extra Stop Information
                  </Button>
              </CollapsibleTrigger>
              <CollapsibleContent className="space-y-4 pt-4">
@@ -262,7 +262,7 @@ export default function ViaStop({
                      name={`stops.${index}.instructions`}
                      render={({ field }) => (
                          <FormItem>
-                             <FormLabel>Instructions</FormLabel>
+                             <FormLabel>Stop Instructions (for driver)</FormLabel>
                              <FormControl>
                                  <div className="relative flex items-center">
                                      <MessageSquare className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
