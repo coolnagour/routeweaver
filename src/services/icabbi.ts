@@ -168,6 +168,22 @@ export async function createBooking(server: ServerConfig, booking: Booking) {
     return response.body;
 }
 
+export async function updateBooking(server: ServerConfig, booking: Booking) {
+    if (!booking.bookingServerId) {
+        throw new Error("Booking must have a bookingServerId to be updated.");
+    }
+    const payload = formatBookingForIcabbi(booking, server);
+
+    const response = await callIcabbiApi({
+        server,
+        method: 'PUT',
+        endpoint: `bookings/update/${booking.bookingServerId}`,
+        body: payload,
+    });
+    
+    return response.body;
+}
+
 export async function deleteBooking(server: ServerConfig, bookingId: number) {
     const response = await callIcabbiApi({
         server,

@@ -9,7 +9,7 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { JourneyInputSchema, JourneyOutputSchema, ServerConfigSchema } from '@/types';
-import { createBooking, createJourney } from '@/services/icabbi';
+import { createBooking, createJourney, updateBooking } from '@/services/icabbi';
 import type { Booking, JourneyOutput, Stop } from '@/types';
 import { generateJourneyPayload } from './journey-payload-flow';
 
@@ -47,63 +47,61 @@ const saveJourneyFlow = ai.defineFlow(
       }))
     }));
 
-    // Step 1: Create new bookings and gather all existing and new bookings for journey creation.
+    // Step 1: Create or update bookings and gather all existing and new bookings for journey creation.
     const processedBookings: Booking[] = [];
     for (const booking of sanitizedBookings) {
       try {
+        let result: any;
+        let isUpdate = false;
+
+        const bookingWithContext = { ...booking, siteId, accountId };
+
         if (booking.bookingServerId) {
-          // This booking already exists on the server, do not update it.
-          // Just add it to the list for journey creation.
-          console.log(`[Journey Flow] Skipping update for existing booking with server ID: ${booking.bookingServerId}`);
-          processedBookings.push(booking);
+          // This booking already exists on the server, so we update it.
+          console.log(`[Journey Flow] Updating existing booking with server ID: ${booking.bookingServerId}`);
+          result = await updateBooking(server, bookingWithContext);
+          isUpdate = true;
         } else {
           // This is a new booking, create it on the server.
           console.log(`[Journey Flow] Creating new booking for passenger: ${booking.stops.find(s=>s.stopType === 'pickup')?.name}`);
-          const bookingWithContext = { ...booking, siteId, accountId };
-          const result = await createBooking(server, bookingWithContext);
-          
-          // The API response for createBooking has `id` at the top level, which is the request_id.
-          // The actual booking's persistent ID is in `result.booking.id`.
-          const bookingRequestId = result?.id ? parseInt(result.id, 10) : undefined;
-          const serverBookingId = result?.booking?.id ? parseInt(result.booking.id, 10) : undefined;
-          
-          if (!serverBookingId || !bookingRequestId) {
-            throw new Error(`Invalid response from createBooking. Booking ID or Request ID not returned. Response: ${JSON.stringify(result)}`);
-          }
-
-          const bookingWithServerIds: Booking = { 
-              ...booking, 
-              bookingServerId: serverBookingId, 
-              requestId: bookingRequestId,
-              stops: [...booking.stops] // Important: work with a copy
-          };
-          
-          // Map server booking segments back to our local stops.
-          if (result.bookingsegments && result.bookingsegments.length > 0) {
-              const serverSegments = result.bookingsegments; // [{id, ...}, {id, ...}]
-              
-              // A simple booking has 1 pickup and 1 dropoff, which is one segment.
-              // A booking with 1 via stop has 2 segments (P -> V, V -> D).
-              // Number of segments = number of stops - 1.
-              // The API returns the segments in order.
-              
-              // We assign the segment ID to the *origin* stop of that leg.
-              for (let i = 0; i < serverSegments.length; i++) {
-                const segmentId = parseInt(serverSegments[i].id, 10);
-                // The stop at index `i` is the origin of the leg represented by `serverSegments[i]`.
-                if (bookingWithServerIds.stops[i]) {
-                    bookingWithServerIds.stops[i].bookingSegmentId = segmentId;
-                }
-              }
-              
-              // The final stop (destination) of the booking doesn't start a new segment,
-              // but for the journey payload, it's often linked to the last segment's ID.
-              // We handle this logic in the journey-payload-flow itself.
-          }
-          
-          processedBookings.push(bookingWithServerIds);
-          console.log(`[Journey Flow] Successfully processed booking with API ID: ${serverBookingId} and Request ID: ${bookingRequestId}`);
+          result = await createBooking(server, bookingWithContext);
         }
+          
+        const bookingRequestId = result?.id ? parseInt(result.id, 10) : booking.requestId;
+        const serverBookingId = result?.booking?.id ? parseInt(result.booking.id, 10) : booking.bookingServerId;
+          
+        if (!serverBookingId) {
+          throw new Error(`Invalid response from ${isUpdate ? 'updateBooking' : 'createBooking'}. Booking ID not returned. Response: ${JSON.stringify(result)}`);
+        }
+
+        const bookingWithServerIds: Booking = { 
+            ...booking, 
+            bookingServerId: serverBookingId, 
+            requestId: bookingRequestId,
+            stops: [...booking.stops] // Important: work with a copy
+        };
+          
+        // Map server booking segments back to our local stops.
+        if (result.bookingsegments && result.bookingsegments.length > 0) {
+            const serverSegments = result.bookingsegments; // [{id, ...}, {id, ...}]
+              
+            // A simple booking has 1 pickup and 1 dropoff, which is one segment.
+            // A booking with 1 via stop has 2 segments (P -> V, V -> D).
+            // Number of segments = number of stops - 1.
+            // The API returns the segments in order.
+              
+            // We assign the segment ID to the *origin* stop of that leg.
+            for (let i = 0; i < serverSegments.length; i++) {
+              const segmentId = parseInt(serverSegments[i].id, 10);
+              // The stop at index `i` is the origin of the leg represented by `serverSegments[i]`.
+              if (bookingWithServerIds.stops[i]) {
+                  bookingWithServerIds.stops[i].bookingSegmentId = segmentId;
+              }
+            }
+        }
+          
+        processedBookings.push(bookingWithServerIds);
+        console.log(`[Journey Flow] Successfully processed booking with API ID: ${serverBookingId} and Request ID: ${bookingRequestId}`);
 
       } catch (error) {
         const passengerName = booking.stops.find(s => s.stopType === 'pickup')?.name || 'Unknown';
