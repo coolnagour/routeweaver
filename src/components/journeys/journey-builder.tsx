@@ -36,6 +36,7 @@ interface JourneyBuilderProps {
 interface JourneyPreviewState {
   orderedStops: Stop[];
   journeyPayload: any | null;
+  bookings: Booking[];
   isLoading: boolean;
 }
 
@@ -78,7 +79,7 @@ export default function JourneyBuilder({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentJourney, setCurrentJourney] = useState<Journey | null>(null);
 
-  const [journeyPreview, setJourneyPreview] = useState<JourneyPreviewState>({ orderedStops: [], journeyPayload: null, isLoading: false });
+  const [journeyPreview, setJourneyPreview] = useState<JourneyPreviewState>({ orderedStops: [], journeyPayload: null, bookings: [], isLoading: false });
 
   const [journeyPrice, setJourneyPrice] = useState<number | undefined>(undefined);
   const [journeyCost, setJourneyCost] = useState<number | undefined>(undefined);
@@ -97,23 +98,18 @@ export default function JourneyBuilder({
 
   const fetchPreview = useCallback(async (currentBookings: Booking[], journey: Journey | null) => {
     if (currentBookings.length === 0 || currentBookings.flatMap(b => b.stops).length < 2) {
-      setJourneyPreview({ orderedStops: [], journeyPayload: null, isLoading: false });
+      setJourneyPreview({ orderedStops: [], journeyPayload: null, isLoading: false, bookings: currentBookings });
       return;
     }
     
-    setJourneyPreview(prev => ({ ...prev, isLoading: true }));
+    setJourneyPreview(prev => ({ ...prev, isLoading: true, bookings: currentBookings }));
     try {
-        let placeholderIdCounter = 1000;
-        
-        // Use real server IDs if they exist, otherwise generate placeholders for the debug view.
         const tempBookingsForPreview = currentBookings.map((b, bookingIndex) => ({
           ...b,
-          // Use real requestId if available, otherwise a temp one for preview
           requestId: b.requestId || (9000 + bookingIndex), 
-          stops: b.stops.map(s => ({
+          stops: b.stops.map((s, stopIndex) => ({
             ...s,
-            // Use real bookingSegmentId if available, otherwise a unique placeholder
-            bookingSegmentId: s.bookingSegmentId || placeholderIdCounter++
+            bookingSegmentId: s.bookingSegmentId || (1000 + (bookingIndex * 10) + stopIndex)
           }))
         }));
 
@@ -121,10 +117,10 @@ export default function JourneyBuilder({
             bookings: tempBookingsForPreview, 
             journeyServerId: journey?.journeyServerId 
         });
-        setJourneyPreview({ orderedStops, journeyPayload, isLoading: false });
+        setJourneyPreview({ orderedStops, journeyPayload, isLoading: false, bookings: currentBookings });
     } catch (e) {
         console.error("Error generating journey preview:", e);
-        setJourneyPreview({ orderedStops: [], journeyPayload: null, isLoading: false });
+        setJourneyPreview({ orderedStops: [], journeyPayload: null, isLoading: false, bookings: currentBookings });
         toast({ title: "Error generating preview", description: (e as Error).message, variant: "destructive" });
     }
   }, [toast]);
@@ -566,15 +562,26 @@ export default function JourneyBuilder({
           </CollapsibleTrigger>
           <CollapsibleContent>
             <CardContent>
-              <div className="bg-muted text-muted-foreground rounded-lg border p-4">
+              <div className="bg-muted text-muted-foreground rounded-lg border p-4 space-y-4">
                  {journeyPreview.isLoading ? (
                   <div className="flex items-center justify-center p-4">
                     <Loader2 className="h-6 w-6 animate-spin" />
                   </div>
-                ) : journeyPreview.journeyPayload ? (
-                    <pre className="text-xs whitespace-pre-wrap break-all">
-                        {JSON.stringify(journeyPreview.journeyPayload, null, 2)}
-                    </pre>
+                ) : journeyPreview.journeyPayload || journeyPreview.bookings.length > 0 ? (
+                  <>
+                    <div>
+                      <h4 className="font-semibold text-foreground mb-2">Journey API Payload</h4>
+                      <pre className="text-xs whitespace-pre-wrap break-all bg-background p-2 rounded">
+                          {JSON.stringify(journeyPreview.journeyPayload, null, 2)}
+                      </pre>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-foreground mb-2">Bookings Data (Input)</h4>
+                       <pre className="text-xs whitespace-pre-wrap break-all bg-background p-2 rounded">
+                          {JSON.stringify(journeyPreview.bookings, null, 2)}
+                      </pre>
+                    </div>
+                  </>
                 ) : (
                   <p className="text-sm text-center">No debug data to display.</p>
                 )}
