@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -14,7 +15,7 @@ export default function EditJourneyPage() {
   const { server } = useServer();
   const journeyId = params.id ? decodeURIComponent(params.id as string) : undefined;
 
-  const [journeys, setJourneys] = useLocalStorage<Journey[]>('recent-journeys', [], server?.companyId);
+  const [journeys, setJourneys] = useLocalStorage<Journey[]>('recent-journeys', [], server?.uuid);
   const [journey, setJourney] = useState<Journey | null>(null);
   const [loading, setLoading] = useState(true);
 

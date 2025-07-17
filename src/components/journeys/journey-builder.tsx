@@ -76,8 +76,8 @@ function JourneyBuilderInner({
   const { toast } = useToast();
   const router = useRouter();
   const { server } = useServer();
-  const [journeys, setJourneys] = useLocalStorage<Journey[]>('recent-journeys', [], server?.companyId);
-  const [templates, setTemplates] = useLocalStorage<JourneyTemplate[]>('journey-templates', [], server?.companyId);
+  const [journeys, setJourneys] = useLocalStorage<Journey[]>('recent-journeys', [], server?.uuid);
+  const [templates, setTemplates] = useLocalStorage<JourneyTemplate[]>('journey-templates', [], server?.uuid);
   const [templateName, setTemplateName] = useState('');
   const [sites, setSites] = useState<{id: number, name: string, ref: string}[]>([]);
   const [isFetchingSites, setIsFetchingSites] = useState(false);
@@ -109,8 +109,8 @@ function JourneyBuilderInner({
   const [journeyCost, setJourneyCost] = useState<number | undefined>(undefined);
   const [enableMessaging, setEnableMessaging] = useState<boolean>(false);
   
-  const hasBookingLevelPrice = bookings.some(b => b.price || b.cost);
-  const hasJourneyLevelPrice = journeyPrice || journeyCost;
+  const hasBookingLevelPrice = bookings.some(b => typeof b.price === 'number' || typeof b.cost === 'number');
+  const hasJourneyLevelPrice = typeof journeyPrice === 'number' || typeof journeyCost === 'number';
 
   const { setSelectedLocation, isMapInSelectionMode } = useMapSelection();
 

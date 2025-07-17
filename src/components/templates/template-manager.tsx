@@ -27,7 +27,7 @@ interface TemplateManagerProps {
 export default function TemplateManager({ onLoadTemplate }: TemplateManagerProps) {
   const { server } = useServer();
   const router = useRouter();
-  const [templates, setTemplates] = useLocalStorage<JourneyTemplate[]>('journey-templates', [], server?.companyId);
+  const [templates, setTemplates] = useLocalStorage<JourneyTemplate[]>('journey-templates', [], server?.uuid);
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -293,4 +293,3 @@ export default function TemplateManager({ onLoadTemplate }: TemplateManagerProps
     </div>
   );
 }
-

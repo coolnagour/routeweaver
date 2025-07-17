@@ -49,7 +49,7 @@ export default function RecentJourneys() {
   const { server } = useServer();
   const router = useRouter();
   const { toast } = useToast();
-  const [journeys, setJourneys] = useLocalStorage<Journey[]>('recent-journeys', [], server?.companyId);
+  const [journeys, setJourneys] = useLocalStorage<Journey[]>('recent-journeys', [], server?.uuid);
   const [publishingId, setPublishingId] = useState<string | null>(null);
   const [expandedJourneyId, setExpandedJourneyId] = useState<string | null>(null);
   const [debugData, setDebugData] = useState<Record<string, { orderedStops: Stop[]; isLoading: boolean }>>({});

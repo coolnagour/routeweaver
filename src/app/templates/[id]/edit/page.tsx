@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -14,7 +15,7 @@ export default function EditTemplatePage() {
   const { server } = useServer();
   const templateId = params.id ? decodeURIComponent(params.id as string) : undefined;
 
-  const [templates] = useLocalStorage<JourneyTemplate[]>('journey-templates', [], server?.companyId);
+  const [templates] = useLocalStorage<JourneyTemplate[]>('journey-templates', [], server?.uuid);
   const [template, setTemplate] = useState<JourneyTemplate | null>(null);
   const [loading, setLoading] = useState(true);
 
