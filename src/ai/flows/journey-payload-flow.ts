@@ -213,14 +213,18 @@ export async function generateJourneyPayload(input: JourneyPayloadInput): Promis
         }
     }
     
+    const journeyObject: any = {
+        bookings: journeyBookingsPayload,
+    };
+    if (journeyServerId) {
+        journeyObject.id = journeyServerId;
+    }
+    
     const journeyPayload: any = {
         logs: "false",
         delete_outstanding_journeys: "false",
         keyless_response: true,
-        journeys: [{
-            id: journeyServerId || null,
-            bookings: journeyBookingsPayload,
-        }],
+        journeys: [journeyObject],
     };
 
     if (enable_messaging_service) {
