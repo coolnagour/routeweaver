@@ -67,6 +67,7 @@ export interface Site {
 
 export interface Journey {
   id: string; // Local/React ID
+  serverScope: string; // To link journey to a server config
   journeyServerId?: number; // ID from iCabbi API
   bookings: Booking[];
   status: 'Draft' | 'Scheduled' | 'Completed' | 'Cancelled';

@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import useIndexedDB from '@/hooks/use-indexed-db';
+import { useJourneys } from '@/hooks/use-journeys';
 import { saveJourney } from '@/ai/flows/journey-flow';
 import { generateJourneyPayload } from '@/ai/flows/journey-payload-flow';
 import { getSites } from '@/services/icabbi';
@@ -31,7 +32,6 @@ interface JourneyBuilderProps {
   onNewJourneyClick?: () => void;
   isEditingTemplate?: boolean;
   isEditingJourney?: boolean;
-  onUpdateJourney?: (journey: Journey) => void;
   journeyId?: string;
   initialSiteId?: number; // For loading from template
   initialAccount?: Account | null; // For loading from template
@@ -68,7 +68,6 @@ function JourneyBuilderInner({
   onNewJourneyClick, 
   isEditingTemplate = false,
   isEditingJourney = false,
-  onUpdateJourney,
   journeyId,
   initialSiteId,
   initialAccount
@@ -76,7 +75,7 @@ function JourneyBuilderInner({
   const { toast } = useToast();
   const router = useRouter();
   const { server } = useServer();
-  const [journeys, setJourneys] = useIndexedDB<Journey[]>('recent-journeys', [], server?.uuid);
+  const { addOrUpdateJourney } = useJourneys();
   const [templates, setTemplates] = useIndexedDB<JourneyTemplate[]>('journey-templates', [], server?.uuid);
   const [templateName, setTemplateName] = useState('');
   const [sites, setSites] = useState<{id: number, name: string, ref: string}[]>([]);
@@ -101,8 +100,7 @@ function JourneyBuilderInner({
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
   const [bookings, setBookings] = useState<Booking[]>(() => getInitialBookings(initialData));
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [currentJourney, setCurrentJourney] = useState<Journey | null>(null);
-
+  
   const [journeyPreview, setJourneyPreview] = useState<JourneyPreviewState>({ orderedStops: [], journeyPayload: null, bookings: [], bookingPayloads: [], isLoading: false });
 
   const [journeyPrice, setJourneyPrice] = useState<number | undefined>(undefined);
@@ -123,7 +121,7 @@ function JourneyBuilderInner({
     };
   };
 
-  const fetchPreview = useCallback(async (currentBookings: Booking[], journey: Journey | null, siteId?: number, accountId?: number, messagingEnabled?: boolean) => {
+  const fetchPreview = useCallback(async (currentBookings: Booking[], journeyData: Partial<Journey> | null, siteId?: number, accountId?: number, messagingEnabled?: boolean) => {
     if (currentBookings.length === 0 || currentBookings.flatMap(b => b.stops).length < 2) {
       setJourneyPreview({ orderedStops: [], journeyPayload: null, isLoading: false, bookings: currentBookings, bookingPayloads: [] });
       return;
@@ -142,7 +140,7 @@ function JourneyBuilderInner({
 
         const { orderedStops, journeyPayload } = await generateJourneyPayload({ 
             bookings: tempBookingsForPreview, 
-            journeyServerId: journey?.journeyServerId,
+            journeyServerId: journeyData?.journeyServerId,
             enable_messaging_service: messagingEnabled,
         });
 
@@ -159,8 +157,8 @@ function JourneyBuilderInner({
   const debouncedFetchPreview = useCallback(debounce(fetchPreview, 750), [fetchPreview]);
 
   useEffect(() => {
-    debouncedFetchPreview(bookings, currentJourney, selectedSiteId, selectedAccount?.id, enableMessaging);
-  }, [bookings, currentJourney, debouncedFetchPreview, selectedSiteId, selectedAccount, enableMessaging]);
+    debouncedFetchPreview(bookings, initialData, selectedSiteId, selectedAccount?.id, enableMessaging);
+  }, [bookings, initialData, debouncedFetchPreview, selectedSiteId, selectedAccount, enableMessaging]);
   
   useEffect(() => {
     // This effect ensures the builder's state is in sync with the initialData prop
@@ -172,13 +170,7 @@ function JourneyBuilderInner({
     setJourneyPrice(initialData?.price);
     setJourneyCost(initialData?.cost);
     setEnableMessaging(initialData?.enable_messaging_service || false);
-
-    if (isEditingJourney && initialData && 'status' in initialData) {
-        setCurrentJourney(initialData as Journey);
-    } else {
-        setCurrentJourney(null);
-    }
-  }, [initialData, isEditingJourney, initialSiteId, initialAccount]);
+  }, [initialData, initialSiteId, initialAccount]);
 
   useEffect(() => {
     async function fetchSites() {
@@ -199,9 +191,11 @@ function JourneyBuilderInner({
     fetchSites();
   }, [server, toast]);
 
-  const handleSaveJourneyLocally = () => {
-    if (!journeys) return;
-
+  const handleSaveJourneyLocally = async () => {
+    if (!server?.uuid) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Server not configured, cannot save journey.' });
+        return;
+    }
     if (bookings.length === 0) {
       toast({
         variant: 'destructive',
@@ -211,26 +205,27 @@ function JourneyBuilderInner({
       return;
     }
 
-    if (currentJourney && onUpdateJourney) {
-      const updatedJourneyData: Journey = {
-        ...currentJourney,
-        bookings: bookings,
-        status: currentJourney.status, // Keep existing status
-        siteId: selectedSiteId,
-        account: selectedAccount,
-        orderedStops: currentJourney.orderedStops, // Keep existing order
-        price: journeyPrice,
-        cost: journeyCost,
-        enable_messaging_service: enableMessaging,
-      };
-      onUpdateJourney(updatedJourneyData);
-      toast({
-        title: 'Journey Updated!',
-        description: `Your journey has been successfully updated locally.`,
-      });
+    if (isEditingJourney && journeyId) {
+        const journeyToUpdate: Journey = {
+            ...(initialData as Journey),
+            id: journeyId,
+            serverScope: server.uuid,
+            bookings: bookings,
+            siteId: selectedSiteId,
+            account: selectedAccount,
+            price: journeyPrice,
+            cost: journeyCost,
+            enable_messaging_service: enableMessaging,
+        };
+        await addOrUpdateJourney(journeyToUpdate);
+        toast({
+            title: 'Journey Updated!',
+            description: `Your journey has been successfully updated locally.`,
+        });
     } else {
         const newJourney: Journey = {
             id: uuidv4(),
+            serverScope: server.uuid,
             status: 'Draft',
             bookings: bookings,
             siteId: selectedSiteId,
@@ -239,7 +234,7 @@ function JourneyBuilderInner({
             cost: journeyCost,
             enable_messaging_service: enableMessaging,
         };
-        setJourneys([newJourney, ...journeys]);
+        await addOrUpdateJourney(newJourney);
         toast({
             title: 'Journey Saved!',
             description: 'Your journey has been saved as a draft.',
@@ -307,9 +302,7 @@ function JourneyBuilderInner({
   };
 
   async function handlePublishJourney() {
-    if (!journeys) return;
-    const journeyToPublish = currentJourney;
-    if (!journeyToPublish) {
+    if (!journeyId) {
         toast({ variant: 'destructive', title: 'No journey selected', description: 'Please save a journey before publishing.' });
         return;
     }
@@ -332,6 +325,18 @@ function JourneyBuilderInner({
 
     setIsSubmitting(true);
     try {
+        const journeyToPublish: Journey = {
+            ...(initialData as Journey),
+            id: journeyId,
+            bookings: bookings,
+            serverScope: server.uuid,
+            siteId: selectedSiteId,
+            account: selectedAccount,
+            price: journeyPrice,
+            cost: journeyCost,
+            enable_messaging_service: enableMessaging,
+        };
+
         const result = await saveJourney({ 
           bookings: journeyToPublish.bookings, 
           server, 
@@ -348,13 +353,10 @@ function JourneyBuilderInner({
             journeyServerId: result.journeyServerId,
             status: 'Scheduled',
             bookings: result.bookings, 
-            siteId: selectedSiteId,
-            account: selectedAccount,
             orderedStops: result.orderedStops,
         };
         
-        const updatedJourneys = journeys.map(j => j.id === journeyToPublish.id ? publishedJourney : j);
-        setJourneys(updatedJourneys);
+        await addOrUpdateJourney(publishedJourney);
 
         toast({
           title: 'Journey Published!',
@@ -376,9 +378,10 @@ function JourneyBuilderInner({
   
   const getTitle = () => {
     if (isEditingTemplate) return `Editing Template: ${(initialData as JourneyTemplate)?.name}`;
-    if (isEditingJourney && currentJourney) {
-      if (currentJourney.journeyServerId) {
-        return `Editing Journey (ID: ${currentJourney.journeyServerId})`;
+    if (isEditingJourney && initialData) {
+      const journeyData = initialData as Journey;
+      if (journeyData.journeyServerId) {
+        return `Editing Journey (ID: ${journeyData.journeyServerId})`;
       }
       return 'Editing Journey';
     }
@@ -400,7 +403,7 @@ function JourneyBuilderInner({
   };
 
   const title = getTitle();
-  const publishButtonText = currentJourney?.status === 'Scheduled' ? 'Update Published Journey' : 'Publish';
+  const publishButtonText = (initialData as Journey)?.status === 'Scheduled' ? 'Update Published Journey' : 'Publish';
   
   const journeyMapComponent = (
       <JourneyMap 
@@ -595,11 +598,11 @@ function JourneyBuilderInner({
                         <div className="flex flex-col gap-2 flex-grow min-w-[250px] w-full sm:w-auto">
                             <Label className="text-xs">Journey Actions</Label>
                             <div className="flex gap-2">
-                                <Button variant="outline" onClick={handleSaveJourneyLocally} disabled={!journeys || bookings.length === 0} className="flex-1">
+                                <Button variant="outline" onClick={handleSaveJourneyLocally} disabled={bookings.length === 0} className="flex-1">
                                     <Save className="mr-2 h-4 w-4" /> {isEditingJourney ? 'Update Journey' : 'Save Draft'}
                                 </Button>
                                 
-                                <Button onClick={handlePublishJourney} disabled={isSubmitting || !currentJourney || bookings.length === 0 || !selectedSiteId || !selectedAccount} className="flex-1">
+                                <Button onClick={handlePublishJourney} disabled={isSubmitting || !journeyId || bookings.length === 0 || !selectedSiteId || !selectedAccount} className="flex-1">
                                     {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
                                     {publishButtonText}
                                 </Button>

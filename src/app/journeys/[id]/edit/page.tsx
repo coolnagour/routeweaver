@@ -3,25 +3,23 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import useIndexedDB from '@/hooks/use-indexed-db';
 import JourneyBuilder from '@/components/journeys/journey-builder';
 import type { Journey } from '@/types';
-import { useServer } from '@/context/server-context';
 import { Loader2 } from 'lucide-react';
+import { useJourneys } from '@/hooks/use-journeys';
 
 export default function EditJourneyPage() {
   const router = useRouter();
   const params = useParams();
-  const { server } = useServer();
   const journeyId = params.id ? decodeURIComponent(params.id as string) : undefined;
 
-  const [journeys, setJourneys] = useIndexedDB<Journey[]>('recent-journeys', [], server?.uuid);
+  const { journeys, loading: journeysLoading } = useJourneys();
   const [journey, setJourney] = useState<Journey | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (journeyId && journeys) {
-      if (journeys.length > 0) {
+    if (journeyId && !journeysLoading) {
+      if (journeys) {
         const foundJourney = journeys.find(j => j.id === journeyId);
         if (foundJourney) {
           setJourney(foundJourney);
@@ -29,21 +27,15 @@ export default function EditJourneyPage() {
           console.error(`Journey with id ${journeyId} not found.`);
           router.push('/journeys');
         }
-        setLoading(false);
-      } else if (!loading) { // Journeys has loaded but is empty
+      } else {
+        // Journeys is null, but not loading, likely an error or empty state
         router.push('/journeys');
       }
+      setLoading(false);
     }
-  }, [journeyId, journeys, router, loading]);
+  }, [journeyId, journeys, router, journeysLoading]);
 
-  const handleUpdateJourney = (updatedJourney: Journey) => {
-    if (!journeys) return;
-    const updatedJourneys = journeys.map(j => j.id === updatedJourney.id ? updatedJourney : j);
-    setJourneys(updatedJourneys);
-    setJourney(updatedJourney); // This is the key change to trigger a re-render
-  };
-
-  if (loading || !journey) {
+  if (loading || journeysLoading || !journey) {
     return (
         <div className="flex h-screen w-full items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin" />
@@ -53,10 +45,9 @@ export default function EditJourneyPage() {
 
   return (
     <JourneyBuilder
-      key={journey.id} // The key remains, but the state update will now cause a re-render
+      key={journey.id}
       initialData={journey}
       isEditingJourney={true}
-      onUpdateJourney={handleUpdateJourney}
       journeyId={journey.id}
     />
   );
