@@ -15,7 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import type { Journey, Booking, Stop } from '@/types';
 import { format } from 'date-fns';
 import { useJourneys } from '@/hooks/use-journeys';
-import { Users, MapPin, Clock, MessageSquare, Edit, Send, Loader2, Info, ChevronDown, Trash2, Milestone, Hash, Car, Map, DollarSign } from 'lucide-react';
+import { Users, MapPin, Clock, MessageSquare, Edit, Send, Loader2, Info, ChevronDown, Trash2, Milestone, Hash, Car, Map, DollarSign, PlusCircle } from 'lucide-react';
 import { useServer } from '@/context/server-context';
 import { Button } from '../ui/button';
 import { useRouter } from 'next/navigation';
@@ -205,12 +205,24 @@ export default function RecentJourneys() {
     return undefined;
   };
 
+  const handleNewJourney = () => {
+    router.push('/journeys/new');
+  }
+
   return (
     <div className="p-4 sm:p-6 lg:p-8">
     <Card>
       <CardHeader>
-        <CardTitle className="font-headline text-2xl">My Journeys</CardTitle>
-        <CardDescription>A list of your recent and upcoming journeys.</CardDescription>
+        <div className="flex justify-between items-center">
+            <div>
+                <CardTitle className="font-headline text-2xl">My Journeys</CardTitle>
+                <CardDescription>A list of your recent and upcoming journeys.</CardDescription>
+            </div>
+            <Button onClick={handleNewJourney}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                New Journey
+            </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {loading ? (
