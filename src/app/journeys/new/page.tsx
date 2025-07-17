@@ -32,7 +32,7 @@ export default function NewJourneyPage() {
     key={loadedTemplate ? loadedTemplate.id : 'new'} 
     initialData={loadedTemplate} 
     onNewJourneyClick={handleNewJourney}
-    initialSiteId={loadedTemplate?.siteId}
+    initialSite={loadedTemplate?.site}
     initialAccount={loadedTemplate?.account}
   />;
 }

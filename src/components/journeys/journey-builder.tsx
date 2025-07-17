@@ -33,7 +33,7 @@ interface JourneyBuilderProps {
   isEditingTemplate?: boolean;
   isEditingJourney?: boolean;
   journeyId?: string;
-  initialSiteId?: number; // For loading from template
+  initialSite?: Site | null; // For loading from template
   initialAccount?: Account | null; // For loading from template
   onUpdateJourney?: (journey: Journey) => void;
 }
@@ -46,18 +46,12 @@ interface JourneyPreviewState {
   isLoading: boolean;
 }
 
-const generateDebugBookingPayloads = (bookings: Booking[], server: any, siteId?: number, accountId?: number) => {
-    if (!server || !siteId || !accountId) return [];
-    
-    const bookingsWithContext = bookings.map(b => ({
-      ...b,
-      siteId: siteId,
-      accountId: accountId
-    }));
+const generateDebugBookingPayloads = (bookings: Booking[], server: any, site?: Site, account?: Account) => {
+    if (!server || !site || !account) return [];
 
-    return bookingsWithContext.map(booking => {
+    return bookings.map(booking => {
         try {
-            return formatBookingForApi(booking, server);
+            return formatBookingForApi({booking, server, siteId: site.id, accountId: account.id});
         } catch (e) {
             return { error: `Error generating payload: ${e instanceof Error ? e.message : 'Unknown error'}` };
         }
@@ -70,7 +64,7 @@ function JourneyBuilderInner({
   isEditingTemplate = false,
   isEditingJourney = false,
   journeyId,
-  initialSiteId,
+  initialSite,
   initialAccount,
   onUpdateJourney
 }: JourneyBuilderProps) {
@@ -82,7 +76,7 @@ function JourneyBuilderInner({
   const [templateName, setTemplateName] = useState('');
   const [sites, setSites] = useState<Site[]>([]);
   const [isFetchingSites, setIsFetchingSites] = useState(false);
-  const [selectedSiteId, setSelectedSiteId] = useState<number | undefined>(initialSiteId || initialData?.siteId);
+  const [selectedSite, setSelectedSite] = useState<Site | null>(initialSite || (initialData as Journey)?.site || null);
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(initialAccount || (initialData as Journey)?.account || null);
   
   const getInitialBookings = (data: Partial<JourneyTemplate | Journey> | null | undefined): Booking[] => {
@@ -123,7 +117,7 @@ function JourneyBuilderInner({
     };
   };
 
-  const fetchPreview = useCallback(async (currentBookings: Booking[], journeyData: Partial<Journey> | null, siteId?: number, accountId?: number, messagingEnabled?: boolean) => {
+  const fetchPreview = useCallback(async (currentBookings: Booking[], journeyData: Partial<Journey> | null, site?: Site | null, account?: Account | null, messagingEnabled?: boolean) => {
     if (currentBookings.length === 0 || currentBookings.flatMap(b => b.stops).length < 2) {
       setJourneyPreview({ orderedStops: [], journeyPayload: null, isLoading: false, bookings: currentBookings, bookingPayloads: [] });
       return;
@@ -146,7 +140,7 @@ function JourneyBuilderInner({
             enable_messaging_service: messagingEnabled,
         });
 
-        const debugBookingPayloads = generateDebugBookingPayloads(currentBookings, server, siteId, accountId);
+        const debugBookingPayloads = generateDebugBookingPayloads(currentBookings, server, site || undefined, account || undefined);
 
         setJourneyPreview({ orderedStops, journeyPayload, isLoading: false, bookings: currentBookings, bookingPayloads: debugBookingPayloads });
     } catch (e) {
@@ -159,20 +153,20 @@ function JourneyBuilderInner({
   const debouncedFetchPreview = useCallback(debounce(fetchPreview, 750), [fetchPreview]);
 
   useEffect(() => {
-    debouncedFetchPreview(bookings, initialData, selectedSiteId, selectedAccount?.id, enableMessaging);
-  }, [bookings, initialData, debouncedFetchPreview, selectedSiteId, selectedAccount, enableMessaging]);
+    debouncedFetchPreview(bookings, initialData, selectedSite, selectedAccount, enableMessaging);
+  }, [bookings, initialData, debouncedFetchPreview, selectedSite, selectedAccount, enableMessaging]);
   
   useEffect(() => {
     // This effect ensures the builder's state is in sync with the initialData prop
     const initialBookings = getInitialBookings(initialData);
     setBookings(initialBookings);
     setTemplateName((initialData as JourneyTemplate)?.name || '');
-    setSelectedSiteId(initialData?.siteId || initialSiteId);
+    setSelectedSite(initialData?.site || initialSite || null);
     setSelectedAccount( (initialData as Journey)?.account || initialAccount || null);
     setJourneyPrice(initialData?.price);
     setJourneyCost(initialData?.cost);
     setEnableMessaging((initialData as Journey)?.enable_messaging_service || false);
-  }, [initialData, initialSiteId, initialAccount]);
+  }, [initialData, initialSite, initialAccount]);
 
   useEffect(() => {
     async function fetchSites() {
@@ -207,16 +201,13 @@ function JourneyBuilderInner({
       return;
     }
     
-    const selectedSite = sites.find(s => s.id === selectedSiteId);
-
     if (isEditingJourney && journeyId) {
         const journeyToUpdate: Journey = {
             ...(initialData as Journey),
             id: journeyId,
             serverScope: server.uuid,
             bookings: bookings,
-            siteId: selectedSiteId,
-            site: selectedSite || null,
+            site: selectedSite,
             account: selectedAccount,
             price: journeyPrice,
             cost: journeyCost,
@@ -236,8 +227,7 @@ function JourneyBuilderInner({
             serverScope: server.uuid,
             status: 'Draft',
             bookings: bookings,
-            siteId: selectedSiteId,
-            site: selectedSite || null,
+            site: selectedSite,
             account: selectedAccount,
             price: journeyPrice,
             cost: journeyCost,
@@ -259,8 +249,6 @@ function JourneyBuilderInner({
         toast({ title: 'Template name required', variant: 'destructive' });
         return;
     }
-    
-    const selectedSite = sites.find(s => s.id === selectedSiteId);
 
     const templateData = {
       name: templateName,
@@ -286,8 +274,7 @@ function JourneyBuilderInner({
         instructions: b.instructions,
         holdOn: b.holdOn
       })),
-      siteId: selectedSiteId,
-      site: selectedSite || null,
+      site: selectedSite,
       account: selectedAccount,
       enable_messaging_service: enableMessaging,
     };
@@ -325,7 +312,7 @@ function JourneyBuilderInner({
         return;
     }
 
-    if (!selectedSiteId) {
+    if (!selectedSite) {
         toast({ variant: 'destructive', title: 'Site required', description: 'Please select a site for this journey.' });
         return;
     }
@@ -343,14 +330,12 @@ function JourneyBuilderInner({
 
     setIsSubmitting(true);
     try {
-        const selectedSite = sites.find(s => s.id === selectedSiteId);
         const journeyToPublish: Journey = {
             ...(initialData as Journey),
             id: journeyId,
             bookings: bookings,
             serverScope: server.uuid,
-            siteId: selectedSiteId,
-            site: selectedSite || null,
+            site: selectedSite,
             account: selectedAccount,
             price: journeyPrice,
             cost: journeyCost,
@@ -360,7 +345,7 @@ function JourneyBuilderInner({
         const result = await saveJourney({ 
           bookings: journeyToPublish.bookings, 
           server, 
-          siteId: selectedSiteId, 
+          siteId: selectedSite.id, 
           accountId: selectedAccount.id,
           journeyServerId: journeyToPublish.journeyServerId, 
           price: journeyToPublish.price,
@@ -453,8 +438,11 @@ function JourneyBuilderInner({
                         <div>
                             <label className="text-sm font-medium mb-2 block">Site</label>
                             <Select 
-                                value={selectedSiteId?.toString()}
-                                onValueChange={(value) => setSelectedSiteId(Number(value))} 
+                                value={selectedSite?.id.toString()}
+                                onValueChange={(value) => {
+                                    const site = sites.find(s => s.id === Number(value));
+                                    setSelectedSite(site || null);
+                                }} 
                                 disabled={isFetchingSites}
                             >
                                 <SelectTrigger>
@@ -622,7 +610,7 @@ function JourneyBuilderInner({
                                     <Save className="mr-2 h-4 w-4" /> {isEditingJourney ? 'Update Journey' : 'Save Draft'}
                                 </Button>
                                 
-                                <Button onClick={handlePublishJourney} disabled={isSubmitting || !journeyId || bookings.length === 0 || !selectedSiteId || !selectedAccount} className="flex-1">
+                                <Button onClick={handlePublishJourney} disabled={isSubmitting || !journeyId || bookings.length === 0 || !selectedSite || !selectedAccount} className="flex-1">
                                     {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
                                     {publishButtonText}
                                 </Button>

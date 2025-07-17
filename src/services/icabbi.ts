@@ -73,8 +73,14 @@ export async function callIcabbiApi({ server, method, endpoint, body }: IcabbiAp
     }
 }
 
-export async function createBooking(server: ServerConfig, booking: Booking) {
-    const payload = formatBookingForApi(booking, server);
+interface BookingApiContext {
+    booking: Booking;
+    siteId: number;
+    accountId: number;
+}
+
+export async function createBooking(server: ServerConfig, { booking, siteId, accountId }: BookingApiContext) {
+    const payload = formatBookingForApi({ booking, server, siteId, accountId });
 
     const response = await callIcabbiApi({
         server,
@@ -86,11 +92,11 @@ export async function createBooking(server: ServerConfig, booking: Booking) {
     return response.body.booking;
 }
 
-export async function updateBooking(server: ServerConfig, booking: Booking) {
+export async function updateBooking(server: ServerConfig, { booking, siteId, accountId }: BookingApiContext) {
     if (!booking.bookingServerId) {
         throw new Error("Booking must have a bookingServerId to be updated.");
     }
-    const payload = formatBookingForApi(booking, server);
+    const payload = formatBookingForApi({ booking, server, siteId, accountId });
 
     const response = await callIcabbiApi({
         server,

@@ -116,7 +116,6 @@ export default function AiTemplateModal({ isOpen, onOpenChange, onTemplateCreate
 
         const templateToCreate: Omit<JourneyTemplate, 'id' | 'serverScope'> = {
             name: suggestion.name,
-            siteId: finalSite.id,
             site: finalSite,
             account: finalAccount,
             enable_messaging_service: suggestion.enable_messaging_service,

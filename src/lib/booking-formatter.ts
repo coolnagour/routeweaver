@@ -6,7 +6,15 @@ import parsePhoneNumberFromString, { getCountryCallingCode } from 'libphonenumbe
  * @fileOverview A shared utility to format booking data for the API.
  */
 
-export const formatBookingForApi = (booking: Booking, server: ServerConfig) => {
+// Define a new type for the function parameters to include site and account context
+type BookingWithApiContext = {
+    booking: Booking;
+    server: ServerConfig;
+    siteId: number;
+    accountId: number;
+};
+
+export const formatBookingForApi = ({ booking, server, siteId, accountId }: BookingWithApiContext) => {
     // Ensure stops are sorted by the order field before processing
     const sortedStops = [...booking.stops].sort((a, b) => a.order - b.order);
 
@@ -22,11 +30,11 @@ export const formatBookingForApi = (booking: Booking, server: ServerConfig) => {
         throw new Error("Booking must have at least one pickup stop.");
     }
     
-    if (!booking.siteId) {
+    if (!siteId) {
         throw new Error("Site ID is required for booking.");
     }
     
-    if (!booking.accountId) {
+    if (!accountId) {
         throw new Error("Account ID is required for booking.");
     }
 
@@ -52,8 +60,8 @@ export const formatBookingForApi = (booking: Booking, server: ServerConfig) => {
             formatted: booking.holdOn ? "As Directed" : lastStop.location.address,
             driver_instructions: lastStop.instructions || "",
         },
-        account_id: booking.accountId,
-        site_id: booking.siteId,
+        account_id: accountId,
+        site_id: siteId,
         customer_id: booking.customerId,
         external_booking_id: booking.externalBookingId,
         vehicle_type: booking.vehicleType,

@@ -54,17 +54,15 @@ const saveJourneyFlow = ai.defineFlow(
         let result: any;
         let isUpdate = false;
 
-        const bookingWithContext = { ...booking, siteId, accountId };
-
         if (booking.bookingServerId) {
           // This booking already exists on the server, so we update it.
           console.log(`[Journey Flow] Updating existing booking with server ID: ${booking.bookingServerId}`);
-          result = await updateBooking(server, bookingWithContext);
+          result = await updateBooking(server, { booking, siteId, accountId });
           isUpdate = true;
         } else {
           // This is a new booking, create it on the server.
           console.log(`[Journey Flow] Creating new booking for passenger: ${booking.stops.find(s=>s.stopType === 'pickup')?.name}`);
-          result = await createBooking(server, bookingWithContext);
+          result = await createBooking(server, { booking, siteId, accountId });
         }
           
         // Use perma_id from the response for the bookingServerId.

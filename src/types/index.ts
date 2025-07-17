@@ -41,8 +41,8 @@ export interface Booking {
   id: string; // Local/React ID
   bookingServerId?: number; // ID from iCabbi API
   stops: Stop[];
-  siteId?: number;
-  accountId?: number;
+  // siteId and accountId are not part of the core booking data model
+  // but are added as context when calling the API.
   customerId?: string; // Optional free text field
   externalBookingId?: string; // Optional free text field
   vehicleType?: string; // Optional free text field
@@ -71,7 +71,6 @@ export interface Journey {
   journeyServerId?: number; // ID from iCabbi API
   bookings: Booking[];
   status: 'Draft' | 'Scheduled' | 'Completed' | 'Cancelled';
-  siteId?: number;
   site?: Site | null;
   account?: Account | null;
   orderedStops?: Stop[]; // The final ordered stops from the server
@@ -81,16 +80,15 @@ export interface Journey {
 }
 
 // Stored template has string dates
-export type TemplateBooking = Omit<Booking, 'stops' | 'siteId' | 'accountId' | 'bookingServerId'> & { stops: Stop[] };
+export type TemplateBooking = Omit<Booking, 'stops' | 'bookingServerId'> & { stops: Stop[] };
 
 export interface JourneyTemplate {
   id: string;
   serverScope: string; // To link template to a server config
   name: string;
   bookings: TemplateBooking[];
-  siteId?: number; 
   account?: Account | null;
-  site?: Site | null; // Added for Quick Start
+  site?: Site | null;
   enable_messaging_service?: boolean;
 }
 
@@ -149,8 +147,6 @@ export const BookingSchema = z.object({
   id: z.string(),
   bookingServerId: z.number().optional(),
   stops: z.array(StopSchema),
-  siteId: z.number().optional(),
-  accountId: z.number().optional(),
   customerId: z.string().optional(),
   externalBookingId: z.string().optional(),
   vehicleType: z.string().optional(),
@@ -176,14 +172,13 @@ export const SiteSchema = z.object({
 // Stored template has string dates
 export const TemplateBookingSchema = BookingSchema.extend({
   stops: z.array(StopSchema),
-}).omit({ siteId: true, accountId: true, bookingServerId: true });
+}).omit({ bookingServerId: true });
 
 export const JourneyTemplateSchema = z.object({
   id: z.string(),
   serverScope: z.string(),
   name: z.string(),
   bookings: z.array(TemplateBookingSchema),
-  siteId: z.number().optional(), 
   account: AccountSchema.nullable().optional(),
   site: SiteSchema.nullable().optional(),
   enable_messaging_service: z.boolean().optional(),
