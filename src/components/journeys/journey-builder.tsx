@@ -232,11 +232,11 @@ function JourneyBuilderInner({
         enable_messaging_service: enableMessaging,
       };
       onUpdateJourney(updatedJourneyData);
+      setCurrentJourney(updatedJourneyData); // This is the key fix
       toast({
         title: 'Journey Updated!',
         description: `Your journey has been successfully updated locally.`,
       });
-      setCurrentJourney(updatedJourneyData);
     } else {
         const newJourney: Journey = {
             id: uuidv4(),
