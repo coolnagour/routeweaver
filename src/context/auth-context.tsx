@@ -44,28 +44,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isConfigValid, setIsConfigValid] = useState(true);
 
   useEffect(() => {
-    // Check if Firebase config is provided
+    // Check if we should use mock auth
+    if (process.env.NEXT_PUBLIC_USE_MOCK_AUTH === 'true') {
+      console.log("Using mock user for development.");
+      setUser(mockUser);
+      setLoading(false);
+      return;
+    }
+
+    // Check if Firebase config is provided for real auth
     if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
       console.error("Firebase config is missing. Please check your .env file.");
       setIsConfigValid(false);
       setLoading(false);
       return;
     }
+    
     setIsConfigValid(true);
 
-    if (process.env.NEXT_PUBLIC_USE_MOCK_AUTH === 'true') {
-      // DEV: Bypassing real auth with mock user
-      console.log("Using mock user for development.");
-      setUser(mockUser);
+    // REAL AUTH
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
       setLoading(false);
-    } else {
-      // REAL AUTH
-      const unsubscribe = onAuthStateChanged(auth, (user) => {
-        setUser(user);
-        setLoading(false);
-      });
-      return () => unsubscribe();
-    }
+    });
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -73,20 +75,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const isAuthPage = pathname === '/login';
 
-    if (user) { // User is logged in
-      if (isAuthPage) {
-        router.push('/'); // If on login page, redirect to server select
-      } else {
-        // If logged in and not on an auth page, check if a server is needed
-        const serverIsRequired = !['/', '/settings/servers'].includes(pathname);
-        if (!server && serverIsRequired) {
-          router.push('/'); // If server is required but not selected, redirect to server select
-        }
-      }
-    } else { // User is not logged in
-      if (!isAuthPage) {
-        router.push('/login'); // If not on login page, redirect there
-      }
+    if (!user && !isAuthPage) {
+      router.push('/login');
     }
     
   }, [user, server, loading, router, pathname, isConfigValid]);
