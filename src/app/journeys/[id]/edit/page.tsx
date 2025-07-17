@@ -18,20 +18,22 @@ export default function EditJourneyPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Wait until the journeys have been loaded from the database.
     if (journeyId && !journeysLoading) {
-      if (journeys) {
-        const foundJourney = journeys.find(j => j.id === journeyId);
-        if (foundJourney) {
-          setJourney(foundJourney);
-        } else {
-          console.error(`Journey with id ${journeyId} not found.`);
-          router.push('/journeys');
-        }
+      // The journeys array can be null initially, so we wait for it to be populated.
+      if (journeys === null) {
+        return; // Still loading, wait for the next effect run.
+      }
+
+      const foundJourney = journeys.find(j => j.id === journeyId);
+      if (foundJourney) {
+        setJourney(foundJourney);
+        setLoading(false);
       } else {
-        // Journeys is null, but not loading, likely an error or empty state
+        // Only if journeys are loaded and the journey is not found, we redirect.
+        console.error(`Journey with id ${journeyId} not found.`);
         router.push('/journeys');
       }
-      setLoading(false);
     }
   }, [journeyId, journeys, router, journeysLoading]);
 
