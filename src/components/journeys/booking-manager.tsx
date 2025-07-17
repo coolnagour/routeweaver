@@ -65,7 +65,7 @@ export default function BookingManager({
         { id: newPickupStopId, order: 0, location: emptyLocation, stopType: 'pickup', name: '', phone: '', dateTime: undefined, instructions: '' },
         { id: uuidv4(), order: 1, location: emptyLocation, stopType: 'dropoff', pickupStopId: newPickupStopId, instructions: '' }
       ],
-      holdOn: false, // Default to false for all new bookings
+      holdOn: false,
     };
     
     setBookings(prev => [...prev, newBooking]);
@@ -161,6 +161,8 @@ export default function BookingManager({
     const firstPickup = [...booking.stops].sort((a,b) => a.order - b.order).find(s => s.stopType === 'pickup');
     return firstPickup?.dateTime;
   }
+  
+  const hasHoldOnBooking = bookings.some(b => b.holdOn);
 
   if (editingBooking) {
     const isFirstBooking = bookings.length > 0 && bookings[0].id === editingBooking.id;
@@ -278,7 +280,7 @@ export default function BookingManager({
                           })}
                       </div>
                       <div className="flex items-center">
-                          {booking.bookingServerId && (
+                          {booking.bookingServerId && hasHoldOnBooking && (
                               <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
                                       <Button variant="ghost" size="icon">
@@ -349,5 +351,3 @@ export default function BookingManager({
     </Card>
   );
 }
-
-    
