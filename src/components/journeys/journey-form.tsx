@@ -264,7 +264,6 @@ export default function JourneyForm({
   const viaStops = stopFields.slice(1, -1);
   const firstPickupIndex = stopFields.findIndex(s => s.stopType === 'pickup');
   
-  // A booking is "new" if it has no server ID and no stop addresses have been filled in yet.
   const isTrulyNew = !initialData.bookingServerId && !initialData.stops.some(s => s.location.address);
 
   return (
@@ -457,7 +456,7 @@ export default function JourneyForm({
                                 <FormControl>
                                     <div className="relative flex items-center">
                                         <MessageSquare className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                        <Input placeholder="e.g., Gate code #1234" {...field} className="pl-10 pr-10 bg-background"/>
+                                        <Input placeholder="e.g., Gate code #1234" {...field} value={field.value ?? ''} className="pl-10 pr-10 bg-background"/>
                                         <Button type="button" variant="ghost" size="icon" className="absolute right-1 h-8 w-8 text-primary" onClick={() => handleGenerateField('instructions', 'stops.0.instructions', 0, 'pickup')} disabled={generatingFields['stops.0.instructions-instructions']}>
                                             {generatingFields['stops.0.instructions-instructions'] ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                                         </Button>
@@ -520,7 +519,7 @@ export default function JourneyForm({
                                 <FormControl>
                                     <div className="relative flex items-center">
                                         <MessageSquare className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                                        <Textarea placeholder="e.g., Customer requires an accessible vehicle." {...field} className="pl-10 pr-10 bg-background"/>
+                                        <Textarea placeholder="e.g., Customer requires an accessible vehicle." {...field} value={field.value ?? ''} className="pl-10 pr-10 bg-background"/>
                                         <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1.5 h-8 w-8 text-primary" onClick={() => handleGenerateField('instructions', 'instructions')} disabled={generatingFields['instructions-instructions']}>
                                             {generatingFields['instructions-instructions'] ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                                         </Button>
@@ -540,7 +539,7 @@ export default function JourneyForm({
                                 <FormControl>
                                     <div className="relative flex items-center">
                                         <Info className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                        <Input placeholder="Enter customer ID" {...field} className="pl-10 bg-background" />
+                                        <Input placeholder="Enter customer ID" {...field} value={field.value ?? ''} className="pl-10 bg-background" />
                                     </div>
                                 </FormControl>
                                 <FormMessage />
@@ -556,7 +555,7 @@ export default function JourneyForm({
                                 <FormControl>
                                     <div className="relative flex items-center">
                                         <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                        <Input placeholder="Enter external ID" {...field} className="pl-10 bg-background" />
+                                        <Input placeholder="Enter external ID" {...field} value={field.value ?? ''} className="pl-10 bg-background" />
                                     </div>
                                 </FormControl>
                                 <FormMessage />
@@ -572,7 +571,7 @@ export default function JourneyForm({
                                 <FormControl>
                                     <div className="relative flex items-center">
                                         <Car className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                        <Input placeholder="e.g., Sedan, MPV" {...field} className="pl-10 bg-background" />
+                                        <Input placeholder="e.g., Sedan, MPV" {...field} value={field.value ?? ''} className="pl-10 bg-background" />
                                     </div>
                                 </FormControl>
                                 <FormMessage />
@@ -588,7 +587,7 @@ export default function JourneyForm({
                                 <FormControl>
                                     <div className="relative flex items-center">
                                         <Map className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                        <Input placeholder="Enter area code" {...field} className="pl-10 bg-background" />
+                                        <Input placeholder="Enter area code" {...field} value={field.value ?? ''} className="pl-10 bg-background" />
                                     </div>
                                 </FormControl>
                                 <FormMessage />
@@ -604,7 +603,7 @@ export default function JourneyForm({
                                 <FormControl>
                                     <div className="relative flex items-center">
                                         <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                        <Input type="number" placeholder="e.g. 25.50" {...field} disabled={isJourneyPriceSet} className="pl-10 bg-background" />
+                                        <Input type="number" placeholder="e.g. 25.50" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} value={field.value ?? ''} disabled={isJourneyPriceSet} className="pl-10 bg-background" />
                                     </div>
                                 </FormControl>
                                 <FormMessage />
@@ -620,7 +619,7 @@ export default function JourneyForm({
                                 <FormControl>
                                     <div className="relative flex items-center">
                                         <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                        <Input type="number" placeholder="e.g. 10.00" {...field} disabled={isJourneyPriceSet} className="pl-10 bg-background" />
+                                        <Input type="number" placeholder="e.g. 10.00" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} value={field.value ?? ''} disabled={isJourneyPriceSet} className="pl-10 bg-background" />
                                     </div>
                                 </FormControl>
                                 <FormMessage />
