@@ -18,7 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { CalendarIcon, MapPin, PlusCircle, X, User, Phone, Clock, MessageSquare, ChevronsUpDown, Sparkles, Loader2, Info, Hash, Car, Map, DollarSign, Lock } from 'lucide-react';
+import { CalendarIcon, MapPin, PlusCircle, X, User, Phone, Clock, MessageSquare, ChevronsUpDown, Sparkles, Loader2, Info, Hash, Car, Map, DollarSign, Lock, ShieldQuestion } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, setHours, setMinutes } from 'date-fns';
 import type { Booking, Stop, SuggestionInput, StopType, Location } from '@/types';
@@ -38,7 +38,13 @@ import { useServer } from '@/context/server-context';
 const FormBookingSchema = BookingSchema.extend({
   stops: z.array(BookingSchema.shape.stops.element.extend({
     dateTime: z.date().optional(),
-  })).min(2, 'At least two stops are required.'),
+  })).min(1, 'At least one stop is required.'), // Min 1 for Hold On, min 2 for regular
+}).refine(data => {
+    if (data.holdOn) return data.stops.length === 1 && data.stops[0].stopType === 'pickup';
+    return data.stops.length >= 2;
+}, {
+    message: 'A standard booking requires at least a pickup and dropoff.',
+    path: ['stops'],
 }).refine(data => {
     // If it's a dropoff, it MUST have a pickupStopId
     const hasInvalidDropoff = data.stops.some(s => s.stopType === 'dropoff' && !s.pickupStopId);
@@ -67,6 +73,7 @@ interface JourneyFormProps {
   onSave: (booking: Booking) => void;
   onCancel: (bookingId: string) => void;
   isJourneyPriceSet: boolean;
+  isFirstBooking: boolean;
 }
 
 const emptyLocation = { address: '', lat: 0, lng: 0 };
@@ -76,6 +83,7 @@ export default function JourneyForm({
     onSave, 
     onCancel, 
     isJourneyPriceSet,
+    isFirstBooking,
 }: JourneyFormProps) {
   const { toast } = useToast();
   const { server } = useServer();
@@ -89,7 +97,7 @@ export default function JourneyForm({
     defaultValues: { ...initialData, stops: sortedInitialStops },
   });
   
-  const { fields: stopFields, insert: insertStop, remove: removeStop, update } = useFieldArray({
+  const { fields: stopFields, insert: insertStop, remove: removeStop, update, replace } = useFieldArray({
     control: form.control,
     name: "stops"
   });
@@ -103,6 +111,28 @@ export default function JourneyForm({
   }, [initialData, form]);
 
   const currentStops = useWatch({ control: form.control, name: 'stops' });
+  const isHoldOn = useWatch({ control: form.control, name: 'holdOn' });
+
+  useEffect(() => {
+    if (isHoldOn) {
+      // If Hold On is enabled, ensure there's only one pickup stop
+      const pickupStop = form.getValues('stops')[0];
+      if(pickupStop) {
+        replace([pickupStop]);
+      }
+    } else {
+      // If Hold On is disabled, ensure there's at least a pickup and dropoff
+      const stops = form.getValues('stops');
+      if (stops.length < 2) {
+          const newPickupId = uuidv4();
+          const currentPickup = stops[0] || { id: newPickupId, order: 0, location: emptyLocation, stopType: 'pickup', name: '', phone: '', dateTime: undefined, instructions: '' };
+          const dropoff = { id: uuidv4(), order: 1, location: emptyLocation, stopType: 'dropoff' as 'dropoff', pickupStopId: currentPickup.id!, instructions: '' };
+          replace([currentPickup, dropoff]);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isHoldOn, replace]);
+
 
   const getAvailablePickups = (currentIndex: number) => {
     const previousPickups = currentStops.slice(0, currentIndex).filter(s => s.stopType === 'pickup' && s.name);
@@ -151,7 +181,23 @@ export default function JourneyForm({
   function onSubmit(values: BookingFormData) {
     const bookingToSave: Booking = { ...values, stops: [] };
     
-    bookingToSave.stops = values.stops.map(stop => {
+    let stopsToSave = values.stops;
+
+    // For "Hold On" bookings, we need a destination stop for the API, but not in the UI state.
+    // So we create it temporarily here.
+    if (values.holdOn && stopsToSave.length === 1) {
+        const pickup = stopsToSave[0];
+        const syntheticDropoff: Stop = {
+            ...pickup, // Inherit location etc.
+            id: uuidv4(),
+            order: 1,
+            stopType: 'dropoff',
+            pickupStopId: pickup.id,
+        };
+        stopsToSave = [pickup, syntheticDropoff];
+    }
+    
+    bookingToSave.stops = stopsToSave.map(stop => {
       const stopDateTime = isScheduled ? stop.dateTime : undefined;
       return { 
         ...stop, 
@@ -234,6 +280,29 @@ export default function JourneyForm({
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+                {isFirstBooking && (
+                     <FormField
+                        control={form.control}
+                        name="holdOn"
+                        render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-muted/20">
+                                <div className="space-y-0.5">
+                                    <FormLabel className="flex items-center gap-2"><ShieldQuestion/>Hold On Booking</FormLabel>
+                                    <FormMessage />
+                                    <p className="text-sm text-muted-foreground">
+                                        Enable this to create a special booking that wraps the journey.
+                                    </p>
+                                </div>
+                                <FormControl>
+                                    <Switch
+                                        checked={field.value}
+                                        onCheckedChange={field.onChange}
+                                    />
+                                </FormControl>
+                            </FormItem>
+                        )}
+                    />
+                )}
                 {/* Pickup Section */}
                 <div className="p-4 border rounded-lg space-y-3 bg-muted/20">
                     <h3 className="font-semibold text-lg text-primary">Pickup</h3>
@@ -328,46 +397,48 @@ export default function JourneyForm({
                             </FormItem>
                         )}
                     />
-                    <div className="grid grid-cols-2 gap-4">
-                        <FormField
-                            control={form.control}
-                            name={`stops.0.name`}
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Passenger Name</FormLabel>
-                                <FormControl>
-                                    <div className="relative flex items-center">
-                                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                        <Input placeholder="e.g. Jane Doe" {...field} className="pl-10 pr-10 bg-background" />
-                                        <Button type="button" variant="ghost" size="icon" className="absolute right-1 h-8 w-8 text-primary" onClick={() => handleGenerateField('name', 'stops.0.name', 0)} disabled={generatingFields['stops.0.name-name']}>
-                                            {generatingFields['stops.0.name-name'] ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                                        </Button>
-                                    </div>
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
-                         <FormField
-                            control={form.control}
-                            name={`stops.0.phone`}
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Phone Number</FormLabel>
-                                <FormControl>
-                                    <div className="relative flex items-center">
-                                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                        <Input placeholder="e.g. +15551234567" {...field} className="pl-10 pr-10 bg-background" />
-                                        <Button type="button" variant="ghost" size="icon" className="absolute right-1 h-8 w-8 text-primary" onClick={() => handleGenerateField('phone', 'stops.0.phone', 0)} disabled={generatingFields['stops.0.phone-phone']}>
-                                            {generatingFields['stops.0.phone-phone'] ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                                        </Button>
-                                    </div>
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
-                    </div>
+                    {!isHoldOn && (
+                      <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                              control={form.control}
+                              name={`stops.0.name`}
+                              render={({ field }) => (
+                              <FormItem>
+                                  <FormLabel>Passenger Name</FormLabel>
+                                  <FormControl>
+                                      <div className="relative flex items-center">
+                                          <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                          <Input placeholder="e.g. Jane Doe" {...field} className="pl-10 pr-10 bg-background" />
+                                          <Button type="button" variant="ghost" size="icon" className="absolute right-1 h-8 w-8 text-primary" onClick={() => handleGenerateField('name', 'stops.0.name', 0)} disabled={generatingFields['stops.0.name-name']}>
+                                              {generatingFields['stops.0.name-name'] ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                                          </Button>
+                                      </div>
+                                  </FormControl>
+                                  <FormMessage />
+                              </FormItem>
+                              )}
+                          />
+                          <FormField
+                              control={form.control}
+                              name={`stops.0.phone`}
+                              render={({ field }) => (
+                              <FormItem>
+                                  <FormLabel>Phone Number</FormLabel>
+                                  <FormControl>
+                                      <div className="relative flex items-center">
+                                          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                          <Input placeholder="e.g. +15551234567" {...field} className="pl-10 pr-10 bg-background" />
+                                          <Button type="button" variant="ghost" size="icon" className="absolute right-1 h-8 w-8 text-primary" onClick={() => handleGenerateField('phone', 'stops.0.phone', 0)} disabled={generatingFields['stops.0.phone-phone']}>
+                                              {generatingFields['stops.0.phone-phone'] ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                                          </Button>
+                                      </div>
+                                  </FormControl>
+                                  <FormMessage />
+                              </FormItem>
+                              )}
+                          />
+                      </div>
+                    )}
                      <FormField
                         control={form.control}
                         name={`stops.0.instructions`}
@@ -390,7 +461,7 @@ export default function JourneyForm({
                 </div>
 
                 {/* Via Stops Section */}
-                {viaStops.map((stop, index) => (
+                {!isHoldOn && viaStops.map((stop, index) => (
                     <ViaStop 
                         key={stop.id}
                         control={form.control}
@@ -403,21 +474,25 @@ export default function JourneyForm({
                 ))}
 
                 {/* Add Stop Button */}
-                <div className="flex justify-center my-4">
-                    <Button type="button" variant="link" size="sm" onClick={handleAddStop}>
-                        <PlusCircle className="mr-2 h-4 w-4"/> Add Stop
-                    </Button>
-                </div>
+                {!isHoldOn && (
+                  <div className="flex justify-center my-4">
+                      <Button type="button" variant="link" size="sm" onClick={handleAddStop}>
+                          <PlusCircle className="mr-2 h-4 w-4"/> Add Stop
+                      </Button>
+                  </div>
+                )}
 
                 {/* Destination Section */}
-                <ViaStop
-                    control={form.control}
-                    index={stopFields.length - 1}
-                    isDestination
-                    getAvailablePickups={getAvailablePickups}
-                    onGenerateField={handleGenerateField}
-                    generatingFields={generatingFields}
-                />
+                {!isHoldOn && stopFields.length > 1 && (
+                    <ViaStop
+                        control={form.control}
+                        index={stopFields.length - 1}
+                        isDestination
+                        getAvailablePickups={getAvailablePickups}
+                        onGenerateField={handleGenerateField}
+                        generatingFields={generatingFields}
+                    />
+                )}
                 
                 <Collapsible className="mt-4">
                     <CollapsibleTrigger asChild>

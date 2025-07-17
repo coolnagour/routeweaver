@@ -48,6 +48,7 @@ export interface Booking {
   price?: number; // Optional numeric field
   cost?: number; // Optional numeric field
   instructions?: string; // Booking-level instructions
+  holdOn?: boolean; // For the "Hold On" feature
 }
 
 export interface Account {
@@ -150,6 +151,7 @@ export const BookingSchema = z.object({
   price: z.number().optional(),
   cost: z.number().optional(),
   instructions: z.string().optional(), // Booking-level instructions
+  holdOn: z.boolean().optional(),
 });
 
 export const AccountSchema = z.object({

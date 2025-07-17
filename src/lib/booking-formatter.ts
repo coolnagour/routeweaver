@@ -10,8 +10,12 @@ export const formatBookingForApi = (booking: Booking, server: ServerConfig) => {
     // Ensure stops are sorted by the order field before processing
     const sortedStops = [...booking.stops].sort((a, b) => a.order - b.order);
 
-    if (sortedStops.length < 2) {
+    if (sortedStops.length < 2 && !booking.holdOn) {
         throw new Error("Booking must have at least a pickup and a dropoff stop.");
+    }
+
+    if (sortedStops.length < 1) {
+        throw new Error("Booking must have at least one stop.");
     }
     
     const firstPickup = sortedStops.find(s => s.stopType === 'pickup');
@@ -42,6 +46,7 @@ export const formatBookingForApi = (booking: Booking, server: ServerConfig) => {
             formatted: firstPickup.location.address,
             driver_instructions: firstPickup.instructions || "",
         },
+        // For hold on, destination is same as pickup. For regular, it's the last stop.
         destination: {
             lat: lastStop.location.lat.toString(),
             lng: lastStop.location.lng.toString(),
@@ -57,7 +62,7 @@ export const formatBookingForApi = (booking: Booking, server: ServerConfig) => {
         with_bookingsegments: true,
     };
 
-    if (viaStops.length > 0) {
+    if (viaStops.length > 0 && !booking.holdOn) {
         payload.vias = viaStops.map(stop => ({
             lat: stop.location.lat.toString(),
             lng: stop.location.lng.toString(),
@@ -71,7 +76,7 @@ export const formatBookingForApi = (booking: Booking, server: ServerConfig) => {
     payload.phone = `+${countryCode}0000000000`.slice(0, 15);
 
     // If a valid phone number is provided, use it instead of the placeholder.
-    if (firstPickup.phone) {
+    if (firstPickup.phone && !booking.holdOn) {
         const phoneNumber = parsePhoneNumberFromString(firstPickup.phone, defaultCountry);
         if (phoneNumber && phoneNumber.isValid()) {
             payload.phone = phoneNumber.number;

@@ -62,7 +62,8 @@ export default function BookingManager({
       stops: [
         { id: newPickupStopId, order: 0, location: emptyLocation, stopType: 'pickup', name: '', phone: '', dateTime: undefined, instructions: '' },
         { id: uuidv4(), order: 1, location: emptyLocation, stopType: 'dropoff', pickupStopId: newPickupStopId, instructions: '' }
-      ]
+      ],
+      holdOn: bookings.length === 0, // Default to true only for the very first booking
     };
     setBookings(prev => [...prev, newBooking]);
     setEditingBooking(newBooking);
@@ -122,6 +123,7 @@ export default function BookingManager({
 
   const getTotalPassengers = (bookings: Booking[]) => {
       return bookings.reduce((total, booking) => {
+          if (booking.holdOn) return total; // Don't count passengers from hold on bookings
           return total + getPassengersFromStops(booking.stops).length;
       }, 0);
   }
@@ -132,6 +134,7 @@ export default function BookingManager({
   }
 
   if (editingBooking) {
+    const isFirstBooking = bookings.length > 0 && bookings[0].id === editingBooking.id;
     return (
       <JourneyForm 
         key={editingBooking.id}
@@ -139,6 +142,7 @@ export default function BookingManager({
         onSave={handleSaveBooking}
         onCancel={handleCancelEdit}
         isJourneyPriceSet={isJourneyPriceSet}
+        isFirstBooking={isFirstBooking}
       />
     );
   }
@@ -163,6 +167,44 @@ export default function BookingManager({
       <CardContent className="space-y-3">
         {bookings.length > 0 ? (
           bookings.map(booking => {
+              if (booking.holdOn) {
+                  return (
+                    <Card key={booking.id} className="p-3">
+                        <div className="flex justify-between items-start">
+                             <div className="space-y-2 flex-1">
+                                <p className="font-semibold text-primary">Hold On Booking</p>
+                                <p className="text-sm text-muted-foreground flex items-center gap-2"><Info className="h-4 w-4" />This special booking will wrap the journey.</p>
+                             </div>
+                              <div className="flex items-center">
+                                  <Button variant="ghost" size="icon" onClick={() => handleEditBooking(booking)}>
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="text-destructive" disabled={isDeleting === booking.id}>
+                                            {isDeleting === booking.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                        <AlertDialogTitle>Are you sure you want to delete this booking?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            This action will remove the "Hold On" booking from the journey. This cannot be undone.
+                                        </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleRemoveBooking(booking.id)}>
+                                            Delete
+                                        </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                              </div>
+                        </div>
+                    </Card>
+                  )
+              }
               const pickups = getPassengersFromStops(booking.stops);
               const bookingDateTime = getBookingDateTime(booking);
               return (

@@ -41,7 +41,11 @@ type StopWithParent = Stop & { parentBookingId: string, parentBookingServerId?: 
 export async function generateJourneyPayload(input: JourneyPayloadInput): Promise<JourneyPayloadOutput & { orderedStops: StopWithParent[] }> {
     const { bookings, journeyServerId, enable_messaging_service } = input;
     
-    const sanitizedBookings = bookings.map(b => ({
+    // Separate "Hold On" bookings from regular bookings
+    const holdOnBooking = bookings.find(b => b.holdOn);
+    const regularBookings = bookings.filter(b => !b.holdOn);
+    
+    const sanitizedBookings = regularBookings.map(b => ({
       ...b,
       stops: b.stops.map(s => ({
         ...s,
@@ -58,74 +62,99 @@ export async function generateJourneyPayload(input: JourneyPayloadInput): Promis
     const orderedStops: StopWithParent[] = [];
     const passengersInVehicle = new Set<string>();
 
-    if (unvisitedStops.length === 0) {
-        return { journeyPayload: { error: 'No stops to process.' }, orderedStops: [] };
-    }
-
-    const pickupStops = unvisitedStops.filter(s => s.stopType === 'pickup');
-    if (pickupStops.length === 0) {
-      throw new Error("Cannot create a journey with no pickup stops.");
-    }
-
-    // Start with the earliest pickup time
-    pickupStops.sort((a, b) => {
-        const timeA = a.dateTime ? new Date(a.dateTime).getTime() : Infinity;
-        const timeB = b.dateTime ? new Date(b.dateTime).getTime() : Infinity;
-        if (timeA === Infinity && timeB === Infinity) return 0;
-        return timeA - timeB;
-    });
-    
-    let currentStop = pickupStops[0];
-    orderedStops.push(currentStop);
-    unvisitedStops = unvisitedStops.filter(s => s.id !== currentStop.id);
-    passengersInVehicle.add(currentStop.id);
-    
-    while (unvisitedStops.length > 0) {
-      const candidateStops = unvisitedStops.filter(s => {
-        if (s.stopType === 'pickup') return true;
-        if (s.stopType === 'dropoff' && s.pickupStopId) {
-          // A dropoff is only valid if the corresponding pickup has been completed (i.e., passenger is in vehicle)
-          return passengersInVehicle.has(s.pickupStopId);
+    if (unvisitedStops.length > 0) {
+        const pickupStops = unvisitedStops.filter(s => s.stopType === 'pickup');
+        if (pickupStops.length === 0) {
+          throw new Error("Cannot create a journey with no pickup stops.");
         }
-        return false;
-      });
 
-      if (candidateStops.length === 0) {
-        // If no valid candidates, it implies an issue like a stranded passenger or invalid data.
-        // As a fallback, just add remaining stops to avoid an infinite loop. This part can be improved with better error handling.
-        console.warn("Routing warning: No valid candidate stops found. Adding remaining stops as is.", unvisitedStops);
-        orderedStops.push(...unvisitedStops);
-        break; 
-      }
-      
-      const nextStop = candidateStops.reduce((closest, candidate) => {
-          const closestDistance = getDistanceFromLatLonInMeters(
-              currentStop.location.lat, currentStop.location.lng,
-              closest.location.lat, closest.location.lng
-          );
-          const candidateDistance = getDistanceFromLatLonInMeters(
-              currentStop.location.lat, currentStop.location.lng,
-              candidate.location.lat, candidate.location.lng
-          );
-
-          if (candidateDistance < closestDistance) {
-              return candidate;
-          }
-          return closest;
-      });
-      
-      currentStop = nextStop; // The next stop becomes our new current stop
-      orderedStops.push(currentStop);
-      unvisitedStops = unvisitedStops.filter(s => s.id !== currentStop.id);
-
-      if (currentStop.stopType === 'pickup') {
+        // Start with the earliest pickup time
+        pickupStops.sort((a, b) => {
+            const timeA = a.dateTime ? new Date(a.dateTime).getTime() : Infinity;
+            const timeB = b.dateTime ? new Date(b.dateTime).getTime() : Infinity;
+            if (timeA === Infinity && timeB === Infinity) return 0;
+            return timeA - timeB;
+        });
+        
+        let currentStop = pickupStops[0];
+        orderedStops.push(currentStop);
+        unvisitedStops = unvisitedStops.filter(s => s.id !== currentStop.id);
         passengersInVehicle.add(currentStop.id);
-      } else if (currentStop.stopType === 'dropoff' && currentStop.pickupStopId) {
-        passengersInVehicle.delete(currentStop.pickupStopId);
-      }
+        
+        while (unvisitedStops.length > 0) {
+          const candidateStops = unvisitedStops.filter(s => {
+            if (s.stopType === 'pickup') return true;
+            if (s.stopType === 'dropoff' && s.pickupStopId) {
+              // A dropoff is only valid if the corresponding pickup has been completed (i.e., passenger is in vehicle)
+              return passengersInVehicle.has(s.pickupStopId);
+            }
+            return false;
+          });
+
+          if (candidateStops.length === 0) {
+            console.warn("Routing warning: No valid candidate stops found. Adding remaining stops as is.", unvisitedStops);
+            orderedStops.push(...unvisitedStops);
+            break; 
+          }
+          
+          const nextStop = candidateStops.reduce((closest, candidate) => {
+              const closestDistance = getDistanceFromLatLonInMeters(
+                  currentStop.location.lat, currentStop.location.lng,
+                  closest.location.lat, closest.location.lng
+              );
+              const candidateDistance = getDistanceFromLatLonInMeters(
+                  currentStop.location.lat, currentStop.location.lng,
+                  candidate.location.lat, candidate.location.lng
+              );
+
+              if (candidateDistance < closestDistance) {
+                  return candidate;
+              }
+              return closest;
+          });
+          
+          currentStop = nextStop; // The next stop becomes our new current stop
+          orderedStops.push(currentStop);
+          unvisitedStops = unvisitedStops.filter(s => s.id !== currentStop.id);
+
+          if (currentStop.stopType === 'pickup') {
+            passengersInVehicle.add(currentStop.id);
+          } else if (currentStop.stopType === 'dropoff' && currentStop.pickupStopId) {
+            passengersInVehicle.delete(currentStop.pickupStopId);
+          }
+        }
     }
     
     const journeyBookingsPayload = [];
+    
+    // Add "Hold On" booking at the start if it exists
+    if (holdOnBooking) {
+        const holdOnPickup = holdOnBooking.stops.find(s => s.stopType === 'pickup');
+        const holdOnDropoff = holdOnBooking.stops.find(s => s.stopType === 'dropoff');
+
+        if (holdOnPickup && holdOnDropoff) {
+            const firstPickupOfBooking = holdOnBooking.stops.find(s => s.stopType === 'pickup');
+            const plannedDate = firstPickupOfBooking?.dateTime ? new Date(firstPickupOfBooking.dateTime).toISOString() : new Date().toISOString();
+            
+            // Note: The "Hold On" booking doesn't get a real bookingServerId until after it's created,
+            // but for the journey payload, it's identified by its bookingsegment_id (for pickup)
+            // and request_id (for dropoff) after the fact.
+            // When creating the journey, we must provide valid IDs.
+            
+            if (!holdOnPickup.bookingSegmentId || !holdOnBooking.bookingServerId) {
+                throw new Error("Hold On booking is missing required server IDs (bookingSegmentId or bookingServerId) for journey creation.");
+            }
+            
+            journeyBookingsPayload.push({
+                bookingsegment_id: holdOnPickup.bookingSegmentId,
+                is_destination: "false",
+                planned_date: plannedDate,
+                distance: 0,
+                journey_hold_on: "true",
+            });
+        }
+    }
+
 
     for (let i = 0; i < orderedStops.length; i++) {
         const stop = orderedStops[i];
@@ -150,10 +179,6 @@ export async function generateJourneyPayload(input: JourneyPayloadInput): Promis
         const idToUse = isFinalStopOfBooking ? parentBooking.bookingServerId : stop.bookingSegmentId;
         const idType = isFinalStopOfBooking ? 'request_id' : 'bookingsegment_id';
 
-        // When updating a journey, new stops won't have a bookingSegmentId.
-        // Also, if a booking is already created, it will have a bookingServerId.
-        // The API expects a bookingsegment_id for intermediate stops.
-        // For new stops in an existing journey, we can't provide this, so we must skip them.
         if (!idToUse && journeyServerId) {
             console.log(`[Journey Payload] Skipping new stop in existing journey because it lacks a server-side ID. Address: ${stop.location.address}`);
             continue;
@@ -172,6 +197,27 @@ export async function generateJourneyPayload(input: JourneyPayloadInput): Promis
           planned_date: plannedDate,
           distance: distance,
         });
+    }
+
+    // Add "Hold On" booking's dropoff at the end if it exists
+     if (holdOnBooking) {
+        const holdOnDropoff = holdOnBooking.stops.find(s => s.stopType === 'dropoff');
+        if (holdOnDropoff) {
+            const firstPickupOfBooking = holdOnBooking.stops.find(s => s.stopType === 'pickup');
+            const plannedDate = firstPickupOfBooking?.dateTime ? new Date(firstPickupOfBooking.dateTime).toISOString() : new Date().toISOString();
+            
+            if (!holdOnBooking.bookingServerId) {
+                 throw new Error("Hold On booking is missing required bookingServerId for journey creation.");
+            }
+
+            journeyBookingsPayload.push({
+                request_id: holdOnBooking.bookingServerId,
+                is_destination: "true",
+                planned_date: plannedDate,
+                distance: 0,
+                journey_hold_on: "true",
+            });
+        }
     }
     
     const journeyPayload: any = {
