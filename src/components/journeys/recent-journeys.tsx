@@ -119,7 +119,7 @@ export default function RecentJourneys() {
       return;
     }
 
-    if (!journey.siteId || !journey.account) {
+    if (!journey.site || !journey.account) {
         toast({
             variant: 'destructive',
             title: 'Information Missing',
@@ -133,7 +133,7 @@ export default function RecentJourneys() {
         const result = await saveJourney({ 
             bookings: journey.bookings, 
             server, 
-            siteId: journey.siteId, 
+            siteId: journey.site.id, 
             accountId: journey.account.id, 
             journeyServerId: journey.journeyServerId,
             price: journey.price,

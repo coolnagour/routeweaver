@@ -216,6 +216,7 @@ function JourneyBuilderInner({
             serverScope: server.uuid,
             bookings: bookings,
             siteId: selectedSiteId,
+            site: selectedSite || null,
             account: selectedAccount,
             price: journeyPrice,
             cost: journeyCost,
@@ -236,6 +237,7 @@ function JourneyBuilderInner({
             status: 'Draft',
             bookings: bookings,
             siteId: selectedSiteId,
+            site: selectedSite || null,
             account: selectedAccount,
             price: journeyPrice,
             cost: journeyCost,
@@ -341,12 +343,14 @@ function JourneyBuilderInner({
 
     setIsSubmitting(true);
     try {
+        const selectedSite = sites.find(s => s.id === selectedSiteId);
         const journeyToPublish: Journey = {
             ...(initialData as Journey),
             id: journeyId,
             bookings: bookings,
             serverScope: server.uuid,
             siteId: selectedSiteId,
+            site: selectedSite || null,
             account: selectedAccount,
             price: journeyPrice,
             cost: journeyCost,

@@ -72,6 +72,7 @@ export interface Journey {
   bookings: Booking[];
   status: 'Draft' | 'Scheduled' | 'Completed' | 'Cancelled';
   siteId?: number;
+  site?: Site | null;
   account?: Account | null;
   orderedStops?: Stop[]; // The final ordered stops from the server
   price?: number;
