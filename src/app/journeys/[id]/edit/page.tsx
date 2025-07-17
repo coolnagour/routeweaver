@@ -20,20 +20,19 @@ export default function EditJourneyPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (journeyId && journeys && journeys.length > 0) {
-      const foundJourney = journeys.find(j => j.id === journeyId);
-      if (foundJourney) {
-        setJourney(foundJourney);
-      } else {
-        console.error(`Journey with id ${journeyId} not found.`);
+    if (journeyId && journeys) {
+      if (journeys.length > 0) {
+        const foundJourney = journeys.find(j => j.id === journeyId);
+        if (foundJourney) {
+          setJourney(foundJourney);
+        } else {
+          console.error(`Journey with id ${journeyId} not found.`);
+          router.push('/journeys');
+        }
+        setLoading(false);
+      } else if (!loading) { // Journeys has loaded but is empty
         router.push('/journeys');
       }
-      setLoading(false);
-    } else if (!loading && journeys && journeys.length === 0) {
-        router.push('/journeys');
-    } else if (!journeys && !loading) {
-        // This can happen if indexeddb is still loading
-        setLoading(true);
     }
   }, [journeyId, journeys, router, loading]);
 
@@ -41,7 +40,7 @@ export default function EditJourneyPage() {
     if (!journeys) return;
     const updatedJourneys = journeys.map(j => j.id === updatedJourney.id ? updatedJourney : j);
     setJourneys(updatedJourneys);
-    // router.push('/journeys'); // This line was causing the redirect.
+    setJourney(updatedJourney); // This is the key change to trigger a re-render
   };
 
   if (loading || !journey) {
@@ -54,8 +53,8 @@ export default function EditJourneyPage() {
 
   return (
     <JourneyBuilder
-      key={journey.id}
-      initialData={{ bookings: journey.bookings, name: `Journey from ${journey.id.substring(0,8)}` }}
+      key={journey.id} // The key remains, but the state update will now cause a re-render
+      initialData={journey}
       isEditingJourney={true}
       onUpdateJourney={handleUpdateJourney}
       journeyId={journey.id}

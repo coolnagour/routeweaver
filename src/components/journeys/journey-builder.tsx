@@ -27,7 +27,7 @@ import JourneyMap from './journey-map';
 import { MapSelectionProvider, useMapSelection } from '@/context/map-selection-context';
 
 interface JourneyBuilderProps {
-  initialData?: Partial<JourneyTemplate> | null;
+  initialData?: Partial<JourneyTemplate> | Partial<Journey> | null;
   onNewJourneyClick?: () => void;
   isEditingTemplate?: boolean;
   isEditingJourney?: boolean;
@@ -163,30 +163,22 @@ function JourneyBuilderInner({
   }, [bookings, currentJourney, debouncedFetchPreview, selectedSiteId, selectedAccount, enableMessaging]);
   
   useEffect(() => {
-    if (journeyId && journeys) {
-        const foundJourney = journeys.find(j => j.id === journeyId);
-        if (foundJourney) {
-          setCurrentJourney(foundJourney);
-          setBookings(getInitialBookings(foundJourney));
-          setSelectedSiteId(foundJourney.siteId);
-          setSelectedAccount(foundJourney.account || null);
-          setJourneyPrice(foundJourney.price);
-          setJourneyCost(foundJourney.cost);
-          setEnableMessaging(foundJourney.enable_messaging_service || false);
-        }
+    // This effect ensures the builder's state is in sync with the initialData prop
+    const initialBookings = getInitialBookings(initialData);
+    setBookings(initialBookings);
+    setTemplateName((initialData as JourneyTemplate)?.name || '');
+    setSelectedSiteId(initialData?.siteId || initialSiteId);
+    setSelectedAccount(initialData?.account || initialAccount || null);
+    setJourneyPrice(initialData?.price);
+    setJourneyCost(initialData?.cost);
+    setEnableMessaging(initialData?.enable_messaging_service || false);
+
+    if (isEditingJourney && initialData && 'status' in initialData) {
+        setCurrentJourney(initialData as Journey);
     } else {
-        setBookings(getInitialBookings(initialData));
-        if (isEditingTemplate) {
-          setTemplateName(initialData?.name || '');
-        } else {
-          setTemplateName(''); // Clear template name when loading from template
-        }
-        setSelectedSiteId(initialData?.siteId || initialSiteId);
-        setSelectedAccount(initialData?.account || initialAccount || null);
-        setEnableMessaging(initialData?.enable_messaging_service || false);
         setCurrentJourney(null);
     }
-  }, [initialData, journeyId, journeys, initialSiteId, initialAccount, isEditingTemplate]);
+  }, [initialData, isEditingJourney, initialSiteId, initialAccount]);
 
   useEffect(() => {
     async function fetchSites() {
@@ -223,16 +215,15 @@ function JourneyBuilderInner({
       const updatedJourneyData: Journey = {
         ...currentJourney,
         bookings: bookings,
-        status: currentJourney.status, 
+        status: currentJourney.status, // Keep existing status
         siteId: selectedSiteId,
         account: selectedAccount,
-        orderedStops: currentJourney.orderedStops, 
+        orderedStops: currentJourney.orderedStops, // Keep existing order
         price: journeyPrice,
         cost: journeyCost,
         enable_messaging_service: enableMessaging,
       };
       onUpdateJourney(updatedJourneyData);
-      setCurrentJourney(updatedJourneyData); // This is the key fix
       toast({
         title: 'Journey Updated!',
         description: `Your journey has been successfully updated locally.`,
@@ -254,11 +245,7 @@ function JourneyBuilderInner({
             description: 'Your journey has been saved as a draft.',
         });
         
-        if (!isEditingJourney) {
-             router.push(`/journeys/${newJourney.id}/edit`);
-        } else {
-            setCurrentJourney(newJourney);
-        }
+        router.push(`/journeys/${newJourney.id}/edit`);
     }
   }
 
@@ -388,14 +375,14 @@ function JourneyBuilderInner({
   }
   
   const getTitle = () => {
-    if (isEditingTemplate) return `Editing Template: ${initialData?.name}`;
+    if (isEditingTemplate) return `Editing Template: ${(initialData as JourneyTemplate)?.name}`;
     if (isEditingJourney && currentJourney) {
       if (currentJourney.journeyServerId) {
         return `Editing Journey (ID: ${currentJourney.journeyServerId})`;
       }
       return 'Editing Journey';
     }
-    if (initialData?.name) return `New Journey from: ${initialData.name}`;
+    if ((initialData as JourneyTemplate)?.name) return `New Journey from: ${(initialData as JourneyTemplate).name}`;
     return 'Create a New Journey';
   };
 
