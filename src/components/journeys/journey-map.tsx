@@ -153,7 +153,7 @@ export default function JourneyMap({ stops, onLocationSelect, isSelectionMode = 
 
   const mapRef = useRef<google.maps.Map | null>(null);
   const geocoderRef = useRef<google.maps.Geocoder | null>(null);
-  const { theme } = useTheme();
+  const { resolvedTheme } = useTheme();
   
   const [center, setCenter] = useState({ lat: 51.5074, lng: -0.1278 });
   
@@ -282,7 +282,7 @@ export default function JourneyMap({ stops, onLocationSelect, isSelectionMode = 
             center={center}
             zoom={10}
             options={{ 
-                styles: theme === 'dark' ? mapStyles.dark : mapStyles.light,
+                styles: resolvedTheme === 'dark' ? mapStyles.dark : mapStyles.light,
                 disableDefaultUI: true,
                 zoomControl: true,
                 draggableCursor: isSelectionMode ? 'crosshair' : undefined,
