@@ -27,7 +27,7 @@ import { z } from 'zod';
 const ServerConfigsArraySchema = z.array(ServerConfigSchema);
 
 export default function SelectServerPage() {
-  const { setServer } = useServer();
+  const { server: selectedServer, setServer } = useServer();
   const router = useRouter();
   const [servers, setServers] = useIndexedDB<ServerConfig[]>('server-configs', []);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -52,11 +52,19 @@ export default function SelectServerPage() {
     setIsDialogOpen(false);
   };
   
-  const filteredServers = servers 
-    ? servers.filter(server => 
-        server.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        server.host.toLowerCase().includes(searchTerm.toLowerCase())
-      )
+  const filteredAndSortedServers = servers 
+    ? servers
+        .filter(server => 
+          server.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+          server.host.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+        .sort((a, b) => {
+          if (selectedServer?.uuid) {
+            if (a.uuid === selectedServer.uuid) return -1;
+            if (b.uuid === selectedServer.uuid) return 1;
+          }
+          return a.name.localeCompare(b.name);
+        })
     : [];
     
   const handleImportClick = () => {
@@ -181,8 +189,8 @@ export default function SelectServerPage() {
                 </div>
             </CardHeader>
             <CardContent className="flex flex-col gap-2">
-                {filteredServers.length > 0 ? (
-                    filteredServers.map((server) => (
+                {filteredAndSortedServers.length > 0 ? (
+                    filteredAndSortedServers.map((server) => (
                         <div 
                           key={server.uuid || `${server.host}-${server.companyId}`}
                           className="flex items-center justify-between rounded-md border p-4 transition-colors hover:bg-muted/50 cursor-pointer"
