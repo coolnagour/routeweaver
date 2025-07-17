@@ -122,6 +122,24 @@ export async function createJourney(server: ServerConfig, journeyPayload: any) {
     return response.body;
 }
 
+export async function sendDriverAppEvent(server: ServerConfig, type: string, bookingId: number) {
+    const payload = {
+        type,
+        context: {
+            booking_id: bookingId,
+        },
+    };
+
+    const response = await callIcabbiApi({
+        server,
+        method: 'POST',
+        endpoint: 'drivers/app_events',
+        body: payload,
+    });
+
+    return response;
+}
+
 export async function getSites(server: ServerConfig): Promise<Site[]> {
     const response = await callIcabbiApi({
         server,
