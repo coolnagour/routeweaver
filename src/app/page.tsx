@@ -98,14 +98,19 @@ export default function SelectServerPage() {
             <CardContent className="flex flex-col gap-2">
                 {filteredServers.length > 0 ? (
                     filteredServers.map((server) => (
-                        <div key={`${server.host}-${server.companyId}`} className="flex items-center justify-between rounded-md border p-2 pl-4 transition-colors hover:bg-muted/50">
+                        <div 
+                          key={`${server.host}-${server.companyId}`} 
+                          className="flex items-center justify-between rounded-md border p-4 transition-colors hover:bg-muted/50 cursor-pointer"
+                          onClick={() => handleSelectServer(server)}
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handleSelectServer(server)}
+                        >
                             <div className="flex-grow">
                                 <h3 className="text-md font-semibold">{server.name}</h3>
                                 <p className="text-sm text-muted-foreground">{server.host}</p>
                             </div>
-                            <Button variant="ghost" size="icon" onClick={() => handleSelectServer(server)} title={`Connect to ${server.name}`}>
-                                <ChevronRight className="h-5 w-5" />
-                            </Button>
+                            <ChevronRight className="h-5 w-5 text-muted-foreground" />
                         </div>
                     ))
                 ) : (
