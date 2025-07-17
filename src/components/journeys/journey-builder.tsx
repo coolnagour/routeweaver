@@ -11,7 +11,7 @@ import { saveJourney } from '@/ai/flows/journey-flow';
 import { generateJourneyPayload } from '@/ai/flows/journey-payload-flow';
 import { getSites } from '@/services/icabbi';
 import type { Booking, Journey, JourneyTemplate, Account, JourneyPayloadOutput, Stop, Location } from '@/types';
-import { Save, Building, Loader2, Send, ChevronsUpDown, Code, DollarSign, Info } from 'lucide-react';
+import { Save, Building, Loader2, Send, ChevronsUpDown, Code, DollarSign, Info, MessageSquare } from 'lucide-react';
 import BookingManager from './booking-manager';
 import { useServer } from '@/context/server-context';
 import { useRouter } from 'next/navigation';
@@ -21,6 +21,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '../ui/collapsible';
 import { cn } from '@/lib/utils';
 import { Label } from '../ui/label';
+import { Switch } from '../ui/switch';
 import { formatBookingForApi } from '@/lib/booking-formatter';
 import JourneyMap from './journey-map';
 import { MapSelectionProvider, useMapSelection } from '@/context/map-selection-context';
@@ -106,6 +107,7 @@ function JourneyBuilderInner({
 
   const [journeyPrice, setJourneyPrice] = useState<number | undefined>(undefined);
   const [journeyCost, setJourneyCost] = useState<number | undefined>(undefined);
+  const [enableMessaging, setEnableMessaging] = useState<boolean>(false);
   
   const hasBookingLevelPrice = bookings.some(b => b.price || b.cost);
   const hasJourneyLevelPrice = journeyPrice || journeyCost;
@@ -121,7 +123,7 @@ function JourneyBuilderInner({
     };
   };
 
-  const fetchPreview = useCallback(async (currentBookings: Booking[], journey: Journey | null, siteId?: number, accountId?: number) => {
+  const fetchPreview = useCallback(async (currentBookings: Booking[], journey: Journey | null, siteId?: number, accountId?: number, messagingEnabled?: boolean) => {
     if (currentBookings.length === 0 || currentBookings.flatMap(b => b.stops).length < 2) {
       setJourneyPreview({ orderedStops: [], journeyPayload: null, isLoading: false, bookings: currentBookings, bookingPayloads: [] });
       return;
@@ -140,7 +142,8 @@ function JourneyBuilderInner({
 
         const { orderedStops, journeyPayload } = await generateJourneyPayload({ 
             bookings: tempBookingsForPreview, 
-            journeyServerId: journey?.journeyServerId 
+            journeyServerId: journey?.journeyServerId,
+            enable_messaging_service: messagingEnabled,
         });
 
         const debugBookingPayloads = generateDebugBookingPayloads(currentBookings, server, siteId, accountId);
@@ -156,8 +159,8 @@ function JourneyBuilderInner({
   const debouncedFetchPreview = useCallback(debounce(fetchPreview, 750), [fetchPreview]);
 
   useEffect(() => {
-    debouncedFetchPreview(bookings, currentJourney, selectedSiteId, selectedAccount?.id);
-  }, [bookings, currentJourney, debouncedFetchPreview, selectedSiteId, selectedAccount]);
+    debouncedFetchPreview(bookings, currentJourney, selectedSiteId, selectedAccount?.id, enableMessaging);
+  }, [bookings, currentJourney, debouncedFetchPreview, selectedSiteId, selectedAccount, enableMessaging]);
   
   useEffect(() => {
     if (journeyId) {
@@ -169,6 +172,7 @@ function JourneyBuilderInner({
           setSelectedAccount(foundJourney.account || null);
           setJourneyPrice(foundJourney.price);
           setJourneyCost(foundJourney.cost);
+          setEnableMessaging(foundJourney.enable_messaging_service || false);
         }
     } else {
         setBookings(getInitialBookings(initialData));
@@ -179,6 +183,7 @@ function JourneyBuilderInner({
         }
         setSelectedSiteId(initialData?.siteId || initialSiteId);
         setSelectedAccount(initialData?.account || initialAccount || null);
+        setEnableMessaging(initialData?.enable_messaging_service || false);
         setCurrentJourney(null);
     }
   }, [initialData, journeyId, journeys, initialSiteId, initialAccount, isEditingTemplate]);
@@ -222,6 +227,7 @@ function JourneyBuilderInner({
         orderedStops: currentJourney.orderedStops, 
         price: journeyPrice,
         cost: journeyCost,
+        enable_messaging_service: enableMessaging,
       };
       onUpdateJourney(updatedJourneyData);
       toast({
@@ -238,6 +244,7 @@ function JourneyBuilderInner({
             account: selectedAccount,
             price: journeyPrice,
             cost: journeyCost,
+            enable_messaging_service: enableMessaging,
         };
         setJourneys([newJourney, ...journeys]);
         toast({
@@ -284,6 +291,7 @@ function JourneyBuilderInner({
       })),
       siteId: selectedSiteId,
       account: selectedAccount,
+      enable_messaging_service: enableMessaging,
     };
 
     if (isEditingTemplate && initialData?.id) {
@@ -341,6 +349,7 @@ function JourneyBuilderInner({
           journeyServerId: journeyToPublish.journeyServerId, 
           price: journeyToPublish.price,
           cost: journeyToPublish.cost,
+          enable_messaging_service: journeyToPublish.enable_messaging_service,
         });
         
         const publishedJourney: Journey = {
@@ -506,6 +515,13 @@ function JourneyBuilderInner({
                                 Journey-level price/cost is disabled because one or more bookings have individual pricing.
                             </p>
                         )}
+                        <div className="flex items-center space-x-2 pt-2">
+                          <Switch id="messaging-service" checked={enableMessaging} onCheckedChange={setEnableMessaging}/>
+                          <Label htmlFor="messaging-service" className="flex items-center gap-2">
+                            <MessageSquare className="h-4 w-4" />
+                            Enable Messaging Service
+                          </Label>
+                        </div>
                     </CollapsibleContent>
                     </Collapsible>
                 </CardContent>
@@ -663,7 +679,7 @@ function JourneyBuilderInner({
             </div>
             
             {/* Desktop Layout: Map on the side */}
-            <div className="hidden lg:block lg:h-[calc(100vh-4rem)] lg:sticky lg:top-8">
+            <div className="hidden lg:block lg:h-[calc(100vh-2rem)] lg:sticky lg:top-4">
                 {journeyMapComponent}
             </div>
         </div>

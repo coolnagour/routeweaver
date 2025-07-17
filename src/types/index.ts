@@ -72,6 +72,7 @@ export interface Journey {
   orderedStops?: Stop[]; // The final ordered stops from the server
   price?: number;
   cost?: number;
+  enable_messaging_service?: boolean;
 }
 
 // Stored template has string dates
@@ -84,6 +85,7 @@ export interface JourneyTemplate {
   siteId?: number; 
   account?: Account | null;
   site?: Site | null; // Added for Quick Start
+  enable_messaging_service?: boolean;
 }
 
 // Type for AI-generated template suggestions before they are fully structured
@@ -174,6 +176,7 @@ export const JourneyTemplateSchema = z.object({
   siteId: z.number().optional(), 
   account: AccountSchema.nullable().optional(),
   site: SiteSchema.nullable().optional(),
+  enable_messaging_service: z.boolean().optional(),
 });
 
 export const JourneyInputSchema = z.object({
@@ -181,6 +184,7 @@ export const JourneyInputSchema = z.object({
   journeyServerId: z.number().optional(),
   price: z.number().optional(),
   cost: z.number().optional(),
+  enable_messaging_service: z.boolean().optional(),
 });
 export type JourneyInput = z.infer<typeof JourneyInputSchema>;
 

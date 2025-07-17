@@ -31,6 +31,7 @@ function deg2rad(deg: number) {
 const JourneyPayloadInputSchema = z.object({
   bookings: z.array(BookingSchema),
   journeyServerId: z.number().optional(),
+  enable_messaging_service: z.boolean().optional(),
 });
 export type JourneyPayloadInput = z.infer<typeof JourneyPayloadInputSchema>;
 
@@ -38,7 +39,7 @@ type StopWithParent = Stop & { parentBookingId: string, parentBookingServerId?: 
 
 // This is no longer a Genkit Flow, but a regular async function.
 export async function generateJourneyPayload(input: JourneyPayloadInput): Promise<JourneyPayloadOutput & { orderedStops: StopWithParent[] }> {
-    const { bookings, journeyServerId } = input;
+    const { bookings, journeyServerId, enable_messaging_service } = input;
     
     const sanitizedBookings = bookings.map(b => ({
       ...b,
@@ -173,7 +174,7 @@ export async function generateJourneyPayload(input: JourneyPayloadInput): Promis
         });
     }
     
-    const journeyPayload = {
+    const journeyPayload: any = {
         logs: "false",
         delete_outstanding_journeys: "false",
         keyless_response: true,
@@ -182,6 +183,12 @@ export async function generateJourneyPayload(input: JourneyPayloadInput): Promis
             bookings: journeyBookingsPayload,
         }],
     };
+
+    if (enable_messaging_service) {
+      if (journeyPayload.journeys && journeyPayload.journeys.length > 0) {
+        journeyPayload.journeys[0].enable_messaging_service = "true";
+      }
+    }
 
     return {
         journeyPayload,
