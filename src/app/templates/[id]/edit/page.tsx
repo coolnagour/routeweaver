@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import useLocalStorage from '@/hooks/use-local-storage';
+import useIndexedDB from '@/hooks/use-indexed-db';
 import JourneyBuilder from '@/components/journeys/journey-builder';
 import type { JourneyTemplate } from '@/types';
 import { useServer } from '@/context/server-context';
@@ -15,12 +15,12 @@ export default function EditTemplatePage() {
   const { server } = useServer();
   const templateId = params.id ? decodeURIComponent(params.id as string) : undefined;
 
-  const [templates] = useLocalStorage<JourneyTemplate[]>('journey-templates', [], server?.uuid);
+  const [templates] = useIndexedDB<JourneyTemplate[]>('journey-templates', [], server?.uuid);
   const [template, setTemplate] = useState<JourneyTemplate | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (templateId && templates.length > 0) {
+    if (templateId && templates && templates.length > 0) {
       const foundTemplate = templates.find(t => t.id === templateId);
       if (foundTemplate) {
         setTemplate(foundTemplate);
@@ -30,7 +30,7 @@ export default function EditTemplatePage() {
         router.push('/templates');
       }
       setLoading(false);
-    } else if (!loading && templates.length === 0) {
+    } else if (!loading && templates && templates.length === 0) {
         router.push('/templates');
     }
   }, [templateId, templates, router, loading]);

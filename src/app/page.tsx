@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useServer } from '@/context/server-context';
 import { Server, PlusCircle, ChevronRight, Search } from 'lucide-react';
-import useLocalStorage from '@/hooks/use-local-storage';
+import useIndexedDB from '@/hooks/use-indexed-db';
 import type { ServerConfig } from '@/types';
 import ServerForm from '@/components/settings/server-form';
 import { useToast } from '@/hooks/use-toast';
@@ -25,7 +25,7 @@ import { v4 as uuidv4 } from 'uuid';
 export default function SelectServerPage() {
   const { setServer } = useServer();
   const router = useRouter();
-  const [servers, setServers] = useLocalStorage<ServerConfig[]>('server-configs', []);
+  const [servers, setServers] = useIndexedDB<ServerConfig[]>('server-configs', []);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
@@ -36,6 +36,7 @@ export default function SelectServerPage() {
   };
   
   const handleSave = (data: ServerConfig) => {
+      if (!servers) return;
       if (servers.some(s => s.host === data.host && s.companyId === data.companyId)) {
         toast({ title: 'Duplicate Server', description: 'A server with this Host and Company ID already exists.', variant: 'destructive' });
         return;
@@ -46,10 +47,12 @@ export default function SelectServerPage() {
     setIsDialogOpen(false);
   };
   
-  const filteredServers = servers.filter(server => 
-    server.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    server.host.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredServers = servers 
+    ? servers.filter(server => 
+        server.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        server.host.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    : [];
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
@@ -118,10 +121,10 @@ export default function SelectServerPage() {
                 ) : (
                     <div className="col-span-full text-center py-10 border-2 border-dashed rounded-lg">
                         <p className="text-muted-foreground">
-                            {searchTerm ? `No servers found for "${searchTerm}".` : "No servers configured."}
+                            { !servers ? 'Loading servers...' : searchTerm ? `No servers found for "${searchTerm}".` : "No servers configured."}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                            {searchTerm ? 'Try a different search term.' : 'Click "Add Server" to get started.'}
+                            { !searchTerm && 'Click "Add Server" to get started.'}
                         </p>
                     </div>
                 )}

@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import useLocalStorage from '@/hooks/use-local-storage';
+import useIndexedDB from '@/hooks/use-indexed-db';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -49,7 +49,7 @@ import { v4 as uuidv4 } from 'uuid';
 const ServerConfigsArraySchema = z.array(ServerConfigSchema);
 
 export default function ServerSettingsPage() {
-  const [servers, setServers] = useLocalStorage<ServerConfig[]>('server-configs', []);
+  const [servers, setServers] = useIndexedDB<ServerConfig[]>('server-configs', []);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingServer, setEditingServer] = useState<ServerConfig | undefined>(undefined);
   const { toast } = useToast();
@@ -57,6 +57,7 @@ export default function ServerSettingsPage() {
 
   // One-time migration to add UUIDs to existing server configs
   useEffect(() => {
+    if (!servers) return;
     let hasChanges = false;
     const migratedServers = servers.map(s => {
         if (!s.uuid) {
@@ -81,6 +82,7 @@ export default function ServerSettingsPage() {
   };
 
   const handleDelete = (serverToDelete: ServerConfig) => {
+    if (!servers) return;
     setServers(servers.filter((s) => s.uuid !== serverToDelete.uuid));
     toast({
       title: 'Server Deleted',
@@ -90,6 +92,7 @@ export default function ServerSettingsPage() {
   };
 
   const handleSave = (data: ServerConfig) => {
+    if (!servers) return;
     if (editingServer) {
       // Editing existing server
       const isDuplicate = servers.some(
@@ -115,6 +118,7 @@ export default function ServerSettingsPage() {
   };
 
   const handleExport = () => {
+    if (!servers) return;
     const jsonString = JSON.stringify(servers, null, 2);
     const blob = new Blob([jsonString], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -133,6 +137,7 @@ export default function ServerSettingsPage() {
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!servers) return;
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -163,7 +168,7 @@ export default function ServerSettingsPage() {
         const newServers = importedServers.filter(s => !existingServerKeys.has(`${s.host}-${s.companyId}`));
         
         if (newServers.length > 0) {
-          setServers(prevServers => [...prevServers, ...newServers]);
+          setServers(prevServers => [...(prevServers || []), ...newServers]);
           toast({
             title: 'Import Successful',
             description: `${newServers.length} new server configuration(s) added.`,
@@ -212,7 +217,7 @@ export default function ServerSettingsPage() {
                 <Button variant="outline" onClick={handleImportClick} className="flex-1 md:flex-none">
                     <Upload className="mr-2 h-4 w-4" /> Import
                 </Button>
-                <Button variant="outline" onClick={handleExport} disabled={servers.length === 0} className="flex-1 md:flex-none">
+                <Button variant="outline" onClick={handleExport} disabled={!servers || servers.length === 0} className="flex-1 md:flex-none">
                     <Download className="mr-2 h-4 w-4" /> Export
                 </Button>
                  <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
@@ -243,7 +248,7 @@ export default function ServerSettingsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {servers.length > 0 ? (
+          {servers && servers.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>

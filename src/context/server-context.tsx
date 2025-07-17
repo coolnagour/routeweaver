@@ -1,7 +1,8 @@
+
 'use client';
 
 import { createContext, useContext, type ReactNode } from 'react';
-import useLocalStorage from '@/hooks/use-local-storage';
+import useIndexedDB from '@/hooks/use-indexed-db';
 import type { ServerConfig } from '@/types';
 
 interface ServerContextType {
@@ -12,8 +13,7 @@ interface ServerContextType {
 export const ServerContext = createContext<ServerContextType | undefined>(undefined);
 
 export function ServerProvider({ children }: { children: ReactNode }) {
-  // We pass null as the scope, so it uses the unscoped key 'selected-server'
-  const [server, setServer] = useLocalStorage<ServerConfig | null>('selected-server', null, null);
+  const [server, setServer] = useIndexedDB<ServerConfig | null>('selected-server', null);
 
   return (
     <ServerContext.Provider value={{ server, setServer }}>

@@ -3,7 +3,7 @@
 
 import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import useLocalStorage from '@/hooks/use-local-storage';
+import useIndexedDB from '@/hooks/use-indexed-db';
 import type { JourneyTemplate, Stop } from '@/types';
 import { FileText, Users, Trash2, Bot, Package, Edit, Building, Building2, Upload, Download } from 'lucide-react';
 import AiTemplateModal from './ai-template-modal';
@@ -27,7 +27,7 @@ interface TemplateManagerProps {
 export default function TemplateManager({ onLoadTemplate }: TemplateManagerProps) {
   const { server } = useServer();
   const router = useRouter();
-  const [templates, setTemplates] = useLocalStorage<JourneyTemplate[]>('journey-templates', [], server?.uuid);
+  const [templates, setTemplates] = useIndexedDB<JourneyTemplate[]>('journey-templates', [], server?.uuid);
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -48,6 +48,7 @@ export default function TemplateManager({ onLoadTemplate }: TemplateManagerProps
   };
 
   const handleSelectAll = (checked: boolean) => {
+    if (!templates) return;
     if (checked) {
       setSelectedTemplateIds(new Set(templates.map(t => t.id)));
     } else {
@@ -56,6 +57,7 @@ export default function TemplateManager({ onLoadTemplate }: TemplateManagerProps
   };
 
   const deleteTemplate = (id: string) => {
+    if (!templates) return;
     setTemplates(templates.filter((t) => t.id !== id));
     setSelectedTemplateIds(prev => {
         const newSet = new Set(prev);
@@ -81,7 +83,7 @@ export default function TemplateManager({ onLoadTemplate }: TemplateManagerProps
     if (!newTemplate.name) {
         newTemplate.name = "AI Generated Template";
     }
-    setTemplates(prev => [...prev, newTemplate]);
+    setTemplates(prev => [...(prev || []), newTemplate]);
   }
 
   const getTotalPassengers = (template: JourneyTemplate) => {
@@ -93,6 +95,7 @@ export default function TemplateManager({ onLoadTemplate }: TemplateManagerProps
   }
 
   const handleExport = () => {
+    if (!templates) return;
     const templatesToExport = templates.filter(t => selectedTemplateIds.has(t.id));
 
     if (templatesToExport.length === 0) {
@@ -138,7 +141,7 @@ export default function TemplateManager({ onLoadTemplate }: TemplateManagerProps
           throw new Error('The imported file has an invalid format or structure.');
         }
 
-        const existingTemplateIds = new Set(templates.map(t => t.id));
+        const existingTemplateIds = new Set(templates?.map(t => t.id) || []);
         const validTemplatesToImport = validationResult.data.filter(t => !existingTemplateIds.has(t.id));
 
         if (validTemplatesToImport.length > 0) {
@@ -166,7 +169,7 @@ export default function TemplateManager({ onLoadTemplate }: TemplateManagerProps
   };
   
   const handleConfirmImport = (selectedTemplates: JourneyTemplate[]) => {
-    setTemplates(prev => [...prev, ...selectedTemplates]);
+    setTemplates(prev => [...(prev || []), ...selectedTemplates]);
     toast({
         title: "Import Successful",
         description: `${selectedTemplates.length} new template(s) have been added.`
@@ -174,8 +177,8 @@ export default function TemplateManager({ onLoadTemplate }: TemplateManagerProps
     setIsImportModalOpen(false);
   }
 
-  const allSelected = selectedTemplateIds.size > 0 && selectedTemplateIds.size === templates.length;
-  const isIndeterminate = selectedTemplateIds.size > 0 && selectedTemplateIds.size < templates.length;
+  const allSelected = templates && selectedTemplateIds.size > 0 && selectedTemplateIds.size === templates.length;
+  const isIndeterminate = templates && selectedTemplateIds.size > 0 && selectedTemplateIds.size < templates.length;
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -207,7 +210,7 @@ export default function TemplateManager({ onLoadTemplate }: TemplateManagerProps
             </div>
         </CardHeader>
         <CardContent>
-            {templates.length > 0 ? (
+            {templates && templates.length > 0 ? (
                 <div className="space-y-4">
                     <div className="flex items-center space-x-2 border-b pb-2">
                         <Checkbox 
@@ -270,7 +273,7 @@ export default function TemplateManager({ onLoadTemplate }: TemplateManagerProps
                     <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
                     <h3 className="mt-4 text-lg font-medium">No Templates Found</h3>
                     <p className="mt-1 text-sm text-muted-foreground">
-                    Click "Create with AI" or "Import" to get started.
+                    { !templates ? "Loading templates..." : 'Click "Create with AI" or "Import" to get started.'}
                     </p>
                 </div>
             )}

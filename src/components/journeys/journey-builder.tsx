@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import useLocalStorage from '@/hooks/use-local-storage';
+import useIndexedDB from '@/hooks/use-indexed-db';
 import { saveJourney } from '@/ai/flows/journey-flow';
 import { generateJourneyPayload } from '@/ai/flows/journey-payload-flow';
 import { getSites } from '@/services/icabbi';
@@ -76,8 +76,8 @@ function JourneyBuilderInner({
   const { toast } = useToast();
   const router = useRouter();
   const { server } = useServer();
-  const [journeys, setJourneys] = useLocalStorage<Journey[]>('recent-journeys', [], server?.uuid);
-  const [templates, setTemplates] = useLocalStorage<JourneyTemplate[]>('journey-templates', [], server?.uuid);
+  const [journeys, setJourneys] = useIndexedDB<Journey[]>('recent-journeys', [], server?.uuid);
+  const [templates, setTemplates] = useIndexedDB<JourneyTemplate[]>('journey-templates', [], server?.uuid);
   const [templateName, setTemplateName] = useState('');
   const [sites, setSites] = useState<{id: number, name: string, ref: string}[]>([]);
   const [isFetchingSites, setIsFetchingSites] = useState(false);
@@ -163,7 +163,7 @@ function JourneyBuilderInner({
   }, [bookings, currentJourney, debouncedFetchPreview, selectedSiteId, selectedAccount, enableMessaging]);
   
   useEffect(() => {
-    if (journeyId) {
+    if (journeyId && journeys) {
         const foundJourney = journeys.find(j => j.id === journeyId);
         if (foundJourney) {
           setCurrentJourney(foundJourney);
@@ -208,6 +208,8 @@ function JourneyBuilderInner({
   }, [server, toast]);
 
   const handleSaveJourneyLocally = () => {
+    if (!journeys) return;
+
     if (bookings.length === 0) {
       toast({
         variant: 'destructive',
@@ -261,6 +263,7 @@ function JourneyBuilderInner({
   }
 
   const handleSaveTemplate = () => {
+    if (!templates) return;
     if (!templateName) {
         toast({ title: 'Template name required', variant: 'destructive' });
         return;
@@ -317,6 +320,7 @@ function JourneyBuilderInner({
   };
 
   async function handlePublishJourney() {
+    if (!journeys) return;
     const journeyToPublish = currentJourney;
     if (!journeyToPublish) {
         toast({ variant: 'destructive', title: 'No journey selected', description: 'Please save a journey before publishing.' });
@@ -595,7 +599,7 @@ function JourneyBuilderInner({
                                     className="bg-background h-10"
                                 />
                             </div>
-                            <Button variant="outline" onClick={handleSaveTemplate} disabled={bookings.length === 0 || !templateName}>
+                            <Button variant="outline" onClick={handleSaveTemplate} disabled={!templates || bookings.length === 0 || !templateName}>
                                 <Save className="mr-2 h-4 w-4" /> {isEditingTemplate ? 'Update' : 'Save as Template'}
                             </Button>
                         </div>
@@ -604,7 +608,7 @@ function JourneyBuilderInner({
                         <div className="flex flex-col gap-2 flex-grow min-w-[250px] w-full sm:w-auto">
                             <Label className="text-xs">Journey Actions</Label>
                             <div className="flex gap-2">
-                                <Button variant="outline" onClick={handleSaveJourneyLocally} disabled={bookings.length === 0} className="flex-1">
+                                <Button variant="outline" onClick={handleSaveJourneyLocally} disabled={!journeys || bookings.length === 0} className="flex-1">
                                     <Save className="mr-2 h-4 w-4" /> {isEditingJourney ? 'Update Journey' : 'Save Draft'}
                                 </Button>
                                 

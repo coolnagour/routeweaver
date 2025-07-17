@@ -11,15 +11,15 @@ export default function NewJourneyPage() {
   const [loadedTemplate, setLoadedTemplate] = useState<JourneyTemplate | null>(null);
 
   useEffect(() => {
-    const templateToLoad = localStorage.getItem('templateToLoad');
+    const templateToLoad = sessionStorage.getItem('templateToLoad');
     if (templateToLoad) {
       try {
         const parsedTemplate = JSON.parse(templateToLoad);
         setLoadedTemplate(parsedTemplate);
       } catch (e) {
-        console.error("Failed to parse template from localStorage", e);
+        console.error("Failed to parse template from sessionStorage", e);
       } finally {
-        localStorage.removeItem('templateToLoad');
+        sessionStorage.removeItem('templateToLoad');
       }
     }
   }, []);

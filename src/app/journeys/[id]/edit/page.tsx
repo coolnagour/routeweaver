@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import useLocalStorage from '@/hooks/use-local-storage';
+import useIndexedDB from '@/hooks/use-indexed-db';
 import JourneyBuilder from '@/components/journeys/journey-builder';
 import type { Journey } from '@/types';
 import { useServer } from '@/context/server-context';
@@ -15,12 +15,12 @@ export default function EditJourneyPage() {
   const { server } = useServer();
   const journeyId = params.id ? decodeURIComponent(params.id as string) : undefined;
 
-  const [journeys, setJourneys] = useLocalStorage<Journey[]>('recent-journeys', [], server?.uuid);
+  const [journeys, setJourneys] = useIndexedDB<Journey[]>('recent-journeys', [], server?.uuid);
   const [journey, setJourney] = useState<Journey | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (journeyId && journeys.length > 0) {
+    if (journeyId && journeys && journeys.length > 0) {
       const foundJourney = journeys.find(j => j.id === journeyId);
       if (foundJourney) {
         setJourney(foundJourney);
@@ -29,12 +29,16 @@ export default function EditJourneyPage() {
         router.push('/journeys');
       }
       setLoading(false);
-    } else if (!loading && journeys.length === 0) {
+    } else if (!loading && journeys && journeys.length === 0) {
         router.push('/journeys');
+    } else if (!journeys && !loading) {
+        // This can happen if indexeddb is still loading
+        setLoading(true);
     }
   }, [journeyId, journeys, router, loading]);
 
   const handleUpdateJourney = (updatedJourney: Journey) => {
+    if (!journeys) return;
     const updatedJourneys = journeys.map(j => j.id === updatedJourney.id ? updatedJourney : j);
     setJourneys(updatedJourneys);
     // router.push('/journeys'); // This line was causing the redirect.

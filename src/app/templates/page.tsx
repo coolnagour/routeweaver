@@ -9,10 +9,14 @@ export default function TemplatesPage() {
   const router = useRouter();
 
   const handleLoadTemplate = (template: JourneyTemplate) => {
-    // In a real app, you might pass this data via state management or query params
-    // For now, we can store it in localStorage and redirect.
-    localStorage.setItem('templateToLoad', JSON.stringify(template));
-    router.push('/journeys/new');
+    // We can store it in sessionStorage which is cleared when the tab is closed.
+    // This is a simple way to pass data between pages on client-side navigation.
+    try {
+      sessionStorage.setItem('templateToLoad', JSON.stringify(template));
+      router.push('/journeys/new');
+    } catch(e) {
+      console.error("Failed to save template to session storage", e);
+    }
   };
 
   return <TemplateManager onLoadTemplate={handleLoadTemplate} />;

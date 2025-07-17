@@ -14,7 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import type { Journey, Booking, Stop } from '@/types';
 import { format } from 'date-fns';
-import useLocalStorage from '@/hooks/use-local-storage';
+import useIndexedDB from '@/hooks/use-indexed-db';
 import { Users, MapPin, Clock, MessageSquare, Edit, Send, Loader2, Info, ChevronDown, Trash2, Milestone, Hash, Car, Map, DollarSign } from 'lucide-react';
 import { useServer } from '@/context/server-context';
 import { Button } from '../ui/button';
@@ -49,7 +49,7 @@ export default function RecentJourneys() {
   const { server } = useServer();
   const router = useRouter();
   const { toast } = useToast();
-  const [journeys, setJourneys] = useLocalStorage<Journey[]>('recent-journeys', [], server?.uuid);
+  const [journeys, setJourneys] = useIndexedDB<Journey[]>('recent-journeys', [], server?.uuid);
   const [publishingId, setPublishingId] = useState<string | null>(null);
   const [expandedJourneyId, setExpandedJourneyId] = useState<string | null>(null);
   const [debugData, setDebugData] = useState<Record<string, { orderedStops: Stop[]; isLoading: boolean }>>({});
@@ -91,7 +91,7 @@ export default function RecentJourneys() {
     const newExpandedId = expandedJourneyId === journeyId ? null : journeyId;
     setExpandedJourneyId(newExpandedId);
     
-    if (newExpandedId) {
+    if (newExpandedId && journeys) {
         const journey = journeys.find(j => j.id === newExpandedId);
         if (journey) {
             getStopsForDebug(journey);
@@ -104,6 +104,7 @@ export default function RecentJourneys() {
   };
 
   const handleDeleteJourney = (id: string) => {
+    if (!journeys) return;
     setJourneys(journeys.filter(j => j.id !== id));
     toast({
         title: 'Journey Deleted',
@@ -148,8 +149,10 @@ export default function RecentJourneys() {
             orderedStops: result.orderedStops,
         };
         
-        const updatedJourneys = journeys.map(j => j.id === journey.id ? publishedJourney : j);
-        setJourneys(updatedJourneys);
+        if (journeys) {
+            const updatedJourneys = journeys.map(j => j.id === journey.id ? publishedJourney : j);
+            setJourneys(updatedJourneys);
+        }
 
         toast({
           title: 'Journey Published!',
@@ -214,7 +217,7 @@ export default function RecentJourneys() {
         <CardDescription>A list of your recent and upcoming journeys.</CardDescription>
       </CardHeader>
       <CardContent>
-        {journeys.length > 0 ? (
+        {journeys && journeys.length > 0 ? (
           <Table>
             <TableHeader>
               <TableRow>
@@ -408,7 +411,7 @@ export default function RecentJourneys() {
           </Table>
         ) : (
             <div className="text-center py-16 border-2 border-dashed rounded-lg">
-                <p className="text-muted-foreground">You haven't booked any journeys yet.</p>
+                <p className="text-muted-foreground">{!journeys ? "Loading journeys..." : "You haven't booked any journeys yet."}</p>
             </div>
         )}
       </CardContent>
