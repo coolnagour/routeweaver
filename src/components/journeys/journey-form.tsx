@@ -40,7 +40,7 @@ const FormBookingSchema = BookingSchema.extend({
     dateTime: z.date().optional(),
   })).min(1, 'At least one stop is required.'), // Min 1 for Hold On, min 2 for regular
 }).refine(data => {
-    if (data.holdOn) return data.stops.length === 1 && data.stops[0].stopType === 'pickup';
+    if (data.holdOn) return data.stops.length === 2 && data.stops[0].stopType === 'pickup' && data.stops[1].stopType === 'dropoff';
     return data.stops.length >= 2;
 }, {
     message: 'A standard booking requires at least a pickup and dropoff.',
@@ -114,21 +114,41 @@ export default function JourneyForm({
   const isHoldOn = useWatch({ control: form.control, name: 'holdOn' });
 
   useEffect(() => {
+    const stops = form.getValues('stops');
+    const firstStop = stops[0];
+
     if (isHoldOn) {
-      // If Hold On is enabled, ensure there's only one pickup stop
-      const pickupStop = form.getValues('stops')[0];
-      if(pickupStop) {
-        replace([pickupStop]);
-      }
+        // If Hold On is enabled, ensure there's exactly one pickup and one dropoff
+        if (!firstStop || stops.length > 2 || firstStop.stopType !== 'pickup') {
+            const pickupId = firstStop?.id || uuidv4();
+            const pickupStop = {
+                id: pickupId,
+                order: 0,
+                location: firstStop?.location || emptyLocation,
+                stopType: 'pickup' as const,
+                name: firstStop?.name,
+                phone: firstStop?.phone,
+                dateTime: firstStop?.dateTime,
+                instructions: firstStop?.instructions,
+            };
+            const dropoffStop = {
+                id: uuidv4(),
+                order: 1,
+                location: emptyLocation,
+                stopType: 'dropoff' as const,
+                pickupStopId: pickupId,
+                instructions: '',
+            };
+            replace([pickupStop, dropoffStop]);
+        }
     } else {
-      // If Hold On is disabled, ensure there's at least a pickup and dropoff
-      const stops = form.getValues('stops');
-      if (stops.length < 2) {
-          const newPickupId = uuidv4();
-          const currentPickup = stops[0] || { id: newPickupId, order: 0, location: emptyLocation, stopType: 'pickup', name: '', phone: '', dateTime: undefined, instructions: '' };
-          const dropoff = { id: uuidv4(), order: 1, location: emptyLocation, stopType: 'dropoff' as 'dropoff', pickupStopId: currentPickup.id!, instructions: '' };
-          replace([currentPickup, dropoff]);
-      }
+        // If Hold On is disabled, ensure there's at least a pickup and dropoff if it was a hold on before
+        if (stops.length < 2 && initialData.holdOn) {
+            const newPickupId = uuidv4();
+            const currentPickup = stops[0] || { id: newPickupId, order: 0, location: emptyLocation, stopType: 'pickup' as const, name: '', phone: '', dateTime: undefined, instructions: '' };
+            const dropoff = { id: uuidv4(), order: 1, location: emptyLocation, stopType: 'dropoff' as const, pickupStopId: currentPickup.id!, instructions: '' };
+            replace([currentPickup, dropoff]);
+        }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isHoldOn, replace]);
@@ -181,23 +201,7 @@ export default function JourneyForm({
   function onSubmit(values: BookingFormData) {
     const bookingToSave: Booking = { ...values, stops: [] };
     
-    let stopsToSave = values.stops;
-
-    // For "Hold On" bookings, we need a destination stop for the API, but not in the UI state.
-    // So we create it temporarily here.
-    if (values.holdOn && stopsToSave.length === 1) {
-        const pickup = stopsToSave[0];
-        const syntheticDropoff: Stop = {
-            ...pickup, // Inherit location etc.
-            id: uuidv4(),
-            order: 1,
-            stopType: 'dropoff',
-            pickupStopId: pickup.id,
-        };
-        stopsToSave = [pickup, syntheticDropoff];
-    }
-    
-    bookingToSave.stops = stopsToSave.map(stop => {
+    const stopsToSave = values.stops.map(stop => {
       const stopDateTime = isScheduled ? stop.dateTime : undefined;
       return { 
         ...stop, 
@@ -205,6 +209,8 @@ export default function JourneyForm({
         instructions: stop.instructions,
       };
     }) as Stop[];
+
+    bookingToSave.stops = stopsToSave;
 
     onSave(bookingToSave);
   }

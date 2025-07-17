@@ -7,7 +7,7 @@
  */
 
 import { z } from 'zod';
-import { BookingSchema, StopSchema } from '@/types';
+import { BookingSchema } from '@/types';
 import type { Booking, Stop, JourneyPayloadOutput } from '@/types';
 
 // Helper function to calculate distance between two geo-coordinates
@@ -127,19 +127,12 @@ export async function generateJourneyPayload(input: JourneyPayloadInput): Promis
     
     const journeyBookingsPayload = [];
     
-    // Add "Hold On" booking at the start if it exists
+    // Add "Hold On" booking's pickup at the start if it exists
     if (holdOnBooking) {
         const holdOnPickup = holdOnBooking.stops.find(s => s.stopType === 'pickup');
-        const holdOnDropoff = holdOnBooking.stops.find(s => s.stopType === 'dropoff');
 
-        if (holdOnPickup && holdOnDropoff) {
-            const firstPickupOfBooking = holdOnBooking.stops.find(s => s.stopType === 'pickup');
-            const plannedDate = firstPickupOfBooking?.dateTime ? new Date(firstPickupOfBooking.dateTime).toISOString() : new Date().toISOString();
-            
-            // Note: The "Hold On" booking doesn't get a real bookingServerId until after it's created,
-            // but for the journey payload, it's identified by its bookingsegment_id (for pickup)
-            // and request_id (for dropoff) after the fact.
-            // When creating the journey, we must provide valid IDs.
+        if (holdOnPickup) {
+            const plannedDate = holdOnPickup?.dateTime ? new Date(holdOnPickup.dateTime).toISOString() : new Date().toISOString();
             
             if (!holdOnPickup.bookingSegmentId || !holdOnBooking.bookingServerId) {
                 throw new Error("Hold On booking is missing required server IDs (bookingSegmentId or bookingServerId) for journey creation.");

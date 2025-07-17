@@ -65,6 +65,15 @@ export default function BookingManager({
       ],
       holdOn: bookings.length === 0, // Default to true only for the very first booking
     };
+    if (newBooking.holdOn) {
+      newBooking.stops.push({
+        id: uuidv4(),
+        order: 1,
+        location: emptyLocation,
+        stopType: 'dropoff',
+        pickupStopId: newBooking.stops[0].id
+      })
+    }
     setBookings(prev => [...prev, newBooking]);
     setEditingBooking(newBooking);
   };

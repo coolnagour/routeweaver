@@ -10,14 +10,13 @@ export const formatBookingForApi = (booking: Booking, server: ServerConfig) => {
     // Ensure stops are sorted by the order field before processing
     const sortedStops = [...booking.stops].sort((a, b) => a.order - b.order);
 
+    if (sortedStops.length === 0) {
+        throw new Error("Booking must have at least one stop.");
+    }
     if (sortedStops.length < 2 && !booking.holdOn) {
         throw new Error("Booking must have at least a pickup and a dropoff stop.");
     }
 
-    if (sortedStops.length < 1) {
-        throw new Error("Booking must have at least one stop.");
-    }
-    
     const firstPickup = sortedStops.find(s => s.stopType === 'pickup');
     if (!firstPickup) {
         throw new Error("Booking must have at least one pickup stop.");
@@ -50,7 +49,7 @@ export const formatBookingForApi = (booking: Booking, server: ServerConfig) => {
         destination: {
             lat: lastStop.location.lat.toString(),
             lng: lastStop.location.lng.toString(),
-            formatted: lastStop.location.address,
+            formatted: lastStop.location.address || firstPickup.location.address, // Fallback for empty hold-on dest
             driver_instructions: lastStop.instructions || "",
         },
         account_id: booking.accountId,
