@@ -299,6 +299,7 @@ export default function JourneyMap({ stops, onLocationSelect, isSelectionMode = 
         ))}
         {polylinePath.length > 1 && (
             <Polyline
+                key={validStops.map(s => s.id).join('-')}
                 path={polylinePath}
                 options={{
                     strokeColor: '#007BFF',
