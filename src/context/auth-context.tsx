@@ -2,9 +2,9 @@
 'use client';
 
 import type { User } from 'firebase/auth';
-// import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged } from 'firebase/auth';
 import { createContext, useEffect, useState, type ReactNode } from 'react';
-// import { auth } from '@/lib/firebase';
+import { auth } from '@/lib/firebase';
 import { usePathname, useRouter } from 'next/navigation';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { useServer } from './server-context';
@@ -53,16 +53,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setIsConfigValid(true);
 
-    // DEV: Bypassing real auth
-    setUser(mockUser);
-    setLoading(false);
-
-    // REAL AUTH - keep this commented out for dev
-    // const unsubscribe = onAuthStateChanged(auth, (user) => {
-    //   setUser(user);
-    //   setLoading(false);
-    // });
-    // return () => unsubscribe();
+    if (process.env.NEXT_PUBLIC_USE_MOCK_AUTH === 'true') {
+      // DEV: Bypassing real auth with mock user
+      console.log("Using mock user for development.");
+      setUser(mockUser);
+      setLoading(false);
+    } else {
+      // REAL AUTH
+      const unsubscribe = onAuthStateChanged(auth, (user) => {
+        setUser(user);
+        setLoading(false);
+      });
+      return () => unsubscribe();
+    }
   }, []);
 
   useEffect(() => {

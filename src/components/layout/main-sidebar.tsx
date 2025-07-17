@@ -45,12 +45,14 @@ export default function MainSidebar() {
   };
 
   const handleSignOut = async () => {
-    // In dev mode, just clear context and go to login
-    if (process.env.NODE_ENV === 'development' && user?.uid === 'mock-user-id') {
+    // In dev mode with mock user, just clear context and go to login
+    if (process.env.NEXT_PUBLIC_USE_MOCK_AUTH === 'true' && user?.uid === 'mock-user-id') {
       setServer(null);
+      // A full page reload is better here to clear all state
       window.location.href = '/login';
       return;
     }
+    // For real users, sign out from Firebase
     await signOut(auth);
     setServer(null);
     router.push('/login');
