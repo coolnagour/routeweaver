@@ -36,7 +36,7 @@ export default function EditJourneyPage() {
   const handleUpdateJourney = (updatedJourney: Journey) => {
     const updatedJourneys = journeys.map(j => j.id === updatedJourney.id ? updatedJourney : j);
     setJourneys(updatedJourneys);
-    router.push('/journeys');
+    // router.push('/journeys'); // This line was causing the redirect.
   };
 
   if (loading || !journey) {
