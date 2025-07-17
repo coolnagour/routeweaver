@@ -6,12 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import type { Booking, Stop } from '@/types';
 import JourneyForm from './journey-form';
-import { Edit, MapPin, Package, Trash2, UserPlus, Users, Phone, Clock, MessageSquare, Info, Loader2 } from 'lucide-react';
+import { Edit, MapPin, Package, Trash2, UserPlus, Users, Phone, Clock, MessageSquare, Info, Loader2, MoreHorizontal } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { format } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
 import { useServer } from '@/context/server-context';
 import { useToast } from '@/hooks/use-toast';
-import { deleteBooking } from '@/services/icabbi';
+import { deleteBooking, sendDriverAppEvent } from '@/services/icabbi';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,6 +48,7 @@ export default function BookingManager({
     isJourneyPriceSet,
 }: BookingManagerProps) {
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [isSendingEvent, setIsSendingEvent] = useState<string | null>(null);
   const { server } = useServer();
   const { toast } = useToast();
 
@@ -121,6 +123,32 @@ export default function BookingManager({
     }
     setEditingBooking(null);
   };
+  
+  const handleSendEvent = async (booking: Booking, eventType: string, eventLabel: string) => {
+      if (!server || !booking.bookingServerId) {
+          toast({ variant: 'destructive', title: 'Error', description: 'Cannot send event. Booking or server not available.' });
+          return;
+      }
+      
+      const eventKey = `${booking.id}-${eventType}`;
+      setIsSendingEvent(eventKey);
+
+      try {
+          await sendDriverAppEvent(server, eventType, booking.bookingServerId);
+          toast({
+              title: 'Event Sent',
+              description: `The "${eventLabel}" event was successfully sent for booking ID ${booking.bookingServerId}.`
+          });
+      } catch (error) {
+          toast({
+              variant: 'destructive',
+              title: 'Failed to Send Event',
+              description: error instanceof Error ? error.message : 'An unknown error occurred.'
+          });
+      } finally {
+          setIsSendingEvent(null);
+      }
+  }
 
   const getTotalPassengers = (bookings: Booking[]) => {
       return bookings.reduce((total, booking) => {
@@ -250,6 +278,36 @@ export default function BookingManager({
                           })}
                       </div>
                       <div className="flex items-center">
+                          {booking.bookingServerId && (
+                              <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="icon">
+                                          {isSendingEvent && isSendingEvent.startsWith(booking.id) ? <Loader2 className="h-4 w-4 animate-spin" /> : <MoreHorizontal className="h-4 w-4" />}
+                                      </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                      <DropdownMenuLabel>Driver Events</DropdownMenuLabel>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem onClick={() => handleSendEvent(booking, 'status_arrived', 'Arrive')}>
+                                          Arrive
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => handleSendEvent(booking, 'status_pob', 'Made Contact')}>
+                                          Made Contact
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => handleSendEvent(booking, 'show_payment_screen', 'Payment')}>
+                                          Payment after Made Contact
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => handleSendEvent(booking, 'booking_drop_off', 'Drop Off')}>
+                                          Drop Off
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator />
+                                       <DropdownMenuItem onClick={() => handleSendEvent(booking, 'status_no_show', 'No Show')} className="text-destructive">
+                                          No Show
+                                      </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                              </DropdownMenu>
+                          )}
+
                           <Button variant="ghost" size="icon" onClick={() => handleEditBooking(booking)}>
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -291,3 +349,5 @@ export default function BookingManager({
     </Card>
   );
 }
+
+    
