@@ -258,6 +258,8 @@ export default function JourneyMap({ stops, onLocationSelect, isSelectionMode = 
       anchor: new window.google.maps.Point(20, 20),
     };
   };
+  
+  const mapKey = validStops.map(s => `${s.id}-${s.location.lat}-${s.location.lng}`).join('|');
 
   return (
     <div style={mapContainerStyle}>
@@ -278,6 +280,7 @@ export default function JourneyMap({ stops, onLocationSelect, isSelectionMode = 
             <Maximize className="h-5 w-5" />
         </Button>
         <GoogleMap
+            key={mapKey}
             mapContainerStyle={{ width: '100%', height: '100%', borderRadius: '0.5rem' }}
             center={center}
             zoom={10}
@@ -299,7 +302,6 @@ export default function JourneyMap({ stops, onLocationSelect, isSelectionMode = 
         ))}
         {polylinePath.length > 1 && (
             <Polyline
-                key={validStops.map(s => s.id).join('-')}
                 path={polylinePath}
                 options={{
                     strokeColor: '#007BFF',
