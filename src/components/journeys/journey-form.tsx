@@ -263,6 +263,9 @@ export default function JourneyForm({
   const lastStop = stopFields[stopFields.length - 1];
   const viaStops = stopFields.slice(1, -1);
   const firstPickupIndex = stopFields.findIndex(s => s.stopType === 'pickup');
+  
+  // A booking is "new" if it has no server ID and no stop addresses have been filled in yet.
+  const isTrulyNew = !initialData.bookingServerId && !initialData.stops.some(s => s.location.address);
 
   return (
       <Card>
@@ -270,13 +273,13 @@ export default function JourneyForm({
             <form onSubmit={form.handleSubmit(onSubmit)}>
             <CardHeader>
                 <div className="flex justify-between items-center">
-                    <CardTitle className="font-headline text-xl">{initialData.bookingServerId ? 'Edit Booking' : 'Add New Booking'}</CardTitle>
+                    <CardTitle className="font-headline text-xl">{isTrulyNew ? 'Add New Booking' : 'Edit Booking'}</CardTitle>
                     <Button type="button" variant="ghost" size="icon" onClick={() => onCancel(initialData.id)} title="Cancel">
                         <X className="h-5 w-5" />
                     </Button>
                 </div>
                 <CardDescription>
-                    {initialData.bookingServerId ? 'Modify the details below and click "Update Booking".' : 'Fill in the details for the new booking.'}
+                    {isTrulyNew ? 'Fill in the details for the new booking.' : 'Modify the details below and click "Update Booking".'}
                     {initialData.bookingServerId && (
                         <span className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                             <Lock className="h-3 w-3" />
@@ -630,7 +633,7 @@ export default function JourneyForm({
 
                  <div className="flex justify-end gap-2 mt-4">
                     <Button type="button" variant="outline" onClick={() => onCancel(initialData.id)}>Cancel</Button>
-                    <Button type="submit">{initialData.bookingServerId ? 'Update Booking' : 'Add to Journey'}</Button>
+                    <Button type="submit">{isTrulyNew ? 'Add to Journey' : 'Update Booking'}</Button>
                 </div>
             </CardContent>
           </form>
