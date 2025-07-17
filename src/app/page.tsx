@@ -1,15 +1,16 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useServer } from '@/context/server-context';
-import { Server, PlusCircle, ChevronRight, Search } from 'lucide-react';
+import { Server, PlusCircle, ChevronRight, Search, Upload } from 'lucide-react';
 import useIndexedDB from '@/hooks/use-indexed-db';
 import type { ServerConfig } from '@/types';
+import { ServerConfigSchema } from '@/types';
 import ServerForm from '@/components/settings/server-form';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -21,6 +22,9 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { v4 as uuidv4 } from 'uuid';
+import { z } from 'zod';
+
+const ServerConfigsArraySchema = z.array(ServerConfigSchema);
 
 export default function SelectServerPage() {
   const { setServer } = useServer();
@@ -29,6 +33,7 @@ export default function SelectServerPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSelectServer = (serverConfig: any) => {
     setServer(serverConfig);
@@ -53,6 +58,69 @@ export default function SelectServerPage() {
         server.host.toLowerCase().includes(searchTerm.toLowerCase())
       )
     : [];
+    
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!servers) return;
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const text = e.target?.result;
+        if (typeof text !== 'string') {
+          throw new Error('File content is not readable text.');
+        }
+        const parsedJson = JSON.parse(text);
+        
+        const validationResult = ServerConfigsArraySchema.safeParse(parsedJson);
+
+        if (!validationResult.success) {
+          console.error("Invalid JSON structure:", validationResult.error.flatten().fieldErrors);
+          throw new Error('The imported file has an invalid format.');
+        }
+
+        const importedServers: ServerConfig[] = validationResult.data.map(s => ({
+            ...s,
+            uuid: s.uuid || uuidv4(),
+        }));
+        
+        const existingServerKeys = new Set(servers.map(s => `${s.host}-${s.companyId}`));
+        const newServers = importedServers.filter(s => !existingServerKeys.has(`${s.host}-${s.companyId}`));
+        
+        if (newServers.length > 0) {
+          setServers(prevServers => [...(prevServers || []), ...newServers]);
+          toast({
+            title: 'Import Successful',
+            description: `${newServers.length} new server configuration(s) added.`,
+          });
+        } else {
+          toast({
+            title: 'No New Servers Imported',
+            description: 'All configurations in the file already exist.',
+          });
+        }
+
+      } catch (error) {
+        console.error("Import error:", error);
+        toast({
+          variant: 'destructive',
+          title: 'Import Failed',
+          description: error instanceof Error ? error.message : 'Please check the file and try again.',
+        });
+      } finally {
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+      }
+    };
+    reader.readAsText(file);
+  };
+
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
@@ -69,26 +137,38 @@ export default function SelectServerPage() {
                             <CardDescription>Choose a server to connect to for managing journeys.</CardDescription>
                         </div>
                     </div>
-                    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                        <DialogTrigger asChild>
-                            <Button>
-                                <PlusCircle className="mr-2 h-4 w-4" />
-                                Add Server
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                            <DialogHeader>
-                                <DialogTitle>Add New Server</DialogTitle>
-                                <DialogDescription>
-                                    Fill in the details for the server configuration.
-                                </DialogDescription>
-                            </DialogHeader>
-                            <ServerForm 
-                                onSave={handleSave} 
-                                onCancel={() => setIsDialogOpen(false)}
-                            />
-                        </DialogContent>
-                    </Dialog>
+                    <div className="flex gap-2">
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            onChange={handleFileChange}
+                            accept="application/json"
+                            className="hidden"
+                        />
+                        <Button variant="outline" onClick={handleImportClick}>
+                            <Upload className="mr-2 h-4 w-4" /> Import
+                        </Button>
+                        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                            <DialogTrigger asChild>
+                                <Button>
+                                    <PlusCircle className="mr-2 h-4 w-4" />
+                                    Add Server
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>Add New Server</DialogTitle>
+                                    <DialogDescription>
+                                        Fill in the details for the server configuration.
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <ServerForm 
+                                    onSave={handleSave} 
+                                    onCancel={() => setIsDialogOpen(false)}
+                                />
+                            </DialogContent>
+                        </Dialog>
+                    </div>
                 </div>
                  <div className="relative mt-4">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
