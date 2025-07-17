@@ -64,7 +64,6 @@ export default function SelectServerPage() {
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!servers) return;
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -89,11 +88,12 @@ export default function SelectServerPage() {
             uuid: s.uuid || uuidv4(),
         }));
         
-        const existingServerKeys = new Set(servers.map(s => `${s.host}-${s.companyId}`));
+        const currentServers = servers || [];
+        const existingServerKeys = new Set(currentServers.map(s => `${s.host}-${s.companyId}`));
         const newServers = importedServers.filter(s => !existingServerKeys.has(`${s.host}-${s.companyId}`));
         
         if (newServers.length > 0) {
-          setServers(prevServers => [...(prevServers || []), ...newServers]);
+          setServers([...currentServers, ...newServers]);
           toast({
             title: 'Import Successful',
             description: `${newServers.length} new server configuration(s) added.`,
