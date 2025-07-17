@@ -11,7 +11,7 @@ import { useJourneys } from '@/hooks/use-journeys';
 import { saveJourney } from '@/ai/flows/journey-flow';
 import { generateJourneyPayload } from '@/ai/flows/journey-payload-flow';
 import { getSites } from '@/services/icabbi';
-import type { Booking, Journey, JourneyTemplate, Account, JourneyPayloadOutput, Stop, Location } from '@/types';
+import type { Booking, Journey, JourneyTemplate, Account, JourneyPayloadOutput, Stop, Location, Site } from '@/types';
 import { Save, Building, Loader2, Send, ChevronsUpDown, Code, DollarSign, Info, MessageSquare } from 'lucide-react';
 import BookingManager from './booking-manager';
 import { useServer } from '@/context/server-context';
@@ -80,10 +80,10 @@ function JourneyBuilderInner({
   const { addOrUpdateJourney } = useJourneys();
   const [, , addTemplate, ,] = useIndexedDB<JourneyTemplate>('journey-templates', [], server?.uuid);
   const [templateName, setTemplateName] = useState('');
-  const [sites, setSites] = useState<{id: number, name: string, ref: string}[]>([]);
+  const [sites, setSites] = useState<Site[]>([]);
   const [isFetchingSites, setIsFetchingSites] = useState(false);
   const [selectedSiteId, setSelectedSiteId] = useState<number | undefined>(initialSiteId || initialData?.siteId);
-  const [selectedAccount, setSelectedAccount] = useState<Account | null>(initialAccount || initialData?.account || null);
+  const [selectedAccount, setSelectedAccount] = useState<Account | null>(initialAccount || (initialData as Journey)?.account || null);
   
   const getInitialBookings = (data: Partial<JourneyTemplate | Journey> | null | undefined): Booking[] => {
     if (!data || !data.bookings) return [];
@@ -168,10 +168,10 @@ function JourneyBuilderInner({
     setBookings(initialBookings);
     setTemplateName((initialData as JourneyTemplate)?.name || '');
     setSelectedSiteId(initialData?.siteId || initialSiteId);
-    setSelectedAccount(initialData?.account || initialAccount || null);
+    setSelectedAccount( (initialData as Journey)?.account || initialAccount || null);
     setJourneyPrice(initialData?.price);
     setJourneyCost(initialData?.cost);
-    setEnableMessaging(initialData?.enable_messaging_service || false);
+    setEnableMessaging((initialData as Journey)?.enable_messaging_service || false);
   }, [initialData, initialSiteId, initialAccount]);
 
   useEffect(() => {
@@ -206,6 +206,8 @@ function JourneyBuilderInner({
       });
       return;
     }
+    
+    const selectedSite = sites.find(s => s.id === selectedSiteId);
 
     if (isEditingJourney && journeyId) {
         const journeyToUpdate: Journey = {
@@ -255,6 +257,8 @@ function JourneyBuilderInner({
         toast({ title: 'Template name required', variant: 'destructive' });
         return;
     }
+    
+    const selectedSite = sites.find(s => s.id === selectedSiteId);
 
     const templateData = {
       name: templateName,
@@ -278,8 +282,10 @@ function JourneyBuilderInner({
         price: b.price,
         cost: b.cost,
         instructions: b.instructions,
+        holdOn: b.holdOn
       })),
       siteId: selectedSiteId,
+      site: selectedSite || null,
       account: selectedAccount,
       enable_messaging_service: enableMessaging,
     };
