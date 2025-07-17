@@ -40,7 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
-  const { server, setServer } = useServer();
+  const { server } = useServer();
   const [isConfigValid, setIsConfigValid] = useState(true);
 
   useEffect(() => {
@@ -72,18 +72,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (loading || !isConfigValid) return;
 
     const isAuthPage = pathname === '/login';
-    const serverIsRequired = !['/', '/settings/servers'].includes(pathname);
 
-    if (user) { // User is "logged in"
+    if (user) { // User is logged in
       if (isAuthPage) {
-        router.push('/'); // If on login page, go to server select
-      } else if (!server && serverIsRequired) {
-        router.push('/'); // If no server selected and it's required for the page, go to server select
+        router.push('/'); // If on login page, redirect to server select
+      } else {
+        // If logged in and not on an auth page, check if a server is needed
+        const serverIsRequired = !['/', '/settings/servers'].includes(pathname);
+        if (!server && serverIsRequired) {
+          router.push('/'); // If server is required but not selected, redirect to server select
+        }
       }
     } else { // User is not logged in
-        if (!isAuthPage) {
-            router.push('/login');
-        }
+      if (!isAuthPage) {
+        router.push('/login'); // If not on login page, redirect there
+      }
     }
     
   }, [user, server, loading, router, pathname, isConfigValid]);
