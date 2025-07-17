@@ -45,11 +45,11 @@ export const formatBookingForApi = (booking: Booking, server: ServerConfig) => {
             formatted: firstPickup.location.address,
             driver_instructions: firstPickup.instructions || "",
         },
-        // For hold on, destination is an empty placeholder. For regular, it's the last stop.
+        // For hold on, destination is "As Directed". For regular, it's the last stop.
         destination: {
             lat: lastStop.location.lat.toString(),
             lng: lastStop.location.lng.toString(),
-            formatted: booking.holdOn ? "" : lastStop.location.address,
+            formatted: booking.holdOn ? "As Directed" : lastStop.location.address,
             driver_instructions: lastStop.instructions || "",
         },
         account_id: booking.accountId,
