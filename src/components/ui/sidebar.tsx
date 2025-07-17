@@ -157,7 +157,7 @@ const SidebarProvider = React.forwardRef<
               } as React.CSSProperties
             }
             className={cn(
-              "group/sidebar-wrapper flex min-h-svh w-full has-[[data-variant=inset]]:bg-sidebar",
+              "group/sidebar-wrapper flex w-full has-[[data-variant=inset]]:bg-sidebar",
               className
             )}
             ref={ref}
@@ -234,7 +234,7 @@ const Sidebar = React.forwardRef<
       <div
         ref={ref}
         className={cn(
-            "hidden md:flex flex-col text-sidebar-foreground transition-[width] duration-200 ease-linear border-r",
+            "sticky top-0 hidden h-screen md:flex flex-col text-sidebar-foreground transition-[width] duration-200 ease-linear border-r",
             state === 'collapsed' ? "w-[--sidebar-width-icon]" : "w-[--sidebar-width]",
             className
         )}
@@ -319,7 +319,7 @@ const SidebarInset = React.forwardRef<
     <main
       ref={ref}
       className={cn(
-        "relative flex min-h-svh flex-1 flex-col px-4 sm:px-6 lg:px-8",
+        "relative flex flex-1 flex-col px-4 sm:px-6 lg:px-8",
         className
       )}
       {...props}
