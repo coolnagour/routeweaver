@@ -2,6 +2,7 @@
 import { z } from 'zod';
 
 export const ServerConfigSchema = z.object({
+    uuid: z.string().optional(), // Client-side unique ID
     name: z.string().min(1, "Name is required"),
     host: z.string().min(1, "Host is required"),
     apiPath: z.string().min(1, "API Path is required"),

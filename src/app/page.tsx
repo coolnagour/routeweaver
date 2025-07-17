@@ -20,6 +20,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { v4 as uuidv4 } from 'uuid';
 
 export default function SelectServerPage() {
   const { setServer } = useServer();
@@ -39,7 +40,8 @@ export default function SelectServerPage() {
         toast({ title: 'Duplicate Server', description: 'A server with this Host and Company ID already exists.', variant: 'destructive' });
         return;
       }
-      setServers([...servers, data]);
+      const newServer = { ...data, uuid: uuidv4() };
+      setServers([...servers, newServer]);
       toast({ title: 'Server Added', description: 'The new server configuration has been added.' });
     setIsDialogOpen(false);
   };
@@ -99,7 +101,7 @@ export default function SelectServerPage() {
                 {filteredServers.length > 0 ? (
                     filteredServers.map((server) => (
                         <div 
-                          key={`${server.host}-${server.companyId}`} 
+                          key={server.uuid || `${server.host}-${server.companyId}`}
                           className="flex items-center justify-between rounded-md border p-4 transition-colors hover:bg-muted/50 cursor-pointer"
                           onClick={() => handleSelectServer(server)}
                           role="button"

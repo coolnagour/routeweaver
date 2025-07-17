@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import useLocalStorage from '@/hooks/use-local-storage';
 import { Button } from '@/components/ui/button';
 import {
@@ -44,6 +44,7 @@ import { z } from 'zod';
 import { Edit, PlusCircle, Trash2, Server, Upload, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ServerForm from '@/components/settings/server-form';
+import { v4 as uuidv4 } from 'uuid';
 
 const ServerConfigsArraySchema = z.array(ServerConfigSchema);
 
@@ -53,6 +54,21 @@ export default function ServerSettingsPage() {
   const [editingServer, setEditingServer] = useState<ServerConfig | undefined>(undefined);
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // One-time migration to add UUIDs to existing server configs
+  useEffect(() => {
+    let hasChanges = false;
+    const migratedServers = servers.map(s => {
+        if (!s.uuid) {
+            hasChanges = true;
+            return { ...s, uuid: uuidv4() };
+        }
+        return s;
+    });
+    if (hasChanges) {
+        setServers(migratedServers);
+    }
+  }, [servers, setServers]);
   
   const handleAddClick = () => {
     setEditingServer(undefined);
@@ -65,7 +81,7 @@ export default function ServerSettingsPage() {
   };
 
   const handleDelete = (serverToDelete: ServerConfig) => {
-    setServers(servers.filter((s) => s.host !== serverToDelete.host || s.companyId !== serverToDelete.companyId));
+    setServers(servers.filter((s) => s.uuid !== serverToDelete.uuid));
     toast({
       title: 'Server Deleted',
       description: 'The server configuration has been removed.',
@@ -77,14 +93,13 @@ export default function ServerSettingsPage() {
     if (editingServer) {
       // Editing existing server
       const isDuplicate = servers.some(
-        s => (s.host === data.host && s.companyId === data.companyId) && 
-             (s.host !== editingServer.host || s.companyId !== editingServer.companyId)
+        s => (s.host === data.host && s.companyId === data.companyId) && s.uuid !== editingServer.uuid
       );
       if (isDuplicate) {
         toast({ title: 'Duplicate Server', description: 'Another server with this Host and Company ID already exists.', variant: 'destructive' });
         return;
       }
-      setServers(servers.map((s) => (s.host === editingServer.host && s.companyId === editingServer.companyId ? data : s)));
+      setServers(servers.map((s) => (s.uuid === editingServer.uuid ? data : s)));
       toast({ title: 'Server Updated', description: 'The server configuration has been saved.' });
     } else {
       // Adding new server
@@ -92,7 +107,7 @@ export default function ServerSettingsPage() {
         toast({ title: 'Duplicate Server', description: 'A server with this Host and Company ID already exists.', variant: 'destructive' });
         return;
       }
-      setServers([...servers, data]);
+      setServers([...servers, { ...data, uuid: uuidv4() }]);
       toast({ title: 'Server Added', description: 'The new server configuration has been added.' });
     }
     setIsDialogOpen(false);
@@ -138,7 +153,10 @@ export default function ServerSettingsPage() {
           throw new Error('The imported file has an invalid format.');
         }
 
-        const importedServers: ServerConfig[] = validationResult.data;
+        const importedServers: ServerConfig[] = validationResult.data.map(s => ({
+            ...s,
+            uuid: s.uuid || uuidv4(),
+        }));
         
         // Filter out duplicates based on host and companyId
         const existingServerKeys = new Set(servers.map(s => `${s.host}-${s.companyId}`));
@@ -237,7 +255,7 @@ export default function ServerSettingsPage() {
               </TableHeader>
               <TableBody>
                 {servers.map((server) => (
-                  <TableRow key={`${server.host}-${server.companyId}`}>
+                  <TableRow key={server.uuid || `${server.host}-${server.companyId}`}>
                     <TableCell className="font-medium">{server.name}</TableCell>
                     <TableCell>{server.host}</TableCell>
                     <TableCell>{server.companyId}</TableCell>

@@ -31,6 +31,7 @@ export default function ServerForm({ server, onSave, onCancel, isEditing = false
   const form = useForm<ServerFormData>({
     resolver: zodResolver(ServerConfigSchema),
     defaultValues: server || {
+      uuid: '', // This will be set on save for new servers
       name: '',
       host: '',
       apiPath: '',
