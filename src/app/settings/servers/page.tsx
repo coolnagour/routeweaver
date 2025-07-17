@@ -64,8 +64,8 @@ export default function ServerSettingsPage() {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = (companyId: string) => {
-    setServers(servers.filter((s) => s.companyId !== companyId));
+  const handleDelete = (serverToDelete: ServerConfig) => {
+    setServers(servers.filter((s) => s.host !== serverToDelete.host || s.companyId !== serverToDelete.companyId));
     toast({
       title: 'Server Deleted',
       description: 'The server configuration has been removed.',
@@ -76,12 +76,20 @@ export default function ServerSettingsPage() {
   const handleSave = (data: ServerConfig) => {
     if (editingServer) {
       // Editing existing server
-      setServers(servers.map((s) => (s.companyId === editingServer.companyId ? data : s)));
+      const isDuplicate = servers.some(
+        s => (s.host === data.host && s.companyId === data.companyId) && 
+             (s.host !== editingServer.host || s.companyId !== editingServer.companyId)
+      );
+      if (isDuplicate) {
+        toast({ title: 'Duplicate Server', description: 'Another server with this Host and Company ID already exists.', variant: 'destructive' });
+        return;
+      }
+      setServers(servers.map((s) => (s.host === editingServer.host && s.companyId === editingServer.companyId ? data : s)));
       toast({ title: 'Server Updated', description: 'The server configuration has been saved.' });
     } else {
-      // Adding new server, check for duplicates
-      if (servers.some(s => s.companyId === data.companyId)) {
-        toast({ title: 'Duplicate Company ID', description: 'A server with this Company ID already exists.', variant: 'destructive' });
+      // Adding new server
+      if (servers.some(s => s.host === data.host && s.companyId === data.companyId)) {
+        toast({ title: 'Duplicate Server', description: 'A server with this Host and Company ID already exists.', variant: 'destructive' });
         return;
       }
       setServers([...servers, data]);
@@ -209,6 +217,7 @@ export default function ServerSettingsPage() {
                             server={editingServer} 
                             onSave={handleSave} 
                             onCancel={() => setIsDialogOpen(false)}
+                            isEditing={!!editingServer}
                         />
                     </DialogContent>
                 </Dialog>
@@ -228,7 +237,7 @@ export default function ServerSettingsPage() {
               </TableHeader>
               <TableBody>
                 {servers.map((server) => (
-                  <TableRow key={server.companyId}>
+                  <TableRow key={`${server.host}-${server.companyId}`}>
                     <TableCell className="font-medium">{server.name}</TableCell>
                     <TableCell>{server.host}</TableCell>
                     <TableCell>{server.companyId}</TableCell>
@@ -252,7 +261,7 @@ export default function ServerSettingsPage() {
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleDelete(server.companyId)}>
+                                <AlertDialogAction onClick={() => handleDelete(server)}>
                                     Delete
                                 </AlertDialogAction>
                                 </AlertDialogFooter>

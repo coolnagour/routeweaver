@@ -23,10 +23,11 @@ type ServerFormData = z.infer<typeof ServerConfigSchema>;
 interface ServerFormProps {
     server?: ServerConfig, 
     onSave: (data: ServerFormData) => void, 
-    onCancel: () => void
+    onCancel: () => void,
+    isEditing?: boolean,
 }
 
-export default function ServerForm({ server, onSave, onCancel }: ServerFormProps) {
+export default function ServerForm({ server, onSave, onCancel, isEditing = false }: ServerFormProps) {
   const form = useForm<ServerFormData>({
     resolver: zodResolver(ServerConfigSchema),
     defaultValues: server || {
@@ -67,7 +68,7 @@ export default function ServerForm({ server, onSave, onCancel }: ServerFormProps
             <FormItem>
               <FormLabel>Host</FormLabel>
               <FormControl>
-                <Input placeholder="e.g., api.icabbi.com" {...field} />
+                <Input placeholder="e.g., api.icabbi.com" {...field} disabled={isEditing} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -119,7 +120,7 @@ export default function ServerForm({ server, onSave, onCancel }: ServerFormProps
             <FormItem>
               <FormLabel>Company ID</FormLabel>
               <FormControl>
-                <Input placeholder="e.g., 1234" {...field} />
+                <Input placeholder="e.g., 1234" {...field} disabled={isEditing} />
               </FormControl>
               <FormMessage />
             </FormItem>

@@ -33,8 +33,8 @@ export default function SelectServerPage() {
   };
   
   const handleSave = (data: ServerConfig) => {
-      if (servers.some(s => s.companyId === data.companyId)) {
-        toast({ title: 'Duplicate Company ID', description: 'A server with this Company ID already exists.', variant: 'destructive' });
+      if (servers.some(s => s.host === data.host && s.companyId === data.companyId)) {
+        toast({ title: 'Duplicate Server', description: 'A server with this Host and Company ID already exists.', variant: 'destructive' });
         return;
       }
       setServers([...servers, data]);
@@ -83,7 +83,7 @@ export default function SelectServerPage() {
             <CardContent className="grid grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-4">
                 {servers.length > 0 ? (
                     servers.map((server) => (
-                        <Card key={server.companyId}>
+                        <Card key={`${server.host}-${server.companyId}`}>
                            <div className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                                 <div className="flex-grow">
                                     <h3 className="text-lg font-semibold">{server.name}</h3>
