@@ -486,7 +486,7 @@ function JourneyBuilderInner({
                                         id="journey-price"
                                         type="number"
                                         placeholder="e.g., 50.00"
-                                        value={journeyPrice || ''}
+                                        value={journeyPrice ?? ''}
                                         onChange={(e) => setJourneyPrice(e.target.value ? parseFloat(e.target.value) : undefined)}
                                         disabled={hasBookingLevelPrice}
                                         className="pl-10 bg-background"
@@ -501,7 +501,7 @@ function JourneyBuilderInner({
                                         id="journey-cost"
                                         type="number"
                                         placeholder="e.g., 20.00"
-                                        value={journeyCost || ''}
+                                        value={journeyCost ?? ''}
                                         onChange={(e) => setJourneyCost(e.target.value ? parseFloat(e.target.value) : undefined)}
                                         disabled={hasBookingLevelPrice}
                                         className="pl-10 bg-background"
