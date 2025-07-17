@@ -63,17 +63,9 @@ export default function BookingManager({
         { id: newPickupStopId, order: 0, location: emptyLocation, stopType: 'pickup', name: '', phone: '', dateTime: undefined, instructions: '' },
         { id: uuidv4(), order: 1, location: emptyLocation, stopType: 'dropoff', pickupStopId: newPickupStopId, instructions: '' }
       ],
-      holdOn: bookings.length === 0, // Default to true only for the very first booking
+      holdOn: false, // Default to false for all new bookings
     };
-    if (newBooking.holdOn) {
-      newBooking.stops.push({
-        id: uuidv4(),
-        order: 1,
-        location: emptyLocation,
-        stopType: 'dropoff',
-        pickupStopId: newBooking.stops[0].id
-      })
-    }
+    
     setBookings(prev => [...prev, newBooking]);
     setEditingBooking(newBooking);
   };
