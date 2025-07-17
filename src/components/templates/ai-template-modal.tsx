@@ -119,8 +119,10 @@ export default function AiTemplateModal({ isOpen, onOpenChange, onTemplateCreate
             siteId: finalSite.id,
             site: finalSite,
             account: finalAccount,
+            enable_messaging_service: suggestion.enable_messaging_service,
             bookings: suggestion.bookings.map(b => ({
                 id: uuidv4(),
+                holdOn: b.holdOn,
                 stops: b.stops.map(s => ({
                     ...s,
                     id: s.id || uuidv4(),
@@ -164,7 +166,7 @@ export default function AiTemplateModal({ isOpen, onOpenChange, onTemplateCreate
             <Bot /> Create Template with AI
           </DialogTitle>
           <DialogDescription>
-            Describe a journey. Try including a specific site or account (e.g., "...for the Dublin site and Marian account").
+            Describe a journey. Try including a specific site or account (e.g., "...for the Dublin site and Marian account"). You can also request SMS updates or a "Hold On" booking.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -172,7 +174,7 @@ export default function AiTemplateModal({ isOpen, onOpenChange, onTemplateCreate
             <Label htmlFor="prompt">Your Journey Description</Label>
             <Textarea
               id="prompt"
-              placeholder="e.g., 'Two bookings for a frequent trip to the airport for business travel for the Marian account.'"
+              placeholder="e.g., 'Two bookings for a frequent trip to the airport for business travel for the Marian account. Include SMS updates.'"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
             />

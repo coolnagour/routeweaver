@@ -33,6 +33,7 @@ const StopSchema = z.object({
 
 const BookingSchema = z.object({
   stops: z.array(StopSchema),
+  holdOn: z.boolean().optional().describe("Set to true if this booking is a special 'Hold On' booking that wraps the entire journey. This is rare and should only be used if explicitly requested, for example, by a phrase like 'a booking to hold the journey' or 'a wrapper booking'. Most bookings should not have this set."),
 });
 
 const AITemplateSuggestionSchema = z.object({
@@ -40,6 +41,7 @@ const AITemplateSuggestionSchema = z.object({
   bookings: z.array(BookingSchema),
   account: AccountSchema.nullable().optional().describe("The specific account to be associated with this template, if found. If no account is found or mentioned, this field MUST be null."),
   site: SiteSchema.nullable().optional().describe("The specific site to be associated with this template, if found. If no site is found or mentioned, this field MUST be null."),
+  enable_messaging_service: z.boolean().optional().describe("Set to true if the user asks for SMS updates, messaging, or notifications for the journey."),
 });
 
 const SuggestTemplatesInputSchema = z.object({
@@ -78,6 +80,8 @@ First, analyze the user's prompt for specific tools.
 - When you call a tool, you must provide all parameters for the tool, including 'name' and 'server'.
 
 Then, generate the journey details based on the user's request (e.g., 'two bookings', 'airport run').
+- If the user asks for SMS updates, notifications, or a messaging service, set 'enable_messaging_service' to true.
+- If the user mentions a "Hold On" booking, a wrapper booking, or a booking that holds the whole journey, set the 'holdOn' property for that specific booking to true. Most bookings will not be 'Hold On' bookings.
 - All generated addresses MUST be within the following country: ${input.countryName}.
 - All generated phone numbers MUST be plausible for the country codes provided in the server config: ${input.server.countryCodes.join(', ')}.
 - Each template must contain one or more bookings.
@@ -103,3 +107,4 @@ User's Journey Description: ${input.prompt}
     return llmResponse.output;
   }
 );
+

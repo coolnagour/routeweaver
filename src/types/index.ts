@@ -98,7 +98,9 @@ export type AITemplateSuggestion = {
   name:string;
   account?: Account | null;
   site?: Site | null;
+  enable_messaging_service?: boolean;
   bookings: {
+    holdOn?: boolean;
     stops: {
       id: string; // The AI now provides this
       location: { address: string };
