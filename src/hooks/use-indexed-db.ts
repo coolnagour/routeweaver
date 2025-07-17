@@ -1,58 +1,106 @@
 
 'use client';
 
-import { useState, useEffect, useCallback, Dispatch, SetStateAction } from 'react';
-import { getFromDb, setInDb, type StoreName, type StoreValue } from '@/lib/db';
+import { useState, useEffect, useCallback } from 'react';
+import { getFromDb, setInDb, getAllFromDbByServer, deleteFromDb as dbDelete, type StoreName, type StoreValue, type Journey, type JourneyTemplate } from '@/lib/db';
 
 const GLOBAL_SCOPE_KEY = 'global';
 
-function useIndexedDB<T extends StoreValue<StoreName>>(
-  storeName: StoreName,
+type CollectionStoreName = 'recent-journeys' | 'journey-templates';
+type SingleValueStoreName = 'server-configs' | 'selected-server';
+
+function useIndexedDB<T extends StoreValue<SingleValueStoreName>>(
+  storeName: SingleValueStoreName,
   initialValue: T,
+  scope?: string | null,
+): [T | null, (value: T) => void];
+
+function useIndexedDB<T extends StoreValue<CollectionStoreName>>(
+  storeName: CollectionStoreName,
+  initialValue: T[],
   scope?: string | null
-): [T | null, (value: T) => void] {
-  const [value, setValue] = useState<T | null>(null);
-  const isClient = typeof window !== 'undefined';
-  const key = scope === null ? 'global' : scope || GLOBAL_SCOPE_KEY;
+): [T[] | null, (value: T[]) => void, (item: T) => Promise<void>, (id: string) => Promise<void>, () => void];
 
-  useEffect(() => {
-    if (!isClient) return;
 
-    let isMounted = true;
+function useIndexedDB<T extends StoreValue<StoreName>>(
+    storeName: StoreName,
+    initialValue: T | T[],
+    scope?: string | null
+): any {
+    const [value, setValue] = useState<T | T[] | null>(null);
+    const isClient = typeof window !== 'undefined';
+    const keyOrScope = scope === null ? 'global' : scope || GLOBAL_SCOPE_KEY;
 
-    async function loadData() {
-      try {
-        const dbValue = await getFromDb(storeName as any, key);
-        if (isMounted) {
-          setValue(dbValue === undefined ? initialValue : dbValue);
+    const refreshCollection = useCallback(async () => {
+        if (!isClient || !keyOrScope) return;
+        try {
+            const data = await getAllFromDbByServer(storeName as CollectionStoreName, keyOrScope);
+            setValue(data);
+        } catch (error) {
+            console.error(`Failed to load collection from IndexedDB for store "${storeName}" and scope "${keyOrScope}"`, error);
+            setValue(initialValue as T[]);
         }
-      } catch (error) {
-        console.error(`Failed to load data from IndexedDB for store "${storeName}" and key "${key}"`, error);
-        if (isMounted) {
-          setValue(initialValue);
+    }, [isClient, keyOrScope, storeName, initialValue]);
+
+
+    useEffect(() => {
+        if (!isClient) return;
+
+        let isMounted = true;
+
+        async function loadData() {
+            if (storeName === 'recent-journeys' || storeName === 'journey-templates') {
+                if (isMounted) refreshCollection();
+            } else {
+                try {
+                    const dbValue = await getFromDb(storeName, keyOrScope);
+                    if (isMounted) {
+                        setValue(dbValue === undefined ? initialValue as T : dbValue);
+                    }
+                } catch (error) {
+                    console.error(`Failed to load data from IndexedDB for store "${storeName}" and key "${keyOrScope}"`, error);
+                    if (isMounted) {
+                        setValue(initialValue as T);
+                    }
+                }
+            }
         }
-      }
+
+        loadData();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [keyOrScope, storeName, isClient, initialValue, refreshCollection]);
+
+    const setDBValue = useCallback(
+        (newValue: T | T[]) => {
+            if (!isClient) return;
+            setValue(newValue);
+            setInDb(storeName, newValue as StoreValue<StoreName>, keyOrScope).catch(error => {
+                console.error(`Failed to save data to IndexedDB for store "${storeName}" and key "${keyOrScope}"`, error);
+            });
+        },
+        [keyOrScope, storeName, isClient]
+    );
+
+    const addItem = useCallback(async (item: T) => {
+        if (!isClient) return;
+        await setInDb(storeName, item as StoreValue<StoreName>);
+        refreshCollection();
+    }, [isClient, storeName, refreshCollection]);
+
+    const deleteItem = useCallback(async (id: string) => {
+        if (!isClient) return;
+        await dbDelete(storeName, id);
+        refreshCollection();
+    }, [isClient, storeName, refreshCollection]);
+
+    if (storeName === 'recent-journeys' || storeName === 'journey-templates') {
+        return [value, setDBValue, addItem, deleteItem, refreshCollection];
     }
-
-    loadData();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [key, storeName, isClient]); // initialValue is intentionally left out to prevent re-fetch on re-render
-
-  const setDBValue = useCallback(
-    (newValue: T) => {
-      if (!isClient) return;
-      setValue(newValue);
-      setInDb(storeName as any, key, newValue).catch(error => {
-        console.error(`Failed to save data to IndexedDB for store "${storeName}" and key "${key}"`, error);
-      });
-    },
-    [key, storeName, isClient]
-  );
-
-  return [value, setDBValue];
+    
+    return [value, setDBValue];
 }
 
 export default useIndexedDB;

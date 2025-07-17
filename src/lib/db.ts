@@ -4,7 +4,7 @@ import { openDB } from 'idb';
 import type { ServerConfig, JourneyTemplate, Journey } from '@/types';
 
 const DB_NAME = 'RouteWeaverDB';
-const DB_VERSION = 2; // Bump version for schema change
+const DB_VERSION = 3; // Bump version for schema change
 
 interface RouteWeaverDB extends DBSchema {
   'server-configs': {
@@ -12,8 +12,9 @@ interface RouteWeaverDB extends DBSchema {
     value: ServerConfig[];
   };
   'journey-templates': {
-    key: string; // scope (server uuid)
-    value: JourneyTemplate[];
+    key: string; // template.id
+    value: JourneyTemplate;
+    indexes: { 'by-server': string }; // To query by server scope
   };
   'recent-journeys': {
     key: string; // journey.id
@@ -38,15 +39,19 @@ const getDb = () => {
         if (!db.objectStoreNames.contains('server-configs')) {
           db.createObjectStore('server-configs');
         }
-        if (!db.objectStoreNames.contains('journey-templates')) {
-          db.createObjectStore('journey-templates');
+        if (oldVersion < 3) {
+            if (db.objectStoreNames.contains('journey-templates')) {
+                db.deleteObjectStore('journey-templates');
+            }
+            const templateStore = db.createObjectStore('journey-templates', { keyPath: 'id' });
+            templateStore.createIndex('by-server', 'serverScope');
         }
         if (oldVersion < 2) {
             if (db.objectStoreNames.contains('recent-journeys')) {
                 db.deleteObjectStore('recent-journeys');
             }
-            const store = db.createObjectStore('recent-journeys', { keyPath: 'id' });
-            store.createIndex('by-server', 'serverScope');
+            const journeyStore = db.createObjectStore('recent-journeys', { keyPath: 'id' });
+            journeyStore.createIndex('by-server', 'serverScope');
         }
         if (!db.objectStoreNames.contains('selected-server')) {
             db.createObjectStore('selected-server');
@@ -67,7 +72,7 @@ export async function getAllFromDb<T extends StoreName>(storeName: T): Promise<S
   return db.getAll(storeName);
 }
 
-export async function getAllFromDbByServer<T extends 'recent-journeys'>(storeName: T, serverScope: string): Promise<Journey[]> {
+export async function getAllFromDbByServer<T extends 'recent-journeys' | 'journey-templates'>(storeName: T, serverScope: string): Promise<T extends 'recent-journeys' ? Journey[] : JourneyTemplate[]> {
     const db = await getDb();
     return db.getAllFromIndex(storeName, 'by-server', serverScope);
 }

@@ -15,25 +15,22 @@ export default function EditTemplatePage() {
   const { server } = useServer();
   const templateId = params.id ? decodeURIComponent(params.id as string) : undefined;
 
-  const [templates] = useIndexedDB<JourneyTemplate[]>('journey-templates', [], server?.uuid);
+  const [templates] = useIndexedDB<JourneyTemplate>('journey-templates', [], server?.uuid);
   const [template, setTemplate] = useState<JourneyTemplate | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (templateId && templates && templates.length > 0) {
+    if (templateId && templates !== null) {
       const foundTemplate = templates.find(t => t.id === templateId);
       if (foundTemplate) {
         setTemplate(foundTemplate);
       } else {
-        // Handle case where template is not found
         console.error(`Template with id ${templateId} not found.`);
         router.push('/templates');
       }
       setLoading(false);
-    } else if (!loading && templates && templates.length === 0) {
-        router.push('/templates');
     }
-  }, [templateId, templates, router, loading]);
+  }, [templateId, templates, router]);
 
   if (loading || !template) {
     return (

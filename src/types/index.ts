@@ -84,6 +84,7 @@ export type TemplateBooking = Omit<Booking, 'stops' | 'siteId' | 'accountId' | '
 
 export interface JourneyTemplate {
   id: string;
+  serverScope: string; // To link template to a server config
   name: string;
   bookings: TemplateBooking[];
   siteId?: number; 
@@ -176,6 +177,7 @@ export const TemplateBookingSchema = BookingSchema.extend({
 
 export const JourneyTemplateSchema = z.object({
   id: z.string(),
+  serverScope: z.string(),
   name: z.string(),
   bookings: z.array(TemplateBookingSchema),
   siteId: z.number().optional(), 

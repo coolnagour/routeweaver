@@ -27,7 +27,7 @@ interface TemplateManagerProps {
 export default function TemplateManager({ onLoadTemplate }: TemplateManagerProps) {
   const { server } = useServer();
   const router = useRouter();
-  const [templates, setTemplates] = useIndexedDB<JourneyTemplate[]>('journey-templates', [], server?.uuid);
+  const [templates, , addTemplate, deleteTemplate] = useIndexedDB<JourneyTemplate>('journey-templates', [], server?.uuid);
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -56,9 +56,8 @@ export default function TemplateManager({ onLoadTemplate }: TemplateManagerProps
     }
   };
 
-  const deleteTemplate = (id: string) => {
-    if (!templates) return;
-    setTemplates(templates.filter((t) => t.id !== id));
+  const handleDeleteTemplate = async (id: string) => {
+    await deleteTemplate(id);
     setSelectedTemplateIds(prev => {
         const newSet = new Set(prev);
         newSet.delete(id);
@@ -75,15 +74,17 @@ export default function TemplateManager({ onLoadTemplate }: TemplateManagerProps
     router.push(`/templates/${id}/edit`);
   };
 
-  const handleAiTemplateCreate = (templateData: Omit<JourneyTemplate, 'id'>) => {
+  const handleAiTemplateCreate = (templateData: Omit<JourneyTemplate, 'id' | 'serverScope'>) => {
+    if (!server?.uuid) return;
     const newTemplate = {
         id: uuidv4(),
+        serverScope: server.uuid,
         ...templateData,
     };
     if (!newTemplate.name) {
         newTemplate.name = "AI Generated Template";
     }
-    setTemplates(prev => [...(prev || []), newTemplate]);
+    addTemplate(newTemplate);
   }
 
   const getTotalPassengers = (template: JourneyTemplate) => {
@@ -169,11 +170,21 @@ export default function TemplateManager({ onLoadTemplate }: TemplateManagerProps
   };
   
   const handleConfirmImport = (selectedTemplates: JourneyTemplate[]) => {
-    setTemplates(prev => [...(prev || []), ...selectedTemplates]);
-    toast({
-        title: "Import Successful",
-        description: `${selectedTemplates.length} new template(s) have been added.`
+    if (!server?.uuid) {
+        toast({ title: 'No server selected', description: 'Cannot import templates without a server context.', variant: 'destructive' });
+        return;
+    }
+    const templatesWithScope = selectedTemplates.map(t => ({...t, serverScope: server.uuid! }));
+    
+    Promise.all(templatesWithScope.map(t => addTemplate(t))).then(() => {
+        toast({
+            title: "Import Successful",
+            description: `${selectedTemplates.length} new template(s) have been added.`
+        });
+    }).catch(err => {
+        toast({ title: 'Import failed', description: err.message, variant: 'destructive' });
     });
+
     setIsImportModalOpen(false);
   }
 
@@ -215,7 +226,7 @@ export default function TemplateManager({ onLoadTemplate }: TemplateManagerProps
                     <div className="flex items-center space-x-2 border-b pb-2">
                         <Checkbox 
                             id="select-all-templates"
-                            checked={allSelected}
+                            checked={!!allSelected}
                             onCheckedChange={handleSelectAll}
                             aria-label="Select all templates"
                             data-state={isIndeterminate ? 'indeterminate' : (allSelected ? 'checked' : 'unchecked')}
@@ -261,7 +272,7 @@ export default function TemplateManager({ onLoadTemplate }: TemplateManagerProps
                            <Button variant="outline" className="flex-1 sm:flex-none" onClick={() => handleEditTemplate(template.id)}>
                                <Edit className="mr-2 h-4 w-4"/> Edit
                            </Button>
-                           <Button variant="destructive" className="flex-1 sm:flex-none" onClick={() => deleteTemplate(template.id)}>
+                           <Button variant="destructive" className="flex-1 sm:flex-none" onClick={() => handleDeleteTemplate(template.id)}>
                                 <Trash2 className="mr-2 h-4 w-4"/> Delete
                            </Button>
                         </div>

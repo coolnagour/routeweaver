@@ -35,6 +35,7 @@ interface JourneyBuilderProps {
   journeyId?: string;
   initialSiteId?: number; // For loading from template
   initialAccount?: Account | null; // For loading from template
+  onUpdateJourney?: (journey: Journey) => void;
 }
 
 interface JourneyPreviewState {
@@ -70,13 +71,14 @@ function JourneyBuilderInner({
   isEditingJourney = false,
   journeyId,
   initialSiteId,
-  initialAccount
+  initialAccount,
+  onUpdateJourney
 }: JourneyBuilderProps) {
   const { toast } = useToast();
   const router = useRouter();
   const { server } = useServer();
   const { addOrUpdateJourney } = useJourneys();
-  const [templates, setTemplates] = useIndexedDB<JourneyTemplate[]>('journey-templates', [], server?.uuid);
+  const [, , addTemplate, ,] = useIndexedDB<JourneyTemplate>('journey-templates', [], server?.uuid);
   const [templateName, setTemplateName] = useState('');
   const [sites, setSites] = useState<{id: number, name: string, ref: string}[]>([]);
   const [isFetchingSites, setIsFetchingSites] = useState(false);
@@ -222,6 +224,9 @@ function JourneyBuilderInner({
             title: 'Journey Updated!',
             description: `Your journey has been successfully updated locally.`,
         });
+        if (onUpdateJourney) {
+            onUpdateJourney(journeyToUpdate);
+        }
     } else {
         const newJourney: Journey = {
             id: uuidv4(),
@@ -245,7 +250,7 @@ function JourneyBuilderInner({
   }
 
   const handleSaveTemplate = () => {
-    if (!templates) return;
+    if (!server?.uuid) return;
     if (!templateName) {
         toast({ title: 'Template name required', variant: 'destructive' });
         return;
@@ -280,24 +285,29 @@ function JourneyBuilderInner({
     };
 
     if (isEditingTemplate && initialData?.id) {
-      const updatedTemplates = templates.map(t => t.id === initialData.id ? { ...t, ...templateData, id: initialData.id } : t);
-      setTemplates(updatedTemplates);
-      toast({
-        title: "Template Updated!",
-        description: `Template "${templateName}" has been saved.`,
-      });
-      router.push('/templates');
+        const updatedTemplate: JourneyTemplate = {
+            ...templateData,
+            id: initialData.id,
+            serverScope: (initialData as JourneyTemplate).serverScope || server.uuid,
+        };
+        addTemplate(updatedTemplate);
+        toast({
+            title: "Template Updated!",
+            description: `Template "${templateName}" has been saved.`,
+        });
+        router.push('/templates');
     } else {
-      const newTemplate: JourneyTemplate = {
-        id: uuidv4(),
-        ...templateData,
-      };
-      setTemplates([...templates, newTemplate]);
-      toast({
-        title: "Template Saved!",
-        description: `Template "${templateName}" has been saved.`,
-      });
-      setTemplateName('');
+        const newTemplate: JourneyTemplate = {
+            id: uuidv4(),
+            serverScope: server.uuid,
+            ...templateData,
+        };
+        addTemplate(newTemplate);
+        toast({
+            title: "Template Saved!",
+            description: `Template "${templateName}" has been saved.`,
+        });
+        setTemplateName('');
     }
   };
 
@@ -589,7 +599,7 @@ function JourneyBuilderInner({
                                     className="bg-background h-10"
                                 />
                             </div>
-                            <Button variant="outline" onClick={handleSaveTemplate} disabled={!templates || bookings.length === 0 || !templateName}>
+                            <Button variant="outline" onClick={handleSaveTemplate} disabled={bookings.length === 0 || !templateName}>
                                 <Save className="mr-2 h-4 w-4" /> {isEditingTemplate ? 'Update' : 'Save as Template'}
                             </Button>
                         </div>

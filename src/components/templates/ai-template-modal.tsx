@@ -25,7 +25,7 @@ import { Alert, AlertDescription } from '../ui/alert';
 interface AiTemplateModalProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  onTemplateCreate: (template: Omit<JourneyTemplate, 'id'>) => void;
+  onTemplateCreate: (template: Omit<JourneyTemplate, 'id' | 'serverScope'>) => void;
 }
 
 // A simple utility to get a country name from its code
@@ -114,7 +114,7 @@ export default function AiTemplateModal({ isOpen, onOpenChange, onTemplateCreate
             return;
         }
 
-        const templateToCreate: Omit<JourneyTemplate, 'id'> = {
+        const templateToCreate: Omit<JourneyTemplate, 'id' | 'serverScope'> = {
             name: suggestion.name,
             siteId: finalSite.id,
             site: finalSite,
