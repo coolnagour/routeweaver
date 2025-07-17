@@ -84,7 +84,7 @@ export const formatBookingForApi = (booking: Booking, server: ServerConfig) => {
         }
     }
 
-    if ((booking.price && booking.price > 0) || (booking.cost && booking.cost > 0)) {
+    if (typeof booking.price === 'number' || typeof booking.cost === 'number') {
         payload.payment = {
             price: booking.price || 0,
             cost: booking.cost || 0,
