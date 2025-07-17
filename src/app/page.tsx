@@ -27,7 +27,7 @@ import { z } from 'zod';
 const ServerConfigsArraySchema = z.array(ServerConfigSchema);
 
 export default function SelectServerPage() {
-  const { server: selectedServer, setServer } = useServer();
+  const { setServer } = useServer();
   const router = useRouter();
   const [servers, setServers] = useIndexedDB<ServerConfig[]>('server-configs', []);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -35,7 +35,16 @@ export default function SelectServerPage() {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleSelectServer = (serverConfig: any) => {
+  const handleSelectServer = (serverConfig: ServerConfig) => {
+    if (servers) {
+        const updatedServers = servers.map(s => {
+            if (s.uuid === serverConfig.uuid) {
+                return { ...s, usageCount: (s.usageCount || 0) + 1 };
+            }
+            return s;
+        });
+        setServers(updatedServers);
+    }
     setServer(serverConfig);
     router.push('/journeys/new');
   };
@@ -46,7 +55,7 @@ export default function SelectServerPage() {
         toast({ title: 'Duplicate Server', description: 'A server with this Host and Company ID already exists.', variant: 'destructive' });
         return;
       }
-      const newServer = { ...data, uuid: uuidv4() };
+      const newServer = { ...data, uuid: uuidv4(), usageCount: 0 };
       setServers([...servers, newServer]);
       toast({ title: 'Server Added', description: 'The new server configuration has been added.' });
     setIsDialogOpen(false);
@@ -58,13 +67,7 @@ export default function SelectServerPage() {
           server.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
           server.host.toLowerCase().includes(searchTerm.toLowerCase())
         )
-        .sort((a, b) => {
-          if (selectedServer?.uuid) {
-            if (a.uuid === selectedServer.uuid) return -1;
-            if (b.uuid === selectedServer.uuid) return 1;
-          }
-          return a.name.localeCompare(b.name);
-        })
+        .sort((a, b) => (b.usageCount || 0) - (a.usageCount || 0))
     : [];
     
   const handleImportClick = () => {
@@ -94,6 +97,7 @@ export default function SelectServerPage() {
         const importedServers: ServerConfig[] = validationResult.data.map(s => ({
             ...s,
             uuid: s.uuid || uuidv4(),
+            usageCount: s.usageCount || 0,
         }));
         
         const currentServers = servers || [];

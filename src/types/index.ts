@@ -10,6 +10,7 @@ export const ServerConfigSchema = z.object({
     secretKey: z.string().min(1, "Secret Key is required"),
     companyId: z.string().min(1, "Company ID is required"),
     countryCodes: z.array(z.string()).min(1, "At least one country code is required"),
+    usageCount: z.number().optional(), // To track how many times a server is used
 });
 export type ServerConfig = z.infer<typeof ServerConfigSchema>;
 
