@@ -80,20 +80,18 @@ export default function SelectServerPage() {
                     </Dialog>
                 </div>
             </CardHeader>
-            <CardContent className="grid grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-4">
+            <CardContent className="flex flex-col gap-2">
                 {servers.length > 0 ? (
                     servers.map((server) => (
-                        <Card key={`${server.host}-${server.companyId}`}>
-                           <div className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                                <div className="flex-grow">
-                                    <h3 className="text-lg font-semibold">{server.name}</h3>
-                                    <p className="text-sm text-muted-foreground">{server.host}</p>
-                                </div>
-                                <Button className="w-full sm:w-auto" onClick={() => handleSelectServer(server)}>
-                                    Connect
-                                </Button>
+                        <div key={`${server.host}-${server.companyId}`} className="flex items-center justify-between rounded-md border p-3 pl-4 transition-colors hover:bg-muted/50">
+                            <div className="flex-grow">
+                                <h3 className="text-lg font-semibold">{server.name}</h3>
+                                <p className="text-sm text-muted-foreground">{server.host}</p>
                             </div>
-                        </Card>
+                            <Button className="w-full sm:w-auto ml-4" onClick={() => handleSelectServer(server)}>
+                                Connect
+                            </Button>
+                        </div>
                     ))
                 ) : (
                     <div className="col-span-full text-center py-10 border-2 border-dashed rounded-lg">
