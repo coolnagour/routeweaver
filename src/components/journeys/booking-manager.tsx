@@ -51,6 +51,8 @@ export default function BookingManager({
   const [isSendingEvent, setIsSendingEvent] = useState<string | null>(null);
   const { server } = useServer();
   const { toast } = useToast();
+  const [liveStatus, setLiveStatus] = useState<{ bookingId: string; status: string | null; isLoading: boolean } | null>(null);
+
 
   const handleEditBooking = (booking: Booking) => {
     setEditingBooking(booking);
@@ -134,7 +136,6 @@ export default function BookingManager({
       setIsSendingEvent(eventKey);
 
       try {
-          // Fetch the booking details from the server to get the correct 'id'
           const serverBooking = await getBookingById(server, booking.bookingServerId);
           if (!serverBooking || !serverBooking.id) {
               throw new Error("Could not retrieve the correct booking ID from the server.");
@@ -158,6 +159,26 @@ export default function BookingManager({
       }
   }
 
+  const handleMenuOpen = async (isOpen: boolean, booking: Booking) => {
+    if (isOpen && booking.bookingServerId && server) {
+        setLiveStatus({ bookingId: booking.id, status: null, isLoading: true });
+        try {
+            const serverBooking = await getBookingById(server, booking.bookingServerId);
+            setLiveStatus({ bookingId: booking.id, status: serverBooking?.status || null, isLoading: false });
+        } catch (error) {
+            console.error("Failed to fetch booking status:", error);
+            toast({
+                variant: "destructive",
+                title: "Could not fetch booking status",
+                description: "Event actions may not be accurate.",
+            });
+            setLiveStatus({ bookingId: booking.id, status: null, isLoading: false });
+        }
+    } else if (!isOpen) {
+        setLiveStatus(null);
+    }
+  }
+
   const getTotalPassengers = (bookings: Booking[]) => {
       return bookings.reduce((total, booking) => {
           if (booking.holdOn) return total; // Don't count passengers from hold on bookings
@@ -171,6 +192,11 @@ export default function BookingManager({
   }
   
   const hasHoldOnBooking = bookings.some(b => b.holdOn);
+  const currentStatus = liveStatus?.status;
+  const isArriveEnabled = currentStatus === 'ENROUTE';
+  const isMadeContactEnabled = currentStatus === 'ARRIVED';
+  const isPaymentDropOffEnabled = currentStatus === 'DROPPINGOFF';
+  const isNoShowEnabled = currentStatus === 'ENROUTE' || currentStatus === 'ARRIVED';
 
   if (editingBooking) {
     const isFirstBooking = bookings.length > 0 && bookings[0].id === editingBooking.id;
@@ -216,29 +242,29 @@ export default function BookingManager({
                              </div>
                               <div className="flex items-center">
                                   {booking.bookingServerId && (
-                                      <DropdownMenu>
+                                      <DropdownMenu onOpenChange={(open) => handleMenuOpen(open, booking)}>
                                           <DropdownMenuTrigger asChild>
                                               <Button variant="ghost" size="icon">
                                                   {isSendingEvent && isSendingEvent.startsWith(booking.id) ? <Loader2 className="h-4 w-4 animate-spin" /> : <MoreHorizontal className="h-4 w-4" />}
                                               </Button>
                                           </DropdownMenuTrigger>
                                           <DropdownMenuContent align="end">
-                                              <DropdownMenuLabel>Driver Events</DropdownMenuLabel>
+                                              <DropdownMenuLabel>Driver Events {liveStatus?.isLoading && <Loader2 className="inline-block h-3 w-3 ml-2 animate-spin" />}</DropdownMenuLabel>
                                               <DropdownMenuSeparator />
-                                              <DropdownMenuItem onClick={() => handleSendEvent(booking, 'status_arrived', 'Arrive')}>
+                                              <DropdownMenuItem onClick={() => handleSendEvent(booking, 'status_arrived', 'Arrive')} disabled={!isArriveEnabled}>
                                                   Arrive
                                               </DropdownMenuItem>
-                                              <DropdownMenuItem onClick={() => handleSendEvent(booking, 'status_pob', 'Made Contact')}>
+                                              <DropdownMenuItem onClick={() => handleSendEvent(booking, 'status_pob', 'Made Contact')} disabled={!isMadeContactEnabled}>
                                                   Made Contact
                                               </DropdownMenuItem>
-                                              <DropdownMenuItem onClick={() => handleSendEvent(booking, 'show_payment_screen', 'Payment')}>
+                                              <DropdownMenuItem onClick={() => handleSendEvent(booking, 'show_payment_screen', 'Payment')} disabled={!isPaymentDropOffEnabled}>
                                                   Payment after Made Contact
                                               </DropdownMenuItem>
-                                              <DropdownMenuItem onClick={() => handleSendEvent(booking, 'booking_drop_off', 'Drop Off')}>
+                                              <DropdownMenuItem onClick={() => handleSendEvent(booking, 'booking_drop_off', 'Drop Off')} disabled={!isPaymentDropOffEnabled}>
                                                   Drop Off
                                               </DropdownMenuItem>
                                               <DropdownMenuSeparator />
-                                               <DropdownMenuItem onClick={() => handleSendEvent(booking, 'status_no_show', 'No Show')} className="text-destructive">
+                                               <DropdownMenuItem onClick={() => handleSendEvent(booking, 'status_no_show', 'No Show')} className="text-destructive" disabled={!isNoShowEnabled}>
                                                   No Show
                                               </DropdownMenuItem>
                                           </DropdownMenuContent>
@@ -318,29 +344,29 @@ export default function BookingManager({
                       </div>
                       <div className="flex items-center">
                           {booking.bookingServerId && hasHoldOnBooking && (
-                              <DropdownMenu>
+                              <DropdownMenu onOpenChange={(open) => handleMenuOpen(open, booking)}>
                                   <DropdownMenuTrigger asChild>
                                       <Button variant="ghost" size="icon">
                                           {isSendingEvent && isSendingEvent.startsWith(booking.id) ? <Loader2 className="h-4 w-4 animate-spin" /> : <MoreHorizontal className="h-4 w-4" />}
                                       </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
-                                      <DropdownMenuLabel>Driver Events</DropdownMenuLabel>
+                                      <DropdownMenuLabel>Driver Events {liveStatus?.isLoading && <Loader2 className="inline-block h-3 w-3 ml-2 animate-spin" />}</DropdownMenuLabel>
                                       <DropdownMenuSeparator />
-                                      <DropdownMenuItem onClick={() => handleSendEvent(booking, 'status_arrived', 'Arrive')}>
+                                      <DropdownMenuItem onClick={() => handleSendEvent(booking, 'status_arrived', 'Arrive')} disabled={!isArriveEnabled}>
                                           Arrive
                                       </DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => handleSendEvent(booking, 'status_pob', 'Made Contact')}>
+                                      <DropdownMenuItem onClick={() => handleSendEvent(booking, 'status_pob', 'Made Contact')} disabled={!isMadeContactEnabled}>
                                           Made Contact
                                       </DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => handleSendEvent(booking, 'show_payment_screen', 'Payment')}>
+                                      <DropdownMenuItem onClick={() => handleSendEvent(booking, 'show_payment_screen', 'Payment')} disabled={!isPaymentDropOffEnabled}>
                                           Payment after Made Contact
                                       </DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => handleSendEvent(booking, 'booking_drop_off', 'Drop Off')}>
+                                      <DropdownMenuItem onClick={() => handleSendEvent(booking, 'booking_drop_off', 'Drop Off')} disabled={!isPaymentDropOffEnabled}>
                                           Drop Off
                                       </DropdownMenuItem>
                                       <DropdownMenuSeparator />
-                                       <DropdownMenuItem onClick={() => handleSendEvent(booking, 'status_no_show', 'No Show')} className="text-destructive">
+                                       <DropdownMenuItem onClick={() => handleSendEvent(booking, 'status_no_show', 'No Show')} className="text-destructive" disabled={!isNoShowEnabled}>
                                           No Show
                                       </DropdownMenuItem>
                                   </DropdownMenuContent>
