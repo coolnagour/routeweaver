@@ -12,7 +12,7 @@ import { format } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
 import { useServer } from '@/context/server-context';
 import { useToast } from '@/hooks/use-toast';
-import { deleteBooking, sendDriverAppEvent } from '@/services/icabbi';
+import { deleteBooking, sendDriverAppEvent, getBookingById } from '@/services/icabbi';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -134,10 +134,18 @@ export default function BookingManager({
       setIsSendingEvent(eventKey);
 
       try {
-          await sendDriverAppEvent(server, eventType, booking.bookingServerId);
+          // Fetch the booking details from the server to get the correct 'id'
+          const serverBooking = await getBookingById(server, booking.bookingServerId);
+          if (!serverBooking || !serverBooking.id) {
+              throw new Error("Could not retrieve the correct booking ID from the server.");
+          }
+          
+          const correctBookingId = serverBooking.id;
+
+          await sendDriverAppEvent(server, eventType, correctBookingId);
           toast({
               title: 'Event Sent',
-              description: `The "${eventLabel}" event was successfully sent for booking ID ${booking.bookingServerId}.`
+              description: `The "${eventLabel}" event was successfully sent for booking ID ${correctBookingId}.`
           });
       } catch (error) {
           toast({

@@ -108,6 +108,20 @@ export async function updateBooking(server: ServerConfig, { booking, siteId, acc
     return response.body.booking;
 }
 
+export async function getBookingById(server: ServerConfig, permaId: number) {
+    const response = await callIcabbiApi({
+        server,
+        method: 'GET',
+        endpoint: `bookings/index/${permaId}`,
+    });
+
+    if (response && response.body && response.body.booking) {
+        return response.body.booking;
+    }
+
+    throw new Error(`Booking with perma_id ${permaId} not found or invalid response.`);
+}
+
 export async function deleteBooking(server: ServerConfig, bookingId: number) {
     const response = await callIcabbiApi({
         server,
