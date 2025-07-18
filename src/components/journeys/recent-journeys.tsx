@@ -88,7 +88,10 @@ export default function RecentJourneys() {
           }))
         }));
 
-      const { orderedStops } = await generateJourneyPayload({ bookings: tempBookingsForPreview });
+      const { orderedStops } = await generateJourneyPayload({ 
+          bookings: tempBookingsForPreview,
+          journeyServerId: journey.journeyServerId,
+      });
       setDebugData(prev => ({ ...prev, [journey.id]: { orderedStops, isLoading: false }}));
     } catch(e) {
       console.error("Error generating debug view for journey:", e);
@@ -633,4 +636,3 @@ export default function RecentJourneys() {
     </div>
   );
 }
-
