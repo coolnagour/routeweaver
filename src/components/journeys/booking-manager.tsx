@@ -215,6 +215,35 @@ export default function BookingManager({
                                 <p className="text-sm text-muted-foreground flex items-center gap-2"><Info className="h-4 w-4" />This special booking will wrap the journey.</p>
                              </div>
                               <div className="flex items-center">
+                                  {booking.bookingServerId && (
+                                      <DropdownMenu>
+                                          <DropdownMenuTrigger asChild>
+                                              <Button variant="ghost" size="icon">
+                                                  {isSendingEvent && isSendingEvent.startsWith(booking.id) ? <Loader2 className="h-4 w-4 animate-spin" /> : <MoreHorizontal className="h-4 w-4" />}
+                                              </Button>
+                                          </DropdownMenuTrigger>
+                                          <DropdownMenuContent align="end">
+                                              <DropdownMenuLabel>Driver Events</DropdownMenuLabel>
+                                              <DropdownMenuSeparator />
+                                              <DropdownMenuItem onClick={() => handleSendEvent(booking, 'status_arrived', 'Arrive')}>
+                                                  Arrive
+                                              </DropdownMenuItem>
+                                              <DropdownMenuItem onClick={() => handleSendEvent(booking, 'status_pob', 'Made Contact')}>
+                                                  Made Contact
+                                              </DropdownMenuItem>
+                                              <DropdownMenuItem onClick={() => handleSendEvent(booking, 'show_payment_screen', 'Payment')}>
+                                                  Payment after Made Contact
+                                              </DropdownMenuItem>
+                                              <DropdownMenuItem onClick={() => handleSendEvent(booking, 'booking_drop_off', 'Drop Off')}>
+                                                  Drop Off
+                                              </DropdownMenuItem>
+                                              <DropdownMenuSeparator />
+                                               <DropdownMenuItem onClick={() => handleSendEvent(booking, 'status_no_show', 'No Show')} className="text-destructive">
+                                                  No Show
+                                              </DropdownMenuItem>
+                                          </DropdownMenuContent>
+                                      </DropdownMenu>
+                                  )}
                                   <Button variant="ghost" size="icon" onClick={() => handleEditBooking(booking)}>
                                     <Edit className="h-4 w-4" />
                                   </Button>
