@@ -265,7 +265,6 @@ export default function RecentJourneys() {
     const blob = new Blob([jsonString], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.href = url;
     link.download = `journeys-export-(${journeysToExport.length}).json`;
     document.body.appendChild(link);
     link.click();
@@ -334,22 +333,17 @@ export default function RecentJourneys() {
     const importPromises = selectedJourneys.map(journey => {
         const newJourney: Journey = {
             ...journey,
-            // Assign a new local ID to prevent any potential collisions
-            id: uuidv4(), 
-            // Reset server-specific data
-            journeyServerId: undefined, 
-            status: 'Draft',
-            orderedStops: undefined,
+            // Assign a new local ID to prevent any potential collisions, but keep server data
+            id: uuidv4(),
             // Associate with the currently active server
-            serverScope: server.uuid, 
+            serverScope: server.uuid,
+            // Ensure bookings and stops also get new local IDs if they dont have one, but keep server data
             bookings: journey.bookings.map(b => ({
                 ...b,
-                id: uuidv4(),
-                bookingServerId: undefined,
+                id: b.id || uuidv4(),
                 stops: b.stops.map(s => ({
                     ...s,
-                    id: uuidv4(),
-                    bookingSegmentId: undefined
+                    id: s.id || uuidv4(),
                 }))
             })),
         };
@@ -360,7 +354,7 @@ export default function RecentJourneys() {
         await Promise.all(importPromises);
         toast({
             title: "Import Successful",
-            description: `${importedCount} new journey(s) have been added as drafts.`
+            description: `${importedCount} journey(s) have been imported.`
         });
         refreshJourneys(); // Refresh the list to show the new journeys
     } catch(err) {
