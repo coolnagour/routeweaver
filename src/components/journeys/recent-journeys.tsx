@@ -31,6 +31,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Checkbox } from '../ui/checkbox';
 import { Label } from '../ui/label';
 import ImportJourneysDialog from './import-journeys-dialog';
+import { getBookingById } from '@/services/icabbi';
 
 const JourneysArraySchema = z.array(JourneySchema);
 
@@ -91,6 +92,7 @@ export default function RecentJourneys() {
       const { orderedStops } = await generateJourneyPayload({ 
           bookings: tempBookingsForPreview,
           journeyServerId: journey.journeyServerId,
+          enable_messaging_service: journey.enable_messaging_service,
       });
       setDebugData(prev => ({ ...prev, [journey.id]: { orderedStops, isLoading: false }}));
     } catch(e) {
@@ -158,6 +160,7 @@ export default function RecentJourneys() {
             journeyServerId: journey.journeyServerId,
             price: journey.price,
             cost: journey.cost,
+            enable_messaging_service: journey.enable_messaging_service,
         });
         
         const publishedJourney: Journey = {
@@ -265,6 +268,7 @@ export default function RecentJourneys() {
     const blob = new Blob([jsonString], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
+    link.href = url;
     link.download = `journeys-export-(${journeysToExport.length}).json`;
     document.body.appendChild(link);
     link.click();
@@ -347,7 +351,7 @@ export default function RecentJourneys() {
                 }))
             })),
         };
-        return addOrUpdateJourney(newJourney);
+        return addOrUpdateJourney(newJourney, false); // Don't sort, preserve imported order
     });
     
     try {
@@ -630,3 +634,5 @@ export default function RecentJourneys() {
     </div>
   );
 }
+
+    

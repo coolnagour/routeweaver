@@ -35,7 +35,7 @@ export function useJourneys() {
     refreshJourneys();
   }, [refreshJourneys]);
 
-  const addOrUpdateJourney = useCallback(async (journey: Journey) => {
+  const addOrUpdateJourney = useCallback(async (journey: Journey, sort: boolean = true) => {
     if (!serverScope) {
         throw new Error("Cannot save journey without a server scope.");
     }
@@ -47,13 +47,17 @@ export function useJourneys() {
     setJourneys(prev => {
         if (!prev) return [journeyWithScope];
         const existingIndex = prev.findIndex(j => j.id === journey.id);
+        let newJourneys;
         if (existingIndex > -1) {
-            const newJourneys = [...prev];
+            newJourneys = [...prev];
             newJourneys[existingIndex] = journeyWithScope;
-            return newJourneys;
         } else {
-            return [journeyWithScope, ...prev];
+            newJourneys = [journeyWithScope, ...prev];
         }
+        if (sort) {
+          return newJourneys.sort((a,b) => (b.journeyServerId || 0) - (a.journeyServerId || 0));
+        }
+        return newJourneys;
     });
   }, [serverScope]);
   
@@ -64,3 +68,5 @@ export function useJourneys() {
 
   return { journeys, loading, addOrUpdateJourney, deleteJourney, refreshJourneys };
 }
+
+    
