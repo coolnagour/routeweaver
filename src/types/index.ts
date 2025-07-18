@@ -22,62 +22,81 @@ export interface Location {
   lng: number;
 }
 
-export interface Stop {
-  id: string;
-  order: number;
-  location: Location;
-  stopType: StopType;
-  bookingSegmentId?: number; // ID from iCabbi API for a specific leg
-  dateTime?: Date; // Only for pickup stops
-  instructions?: string;
-  // Fields for pickup
-  name?: string;
-  phone?:string;
-  // Field for dropoff to link back to a-pickup
-  pickupStopId?: string; 
-}
+const LocationSchema = z.object({
+  address: z.string(),
+  lat: z.number(),
+  lng: z.number(),
+});
 
-export interface Booking {
-  id: string; // Local/React ID
-  bookingServerId?: number; // ID from iCabbi API
-  stops: Stop[];
-  // siteId and accountId are not part of the core booking data model
-  // but are added as context when calling the API.
-  customerId?: string; // Optional free text field
-  externalBookingId?: string; // Optional free text field
-  vehicleType?: string; // Optional free text field
-  externalAreaCode?: string; // Optional free text field
-  price?: number; // Optional numeric field
-  cost?: number; // Optional numeric field
-  instructions?: string; // Booking-level instructions
-  holdOn?: boolean; // For the "Hold On" feature
-}
+export const StopSchema = z.object({
+  id: z.string(),
+  order: z.number(),
+  location: LocationSchema,
+  stopType: z.enum(['pickup', 'dropoff']),
+  bookingSegmentId: z.number().optional(),
+  dateTime: z.union([z.date(), z.string().datetime().optional()]).optional().transform(val => val ? new Date(val) : undefined),
+  name: z.string().optional(),
+  phone: z.string().optional(),
+  pickupStopId: z.string().optional(),
+  instructions: z.string().optional(),
+});
+export type Stop = z.infer<typeof StopSchema>;
+
+
+export const BookingSchema = z.object({
+  id: z.string(),
+  bookingServerId: z.number().optional(),
+  stops: z.array(StopSchema),
+  customerId: z.string().optional(),
+  externalBookingId: z.string().optional(),
+  vehicleType: z.string().optional(),
+  externalAreaCode: z.string().optional(),
+  price: z.number().optional(),
+  cost: z.number().optional(),
+  instructions: z.string().optional(), // Booking-level instructions
+  holdOn: z.boolean().optional(),
+});
+export type Booking = z.infer<typeof BookingSchema>;
 
 export interface Account {
   id: number;
   name: string;
   ref: string;
 }
+export const AccountSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  ref: z.string(),
+});
+
 
 export interface Site {
   id: number;
   name: string;
   ref: string;
 }
+export const SiteSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  ref: z.string(),
+});
 
-export interface Journey {
-  id: string; // Local/React ID
-  serverScope: string; // To link journey to a server config
-  journeyServerId?: number; // ID from iCabbi API
-  bookings: Booking[];
-  status: 'Draft' | 'Scheduled' | 'Completed' | 'Cancelled';
-  site?: Site | null;
-  account?: Account | null;
-  orderedStops?: Stop[]; // The final ordered stops from the server
-  price?: number;
-  cost?: number;
-  enable_messaging_service?: boolean;
-}
+
+export const JourneySchema = z.object({
+  id: z.string(),
+  serverScope: z.string(),
+  journeyServerId: z.number().optional(),
+  bookings: z.array(BookingSchema),
+  status: z.enum(['Draft', 'Scheduled', 'Completed', 'Cancelled']),
+  site: SiteSchema.nullable().optional(),
+  account: AccountSchema.nullable().optional(),
+  orderedStops: z.array(StopSchema).optional(),
+  price: z.number().optional(),
+  cost: z.number().optional(),
+  enable_messaging_service: z.boolean().optional(),
+});
+export type Journey = z.infer<typeof JourneySchema>;
+
 
 // Stored template has string dates
 export type TemplateBooking = Omit<Booking, 'stops' | 'bookingServerId'> & { stops: Stop[] };
@@ -121,14 +140,8 @@ export type JourneyPayloadOutput = {
 
 const e164Regex = /^\+[1-9]\d{1,14}$/;
 
-// Schemas for Genkit Flow
-const LocationSchema = z.object({
-  address: z.string(),
-  lat: z.number(),
-  lng: z.number(),
-});
-
-export const StopSchema = z.object({
+// Genkit Flow Schemas (runtime validation with coercion)
+const GenkitStopSchema = z.object({
   id: z.string(),
   order: z.number(),
   location: LocationSchema,
@@ -143,35 +156,23 @@ export const StopSchema = z.object({
   instructions: z.string().optional(),
 });
 
-export const BookingSchema = z.object({
+const GenkitBookingSchema = z.object({
   id: z.string(),
   bookingServerId: z.number().optional(),
-  stops: z.array(StopSchema),
+  stops: z.array(GenkitStopSchema),
   customerId: z.string().optional(),
   externalBookingId: z.string().optional(),
   vehicleType: z.string().optional(),
   externalAreaCode: z.string().optional(),
   price: z.number().optional(),
   cost: z.number().optional(),
-  instructions: z.string().optional(), // Booking-level instructions
+  instructions: z.string().optional(),
   holdOn: z.boolean().optional(),
 });
 
-export const AccountSchema = z.object({
-  id: z.number(),
-  name: z.string(),
-  ref: z.string(),
-});
-
-export const SiteSchema = z.object({
-  id: z.number(),
-  name: z.string(),
-  ref: z.string(),
-});
-
 // Stored template has string dates
-export const TemplateBookingSchema = BookingSchema.extend({
-  stops: z.array(StopSchema),
+export const TemplateBookingSchema = GenkitBookingSchema.extend({
+  stops: z.array(GenkitStopSchema),
 }).omit({ bookingServerId: true });
 
 export const JourneyTemplateSchema = z.object({
@@ -185,7 +186,7 @@ export const JourneyTemplateSchema = z.object({
 });
 
 export const JourneyInputSchema = z.object({
-  bookings: z.array(BookingSchema),
+  bookings: z.array(GenkitBookingSchema),
   journeyServerId: z.number().optional(),
   price: z.number().optional(),
   cost: z.number().optional(),
@@ -196,10 +197,10 @@ export type JourneyInput = z.infer<typeof JourneyInputSchema>;
 
 export const JourneyOutputSchema = z.object({
   journeyServerId: z.number(),
-  bookings: z.array(BookingSchema),
+  bookings: z.array(GenkitBookingSchema),
   status: z.string(),
   message: z.string(),
-  orderedStops: z.array(StopSchema),
+  orderedStops: z.array(GenkitStopSchema),
 });
 export type JourneyOutput = z.infer<typeof JourneyOutputSchema>;
 
