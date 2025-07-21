@@ -276,6 +276,8 @@ function JourneyBuilderInner({
       })),
       site: selectedSite,
       account: selectedAccount,
+      price: journeyPrice,
+      cost: journeyCost,
       enable_messaging_service: enableMessaging,
     };
 
