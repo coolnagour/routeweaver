@@ -135,13 +135,13 @@ export default function SelectServerPage() {
 
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
+    <div className="flex min-h-screen w-full items-center justify-center bg-muted/40 p-4">
       <div className="w-full max-w-2xl">
          <Card>
             <CardHeader>
-                <div className="flex justify-between items-center">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="flex items-center gap-4">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <div className="hidden sm:flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
                             <Server className="h-6 w-6" />
                         </div>
                         <div>
@@ -149,7 +149,7 @@ export default function SelectServerPage() {
                             <CardDescription>Choose a server to connect to for managing journeys.</CardDescription>
                         </div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 w-full md:w-auto">
                         <input
                             type="file"
                             ref={fileInputRef}
@@ -157,12 +157,12 @@ export default function SelectServerPage() {
                             accept="application/json"
                             className="hidden"
                         />
-                        <Button variant="outline" onClick={handleImportClick}>
+                        <Button variant="outline" onClick={handleImportClick} className="flex-1 md:flex-none">
                             <Upload className="mr-2 h-4 w-4" /> Import
                         </Button>
                         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                             <DialogTrigger asChild>
-                                <Button>
+                                <Button className="flex-1 md:flex-none">
                                     <PlusCircle className="mr-2 h-4 w-4" />
                                     Add Server
                                 </Button>
