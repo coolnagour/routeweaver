@@ -194,7 +194,7 @@ export default function BookingManager({
   const hasHoldOnBooking = bookings.some(b => b.holdOn);
   const currentStatus = liveStatus?.status;
   const isArriveEnabled = currentStatus === 'ENROUTE';
-  const isMadeContactEnabled = currentStatus === 'ARRIVED';
+  const isMadeContactEnabled = currentStatus === 'ENROUTE' || currentStatus === 'ARRIVED';
   const isPaymentDropOffEnabled = currentStatus === 'DROPPINGOFF';
   const isNoShowEnabled = currentStatus === 'ENROUTE' || currentStatus === 'ARRIVED';
 
