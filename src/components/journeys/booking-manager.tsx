@@ -194,9 +194,12 @@ export default function BookingManager({
   const hasHoldOnBooking = bookings.some(b => b.holdOn);
   const currentStatus = liveStatus?.status;
   const isArriveEnabled = currentStatus === 'ENROUTE';
-  const isMadeContactEnabled = currentStatus === 'ENROUTE' || currentStatus === 'ARRIVED';
+  const isMadeContactEnabled = currentStatus === 'ARRIVED';
   const isPaymentDropOffEnabled = currentStatus === 'DROPPINGOFF';
   const isNoShowEnabled = currentStatus === 'ENROUTE' || currentStatus === 'ARRIVED';
+  
+  // Specific logic for Hold On bookings
+  const isHoldOnMadeContactEnabled = currentStatus === 'ENROUTE' || currentStatus === 'ARRIVED';
 
   if (editingBooking) {
     const isFirstBooking = bookings.length > 0 && bookings[0].id === editingBooking.id;
@@ -254,7 +257,7 @@ export default function BookingManager({
                                               <DropdownMenuItem onClick={() => handleSendEvent(booking, 'status_arrived', 'Arrive')} disabled={!isArriveEnabled}>
                                                   Arrive
                                               </DropdownMenuItem>
-                                              <DropdownMenuItem onClick={() => handleSendEvent(booking, 'status_pob', 'Made Contact')} disabled={!isMadeContactEnabled}>
+                                              <DropdownMenuItem onClick={() => handleSendEvent(booking, 'status_pob', 'Made Contact')} disabled={!isHoldOnMadeContactEnabled}>
                                                   Made Contact
                                               </DropdownMenuItem>
                                               <DropdownMenuItem onClick={() => handleSendEvent(booking, 'show_payment_screen', 'Payment')} disabled={!isPaymentDropOffEnabled}>
