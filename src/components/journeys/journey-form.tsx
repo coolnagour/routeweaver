@@ -27,7 +27,7 @@ import { BookingSchema } from '@/types';
 import ViaStop from './via-stop';
 import AddressAutocomplete from './address-autocomplete';
 import { generateSuggestion } from '@/ai/flows/suggestion-flow';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { v4 as uuidv4 } from 'uuid';
 import { Switch } from '../ui/switch';
