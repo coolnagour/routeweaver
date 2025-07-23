@@ -684,14 +684,26 @@ function JourneyBuilderInner({
   );
 
   return (
-    <div className="py-4 lg:py-8 h-full">
-        {/* Mobile Layout: Map on top */}
-        <div className="lg:hidden h-64 sticky top-0 z-10 p-4 -m-4 bg-background">
-            {journeyMapComponent}
+    <div className="py-4 lg:py-8 h-[calc(100vh-var(--header-height,0px))]">
+        {/* Mobile/Tablet Layout: Vertical Resizable Panels */}
+        <div className="lg:hidden h-full">
+             <PanelGroup direction="vertical">
+                <Panel defaultSize={40} minSize={20}>
+                    <div className="h-full w-full p-2">
+                        {journeyMapComponent}
+                    </div>
+                </Panel>
+                <PanelResizeHandle className="h-2 flex items-center justify-center bg-transparent">
+                    <div className="h-1 w-8 bg-border rounded-full" />
+                </PanelResizeHandle>
+                <Panel defaultSize={60} minSize={30}>
+                    {journeyContentComponent}
+                </Panel>
+            </PanelGroup>
         </div>
 
-        {/* Desktop Layout: Resizable Panels */}
-        <div className="hidden lg:block h-[calc(100vh-4rem)]">
+        {/* Desktop Layout: Horizontal Resizable Panels */}
+        <div className="hidden lg:block h-full">
             <PanelGroup direction="horizontal">
                 <Panel defaultSize={50} minSize={30}>
                     {journeyContentComponent}
@@ -706,11 +718,6 @@ function JourneyBuilderInner({
                 </Panel>
             </PanelGroup>
         </div>
-
-        {/* Mobile content (non-map part) */}
-        <div className="lg:hidden mt-4">
-            {journeyContentComponent}
-        </div>
     </div>
   );
 }
@@ -723,3 +730,5 @@ export default function JourneyBuilder(props: JourneyBuilderProps) {
     </MapSelectionProvider>
   )
 }
+
+    

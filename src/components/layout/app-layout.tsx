@@ -7,6 +7,7 @@ import MainSidebar from './main-sidebar';
 import MobileHeader from './mobile-header';
 import GlobalLoader from './global-loader';
 import { AuthProvider } from '@/context/auth-context';
+import { useEffect } from 'react';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -15,6 +16,16 @@ interface AppLayoutProps {
 export default function AppLayout({ children }: AppLayoutProps) {
   const pathname = usePathname();
   const noLayoutPages = ['/login', '/'];
+
+  useEffect(() => {
+    // Set CSS variable for header height to use in calc()
+    const header = document.querySelector('header.sticky'); // MobileHeader
+    if (header) {
+      document.documentElement.style.setProperty('--header-height', `${header.clientHeight}px`);
+    } else {
+       document.documentElement.style.setProperty('--header-height', `0px`);
+    }
+  }, [pathname]);
 
   // The AuthProvider wraps the layout and its children, but we might have pages
   // that don't need the sidebar/header layout.
@@ -45,3 +56,5 @@ export default function AppLayout({ children }: AppLayoutProps) {
       </AuthProvider>
   );
 }
+
+    
