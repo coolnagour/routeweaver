@@ -46,15 +46,15 @@ export type Stop = z.infer<typeof StopSchema>;
 const SplitPaymentSettingsSchema = z.object({
   splitPaymentEnabled: z.boolean().default(false),
   splitPaymentType: z.enum(['percentage', 'absolute']).default('percentage'),
-  splitPaymentValue: z.number().default(0),
+  splitPaymentValue: z.number().nullable().optional(),
   splitPaymentMinAmount: z.number().nullable().optional(),
   splitPaymentThresholdAmount: z.number().nullable().optional(),
   splitPaymentExtrasType: z.enum(['percentage', 'absolute']).default('percentage'),
-  splitPaymentExtrasValue: z.number().default(0),
+  splitPaymentExtrasValue: z.number().nullable().optional(),
   splitPaymentTollsType: z.enum(['percentage', 'absolute']).default('percentage'),
-  splitPaymentTollsValue: z.number().default(0),
+  splitPaymentTollsValue: z.number().nullable().optional(),
   splitPaymentTipsType: z.enum(['percentage', 'absolute']).default('percentage'),
-  splitPaymentTipsValue: z.number().default(0),
+  splitPaymentTipsValue: z.number().nullable().optional(),
 });
 export type SplitPaymentSettings = z.infer<typeof SplitPaymentSettingsSchema>;
 
@@ -239,4 +239,3 @@ export const SuggestionOutputSchema = z.object({
   suggestion: z.string(),
 });
 export type SuggestionOutput = z.infer<typeof SuggestionOutputSchema>;
-

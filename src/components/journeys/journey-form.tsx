@@ -142,10 +142,10 @@ export default function JourneyForm({
         stops: sortedInitialStops.map(s => ({...s, name: s.name ?? ''})),
         splitPaymentSettings: {
             ...initialData.splitPaymentSettings,
-            splitPaymentValue: initialData.splitPaymentSettings?.splitPaymentValue ?? 0,
-            splitPaymentExtrasValue: initialData.splitPaymentSettings?.splitPaymentExtrasValue ?? 0,
-            splitPaymentTollsValue: initialData.splitPaymentSettings?.splitPaymentTollsValue ?? 0,
-            splitPaymentTipsValue: initialData.splitPaymentSettings?.splitPaymentTipsValue ?? 0,
+            splitPaymentValue: initialData.splitPaymentSettings?.splitPaymentValue ?? null,
+            splitPaymentExtrasValue: initialData.splitPaymentSettings?.splitPaymentExtrasValue ?? null,
+            splitPaymentTollsValue: initialData.splitPaymentSettings?.splitPaymentTollsValue ?? null,
+            splitPaymentTipsValue: initialData.splitPaymentSettings?.splitPaymentTipsValue ?? null,
             splitPaymentMinAmount: initialData.splitPaymentSettings?.splitPaymentMinAmount ?? null,
             splitPaymentThresholdAmount: initialData.splitPaymentSettings?.splitPaymentThresholdAmount ?? null,
         },
@@ -177,10 +177,10 @@ export default function JourneyForm({
       cost: initialData.cost,
       splitPaymentSettings: {
         ...initialData.splitPaymentSettings,
-        splitPaymentValue: initialData.splitPaymentSettings?.splitPaymentValue ?? 0,
-        splitPaymentExtrasValue: initialData.splitPaymentSettings?.splitPaymentExtrasValue ?? 0,
-        splitPaymentTollsValue: initialData.splitPaymentSettings?.splitPaymentTollsValue ?? 0,
-        splitPaymentTipsValue: initialData.splitPaymentSettings?.splitPaymentTipsValue ?? 0,
+        splitPaymentValue: initialData.splitPaymentSettings?.splitPaymentValue ?? null,
+        splitPaymentExtrasValue: initialData.splitPaymentSettings?.splitPaymentExtrasValue ?? null,
+        splitPaymentTollsValue: initialData.splitPaymentSettings?.splitPaymentTollsValue ?? null,
+        splitPaymentTipsValue: initialData.splitPaymentSettings?.splitPaymentTipsValue ?? null,
         splitPaymentMinAmount: initialData.splitPaymentSettings?.splitPaymentMinAmount ?? null,
         splitPaymentThresholdAmount: initialData.splitPaymentSettings?.splitPaymentThresholdAmount ?? null,
       },
@@ -498,7 +498,7 @@ export default function JourneyForm({
                                   <FormControl>
                                       <div className="relative flex items-center">
                                           <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                          <Input placeholder="e.g. Jane Doe" {...field} className="pl-10 pr-10 bg-background" disabled={isEditingExisting} />
+                                          <Input placeholder="e.g. Jane Doe" {...field} value={field.value ?? ''} className="pl-10 pr-10 bg-background" disabled={isEditingExisting} />
                                           <Button type="button" variant="ghost" size="icon" className="absolute right-1 h-8 w-8 text-primary" onClick={() => handleGenerateField('name', 'stops.0.name', 0)} disabled={generatingFields['stops.0.name-name'] || isEditingExisting}>
                                               {generatingFields['stops.0.name-name'] ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                                           </Button>
@@ -517,7 +517,7 @@ export default function JourneyForm({
                                   <FormControl>
                                       <div className="relative flex items-center">
                                           <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                          <Input placeholder="e.g. +15551234567" {...field} className="pl-10 pr-10 bg-background" disabled={isEditingExisting} />
+                                          <Input placeholder="e.g. +15551234567" {...field} value={field.value ?? ''} className="pl-10 pr-10 bg-background" disabled={isEditingExisting} />
                                           <Button type="button" variant="ghost" size="icon" className="absolute right-1 h-8 w-8 text-primary" onClick={() => handleGenerateField('phone', 'stops.0.phone', 0)} disabled={generatingFields['stops.0.phone-phone'] || isEditingExisting}>
                                               {generatingFields['stops.0.phone-phone'] ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                                           </Button>
@@ -687,7 +687,7 @@ export default function JourneyForm({
                                 <FormControl>
                                     <div className="relative flex items-center">
                                         <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                        <Input type="number" placeholder="e.g. 25.50" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} value={field.value ?? ''} disabled={isJourneyPriceSet} className="pl-10 bg-background" />
+                                        <Input type="number" placeholder="e.g. 25.50" {...field} onChange={e => field.onChange(e.target.value === '' ? null : parseFloat(e.target.value))} value={field.value ?? ''} disabled={isJourneyPriceSet} className="pl-10 bg-background" />
                                     </div>
                                 </FormControl>
                                 <FormMessage />
@@ -703,7 +703,7 @@ export default function JourneyForm({
                                 <FormControl>
                                     <div className="relative flex items-center">
                                         <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                        <Input type="number" placeholder="e.g. 10.00" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} value={field.value ?? ''} disabled={isJourneyPriceSet} className="pl-10 bg-background" />
+                                        <Input type="number" placeholder="e.g. 10.00" {...field} onChange={e => field.onChange(e.target.value === '' ? null : parseFloat(e.target.value))} value={field.value ?? ''} disabled={isJourneyPriceSet} className="pl-10 bg-background" />
                                     </div>
                                 </FormControl>
                                 <FormMessage />
@@ -762,7 +762,7 @@ export default function JourneyForm({
                                                             )}
                                                         />
                                                         <FormControl>
-                                                            <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} className="bg-background pl-10"/>
+                                                            <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(e.target.value === '' ? null : parseFloat(e.target.value))} value={field.value ?? ''} className="bg-background pl-10"/>
                                                         </FormControl>
                                                     </div>
                                                     <FormField
@@ -793,7 +793,7 @@ export default function JourneyForm({
                                                 <FormControl>
                                                     <div className="relative flex items-center">
                                                         <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                                        <Input type="number" placeholder="e.g. 10" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? null : e.target.valueAsNumber)} className="pl-10 bg-background"/>
+                                                        <Input type="number" placeholder="e.g. 10" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? null : parseFloat(e.target.value))} className="pl-10 bg-background"/>
                                                     </div>
                                                 </FormControl>
                                                 <FormMessage />
@@ -809,7 +809,7 @@ export default function JourneyForm({
                                                 <FormControl>
                                                     <div className="relative flex items-center">
                                                         <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                                        <Input type="number" placeholder="e.g. 50" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? null : e.target.valueAsNumber)} className="pl-10 bg-background"/>
+                                                        <Input type="number" placeholder="e.g. 50" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? null : parseFloat(e.target.value))} className="pl-10 bg-background"/>
                                                     </div>
                                                 </FormControl>
                                                 <FormMessage />
@@ -839,7 +839,7 @@ export default function JourneyForm({
                                                             )}
                                                         />
                                                         <FormControl>
-                                                            <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} className="bg-background pl-10"/>
+                                                            <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(e.target.value === '' ? null : parseFloat(e.target.value))} value={field.value ?? ''} className="bg-background pl-10"/>
                                                         </FormControl>
                                                     </div>
                                                     <FormField
@@ -882,7 +882,7 @@ export default function JourneyForm({
                                                             )}
                                                         />
                                                         <FormControl>
-                                                            <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} className="bg-background pl-10"/>
+                                                            <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(e.target.value === '' ? null : parseFloat(e.target.value))} value={field.value ?? ''} className="bg-background pl-10"/>
                                                         </FormControl>
                                                     </div>
                                                     <FormField
@@ -925,7 +925,7 @@ export default function JourneyForm({
                                                             )}
                                                         />
                                                         <FormControl>
-                                                            <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} className="bg-background pl-10"/>
+                                                            <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(e.target.value === '' ? null : parseFloat(e.target.value))} value={field.value ?? ''} className="bg-background pl-10"/>
                                                         </FormControl>
                                                     </div>
                                                     <FormField

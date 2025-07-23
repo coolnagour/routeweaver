@@ -123,15 +123,15 @@ export async function updateBooking(server: ServerConfig, { booking, siteId, acc
         payload.split_payment_settings = {
             split_payment_enabled: splitPaymentEnabled ? 1 : 0,
             split_payment_type: splitPaymentType,
-            split_payment_value: splitPaymentValue.toString(),
+            split_payment_value: splitPaymentValue?.toString(),
             split_payment_min_amount: splitPaymentMinAmount?.toString(),
             split_payment_threshold_amount: splitPaymentThresholdAmount?.toString(),
             split_payment_extras_type: splitPaymentExtrasType,
-            split_payment_extras_value: splitPaymentExtrasValue.toString(),
+            split_payment_extras_value: splitPaymentExtrasValue?.toString(),
             split_payment_tolls_type: splitPaymentTollsType,
-            split_payment_tolls_value: splitPaymentTollsValue.toString(),
+            split_payment_tolls_value: splitPaymentTollsValue?.toString(),
             split_payment_tips_type: splitPaymentTipsType,
-            split_payment_tips_value: splitPaymentTipsValue.toString(),
+            split_payment_tips_value: splitPaymentTipsValue?.toString(),
         };
     }
 
@@ -274,5 +274,3 @@ export async function searchAccountsByName(server: ServerConfig, query?: string,
 
   return [];
 }
-
-    
