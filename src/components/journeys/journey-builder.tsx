@@ -73,7 +73,7 @@ function JourneyBuilderInner({
   const { toast } = useToast();
   const router = useRouter();
   const { server } = useServer();
-  const { addOrUpdateJourney } = useJourneys();
+  const { journeys: allJourneys, addOrUpdateJourney } = useJourneys();
   const [, , addTemplate, ,] = useIndexedDB<JourneyTemplate>('journey-templates', [], server?.uuid);
   const [templateName, setTemplateName] = useState('');
   const [sites, setSites] = useState<Site[]>([]);
@@ -334,6 +334,8 @@ function JourneyBuilderInner({
 
     setIsSubmitting(true);
     try {
+        const originalJourney = allJourneys?.find(j => j.id === journeyId);
+
         const journeyToPublish: Journey = {
             ...(initialData as Journey),
             id: journeyId,
@@ -355,6 +357,7 @@ function JourneyBuilderInner({
           price: journeyToPublish.price,
           cost: journeyToPublish.cost,
           enable_messaging_service: journeyToPublish.enable_messaging_service,
+          originalBookings: originalJourney?.bookings,
         });
         
         const publishedJourney: Journey = {
@@ -720,5 +723,3 @@ export default function JourneyBuilder(props: JourneyBuilderProps) {
     </MapSelectionProvider>
   )
 }
-
-    

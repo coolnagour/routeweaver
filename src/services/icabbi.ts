@@ -108,6 +108,31 @@ export async function updateBooking(server: ServerConfig, { booking, siteId, acc
     return response.body.booking;
 }
 
+export async function updateBookingPayment(server: ServerConfig, bookingId: number, price?: number, cost?: number) {
+    if (typeof price !== 'number' && typeof cost !== 'number') {
+        throw new Error("Either price or cost must be provided to update payment.");
+    }
+    
+    const payload = {
+        payment: {
+            price: price || 0,
+            cost: cost || 0,
+            fixed: 1,
+        }
+    };
+
+    // The payment endpoint is on the booking itself, not a sub-resource.
+    const response = await callIcabbiApi({
+        server,
+        method: 'POST',
+        endpoint: `bookings/update/${bookingId}`,
+        body: payload,
+    });
+
+    return response.body.booking;
+}
+
+
 export async function getBookingById(server: ServerConfig, permaId: number) {
     const response = await callIcabbiApi({
         server,

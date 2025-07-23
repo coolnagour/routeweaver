@@ -35,6 +35,7 @@ interface ViaStopProps {
     stopType?: StopType
   ) => void;
   generatingFields: Record<string, boolean>;
+  isLocked?: boolean;
 }
 
 export default function ViaStop({ 
@@ -45,6 +46,7 @@ export default function ViaStop({
     isDestination = false,
     onGenerateField,
     generatingFields,
+    isLocked = false,
 }: ViaStopProps) {
   const { setValue } = useFormContext();
   const { server } = useServer();
@@ -71,7 +73,7 @@ export default function ViaStop({
                 <h3 className="font-semibold text-lg text-primary">{isDestination ? 'Destination' : 'Via Stop'}</h3>
              </div>
             {!isDestination && removeStop && (
-                <Button type="button" variant="ghost" size="icon" className="h-9 w-9 text-destructive" onClick={() => removeStop(index)}>
+                <Button type="button" variant="ghost" size="icon" className="h-9 w-9 text-destructive" onClick={() => removeStop(index)} disabled={isLocked}>
                     <MinusCircle className="h-4 w-4"/>
                 </Button>
             )}
@@ -91,6 +93,7 @@ export default function ViaStop({
                                      onChange={field.onChange}
                                      placeholder={isPickup ? 'Pickup location' : 'Drop-off location'}
                                      className={'bg-background'}
+                                     disabled={isLocked}
                                   />
                             </FormControl>
                             <FormMessage>{fieldState.error?.message}</FormMessage>
@@ -112,6 +115,7 @@ export default function ViaStop({
                                          variant="outline" 
                                          className="w-full bg-background" 
                                          onClick={() => handleStopTypeChange(field.value === 'pickup' ? 'dropoff' : 'pickup')}
+                                         disabled={isLocked}
                                      >
                                          {field.value === 'pickup' ? 'Pickup' : 'Drop-off'}
                                      </Button>
@@ -134,8 +138,8 @@ export default function ViaStop({
                      <FormControl>
                          <div className="relative flex items-center">
                              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                             <Input placeholder="e.g. John Smith" {...field} className="pl-10 pr-10 bg-background" />
-                             <Button type="button" variant="ghost" size="icon" className="absolute right-1 h-8 w-8 text-primary" onClick={() => onGenerateField('name', `stops.${index}.name`, index)} disabled={generatingFields[`stops.${index}.name-name`]}>
+                             <Input placeholder="e.g. John Smith" {...field} className="pl-10 pr-10 bg-background" disabled={isLocked} />
+                             <Button type="button" variant="ghost" size="icon" className="absolute right-1 h-8 w-8 text-primary" onClick={() => onGenerateField('name', `stops.${index}.name`, index)} disabled={generatingFields[`stops.${index}.name-name`] || isLocked}>
                                 {generatingFields[`stops.${index}.name-name`] ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                             </Button>
                          </div>
@@ -153,8 +157,8 @@ export default function ViaStop({
                      <FormControl>
                          <div className="relative flex items-center">
                              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                             <Input placeholder="e.g. +15551234567" {...field} className="pl-10 pr-10 bg-background" />
-                             <Button type="button" variant="ghost" size="icon" className="absolute right-1 h-8 w-8 text-primary" onClick={() => onGenerateField('phone', `stops.${index}.phone`, index)} disabled={generatingFields[`stops.${index}.phone-phone`]}>
+                             <Input placeholder="e.g. +15551234567" {...field} className="pl-10 pr-10 bg-background" disabled={isLocked} />
+                             <Button type="button" variant="ghost" size="icon" className="absolute right-1 h-8 w-8 text-primary" onClick={() => onGenerateField('phone', `stops.${index}.phone`, index)} disabled={generatingFields[`stops.${index}.phone-phone`] || isLocked}>
                                 {generatingFields[`stops.${index}.phone-phone`] ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                              </Button>
                          </div>
@@ -171,7 +175,7 @@ export default function ViaStop({
                  render={({ field, fieldState }) => (
                  <FormItem>
                      <FormLabel>Passenger to Drop Off</FormLabel>
-                     <Select onValueChange={field.onChange} defaultValue={field.value}>
+                     <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLocked}>
                          <FormControl>
                              <SelectTrigger className="bg-background">
                                  <SelectValue placeholder="Select a passenger" />
@@ -195,7 +199,7 @@ export default function ViaStop({
  
           <Collapsible>
              <CollapsibleTrigger asChild>
-                 <Button variant="link" size="sm" className="p-0 h-auto">
+                 <Button variant="link" size="sm" className="p-0 h-auto" disabled={isLocked}>
                      <ChevronsUpDown className="h-4 w-4 mr-2" />
                      Extra Stop Information
                  </Button>
@@ -218,6 +222,7 @@ export default function ViaStop({
                                         'w-[calc(50%-0.25rem)] justify-start text-left font-normal bg-background',
                                         !field.value && 'text-muted-foreground'
                                     )}
+                                    disabled={isLocked}
                                     >
                                     <CalendarIcon className="mr-2 h-4 w-4" />
                                     {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
@@ -229,7 +234,7 @@ export default function ViaStop({
                                     mode="single"
                                     selected={field.value}
                                     onSelect={field.onChange}
-                                    disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
+                                    disabled={(date) => date < new Date(new Date().setHours(0,0,0,0)) || isLocked}
                                     initialFocus
                                 />
                                 </PopoverContent>
@@ -239,6 +244,7 @@ export default function ViaStop({
                                 <Input
                                     type="time"
                                     className="pl-10 bg-background"
+                                    disabled={isLocked}
                                     value={field.value ? format(field.value, 'HH:mm') : ''}
                                     onChange={(e) => {
                                         const time = e.target.value;
@@ -267,8 +273,8 @@ export default function ViaStop({
                              <FormControl>
                                  <div className="relative flex items-center">
                                      <MessageSquare className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                     <Input placeholder="e.g., Gate code #1234" {...field} className="pl-10 pr-10 bg-background"/>
-                                     <Button type="button" variant="ghost" size="icon" className="absolute right-1 h-8 w-8 text-primary" onClick={() => onGenerateField('instructions', `stops.${index}.instructions`, index, stopType)} disabled={generatingFields[`stops.${index}.instructions-instructions`]}>
+                                     <Input placeholder="e.g., Gate code #1234" {...field} className="pl-10 pr-10 bg-background" disabled={isLocked}/>
+                                     <Button type="button" variant="ghost" size="icon" className="absolute right-1 h-8 w-8 text-primary" onClick={() => onGenerateField('instructions', `stops.${index}.instructions`, index, stopType)} disabled={generatingFields[`stops.${index}.instructions-instructions`] || isLocked}>
                                         {generatingFields[`stops.${index}.instructions-instructions`] ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                                      </Button>
                                  </div>

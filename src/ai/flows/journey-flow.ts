@@ -9,7 +9,7 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { JourneyInputSchema, JourneyOutputSchema, ServerConfigSchema } from '@/types';
-import { createBooking, createJourney, updateBooking } from '@/services/icabbi';
+import { createBooking, createJourney, updateBooking, updateBookingPayment } from '@/services/icabbi';
 import type { Booking, JourneyOutput, Stop } from '@/types';
 import { generateJourneyPayload } from './journey-payload-flow';
 
@@ -18,6 +18,9 @@ const SaveJourneyInputSchema = JourneyInputSchema.extend({
   server: ServerConfigSchema,
   siteId: z.number(),
   accountId: z.number(),
+  // Add a field to get the original booking data from the database
+  // This helps determine if a payment update is needed.
+  originalBookings: z.array(JourneyInputSchema.shape.bookings.element).optional(),
 });
 type SaveJourneyInput = z.infer<typeof SaveJourneyInputSchema>;
 
@@ -31,12 +34,15 @@ const saveJourneyFlow = ai.defineFlow(
     inputSchema: SaveJourneyInputSchema,
     outputSchema: JourneyOutputSchema,
   },
-  async ({ bookings, server, siteId, accountId, journeyServerId, price, cost, enable_messaging_service }) => {
+  async ({ bookings, server, siteId, accountId, journeyServerId, price, cost, enable_messaging_service, originalBookings = [] }) => {
     console.log(`[Journey Flow] Starting journey processing with ${bookings.length} booking(s) for site ID: ${siteId}, account ID: ${accountId}, and journey ID: ${journeyServerId || 'new'}`);
 
     if (bookings.length === 0) {
       throw new Error('No bookings provided to create or update a journey.');
     }
+    
+    // Create a map of original bookings for easy lookup
+    const originalBookingMap = new Map(originalBookings.map(b => [b.id, b]));
 
     // Ensure all dateTime properties are Date objects for processing
     const sanitizedBookings = bookings.map(b => ({
@@ -53,8 +59,16 @@ const saveJourneyFlow = ai.defineFlow(
       try {
         let result: any;
         let isUpdate = false;
+        
+        const originalBooking = originalBookingMap.get(booking.id);
+        const hasPaymentChanged = originalBooking && (originalBooking.price !== booking.price || originalBooking.cost !== booking.cost);
 
-        if (booking.bookingServerId) {
+        if (booking.bookingServerId && hasPaymentChanged) {
+            // This booking exists and only its payment has changed.
+            console.log(`[Journey Flow] Updating payment for existing booking with server ID: ${booking.bookingServerId}`);
+            result = await updateBookingPayment(server, booking.bookingServerId, booking.price, booking.cost);
+            isUpdate = true;
+        } else if (booking.bookingServerId) {
           // This booking already exists on the server, so we update it.
           console.log(`[Journey Flow] Updating existing booking with server ID: ${booking.bookingServerId}`);
           result = await updateBooking(server, { booking, siteId, accountId });
