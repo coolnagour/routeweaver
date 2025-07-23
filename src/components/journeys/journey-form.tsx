@@ -82,11 +82,15 @@ const emptyLocation = { address: '', lat: 0, lng: 0 };
 
 const SegmentedControl = ({ value, onValueChange, children }: { value: string, onValueChange: (value: string) => void, children: React.ReactNode }) => {
     return (
-        <div className="flex w-full items-center gap-1 rounded-md bg-muted p-1">
+        <div className="flex w-auto items-center gap-1 rounded-md bg-muted p-1">
             {React.Children.map(children, (child) => {
                 if (React.isValidElement(child)) {
                     return React.cloneElement(child, {
-                        onClick: () => onValueChange(child.props.value),
+                        onClick: (e: React.MouseEvent) => {
+                           e.stopPropagation();
+                           e.preventDefault();
+                           onValueChange(child.props.value)
+                        },
                         'data-state': value === child.props.value ? 'active' : 'inactive'
                     } as React.HTMLAttributes<HTMLElement>);
                 }
@@ -103,10 +107,11 @@ const SegmentedControlButton = React.forwardRef<
     return (
         <Button
             ref={ref}
+            type="button"
             variant="ghost"
             size="sm"
             className={cn(
-                "flex-1 justify-center text-muted-foreground hover:text-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm",
+                "flex-1 justify-center text-muted-foreground hover:text-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm h-8 px-2",
                 className
             )}
             {...props}
@@ -708,33 +713,27 @@ export default function JourneyForm({
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <FormField
                                             control={form.control}
-                                            name="splitPaymentSettings.splitPaymentType"
-                                            render={({ field }) => (
-                                            <FormItem className="space-y-2">
-                                                <FormLabel>Payment Split Type</FormLabel>
-                                                    <SegmentedControl value={field.value || 'percentage'} onValueChange={field.onChange}>
-                                                        <SegmentedControlButton value="percentage">Percentage</SegmentedControlButton>
-                                                        <SegmentedControlButton value="absolute">Absolute</SegmentedControlButton>
-                                                    </SegmentedControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                            )}
-                                        />
-                                         <FormField
-                                            control={form.control}
                                             name="splitPaymentSettings.splitPaymentValue"
                                             render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>Payment Split Value</FormLabel>
-                                                <FormControl>
-                                                    <div className="relative flex items-center">
-                                                        {splitPaymentType === 'percentage' ? 
-                                                            <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /> :
-                                                            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                                        }
-                                                        <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} className="pl-10 bg-background"/>
-                                                    </div>
-                                                </FormControl>
+                                                <FormLabel>Payment Split</FormLabel>
+                                                <div className="flex items-center gap-2">
+                                                    <FormControl>
+                                                        <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} className="bg-background"/>
+                                                    </FormControl>
+                                                    <FormField
+                                                        control={form.control}
+                                                        name="splitPaymentSettings.splitPaymentType"
+                                                        render={({ field: typeField }) => (
+                                                            <FormControl>
+                                                                <SegmentedControl value={typeField.value || 'percentage'} onValueChange={typeField.onChange}>
+                                                                    <SegmentedControlButton value="percentage" title="Percentage"><Percent className="h-4 w-4"/></SegmentedControlButton>
+                                                                    <SegmentedControlButton value="absolute" title="Absolute"><DollarSign className="h-4 w-4"/></SegmentedControlButton>
+                                                                </SegmentedControl>
+                                                            </FormControl>
+                                                        )}
+                                                    />
+                                                </div>
                                                 <FormMessage />
                                             </FormItem>
                                             )}
@@ -775,70 +774,58 @@ export default function JourneyForm({
                                         />
                                     </div>
                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <FormField
-                                            control={form.control}
-                                            name="splitPaymentSettings.splitPaymentExtrasType"
-                                            render={({ field }) => (
-                                            <FormItem className="space-y-2">
-                                                <FormLabel>Extras Split Type</FormLabel>
-                                                <SegmentedControl value={field.value || 'percentage'} onValueChange={field.onChange}>
-                                                    <SegmentedControlButton value="percentage">Percentage</SegmentedControlButton>
-                                                    <SegmentedControlButton value="absolute">Absolute</SegmentedControlButton>
-                                                </SegmentedControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                            )}
-                                        />
                                          <FormField
                                             control={form.control}
                                             name="splitPaymentSettings.splitPaymentExtrasValue"
                                             render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>Extras Split Value</FormLabel>
+                                                <FormLabel>Extras Split</FormLabel>
+                                                <div className="flex items-center gap-2">
                                                 <FormControl>
-                                                    <div className="relative flex items-center">
-                                                        {splitExtrasType === 'percentage' ? 
-                                                            <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /> :
-                                                            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                                        }
-                                                        <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} className="pl-10 bg-background"/>
-                                                    </div>
+                                                    <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} className="bg-background"/>
                                                 </FormControl>
+                                                <FormField
+                                                    control={form.control}
+                                                    name="splitPaymentSettings.splitPaymentExtrasType"
+                                                    render={({ field: typeField }) => (
+                                                        <FormControl>
+                                                        <SegmentedControl value={typeField.value || 'percentage'} onValueChange={typeField.onChange}>
+                                                            <SegmentedControlButton value="percentage" title="Percentage"><Percent className="h-4 w-4"/></SegmentedControlButton>
+                                                            <SegmentedControlButton value="absolute" title="Absolute"><DollarSign className="h-4 w-4"/></SegmentedControlButton>
+                                                        </SegmentedControl>
+                                                        </FormControl>
+                                                    )}
+                                                />
+                                                </div>
                                                 <FormMessage />
                                             </FormItem>
                                             )}
                                         />
                                     </div>
                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <FormField
-                                            control={form.control}
-                                            name="splitPaymentSettings.splitPaymentTollsType"
-                                            render={({ field }) => (
-                                            <FormItem className="space-y-2">
-                                                <FormLabel>Tolls Split Type</FormLabel>
-                                                <SegmentedControl value={field.value || 'percentage'} onValueChange={field.onChange}>
-                                                    <SegmentedControlButton value="percentage">Percentage</SegmentedControlButton>
-                                                    <SegmentedControlButton value="absolute">Absolute</SegmentedControlButton>
-                                                </SegmentedControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                            )}
-                                        />
                                          <FormField
                                             control={form.control}
                                             name="splitPaymentSettings.splitPaymentTollsValue"
                                             render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>Tolls Split Value</FormLabel>
-                                                <FormControl>
-                                                     <div className="relative flex items-center">
-                                                        {splitTollsType === 'percentage' ? 
-                                                            <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /> :
-                                                            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                                        }
-                                                        <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} className="pl-10 bg-background"/>
-                                                    </div>
-                                                </FormControl>
+                                                <FormLabel>Tolls Split</FormLabel>
+                                                <div className="flex items-center gap-2">
+                                                    <FormControl>
+                                                        <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} className="bg-background"/>
+                                                    </FormControl>
+                                                    <FormField
+                                                        control={form.control}
+                                                        name="splitPaymentSettings.splitPaymentTollsType"
+                                                        render={({ field: typeField }) => (
+                                                            <FormControl>
+                                                            <SegmentedControl value={typeField.value || 'percentage'} onValueChange={typeField.onChange}>
+                                                                <SegmentedControlButton value="percentage" title="Percentage"><Percent className="h-4 w-4"/></SegmentedControlButton>
+                                                                <SegmentedControlButton value="absolute" title="Absolute"><DollarSign className="h-4 w-4"/></SegmentedControlButton>
+                                                            </SegmentedControl>
+                                                            </FormControl>
+                                                        )}
+                                                    />
+                                                </div>
                                                 <FormMessage />
                                             </FormItem>
                                             )}
@@ -847,33 +834,27 @@ export default function JourneyForm({
                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <FormField
                                             control={form.control}
-                                            name="splitPaymentSettings.splitPaymentTipsType"
-                                            render={({ field }) => (
-                                            <FormItem className="space-y-2">
-                                                <FormLabel>Tips Split Type</FormLabel>
-                                                <SegmentedControl value={field.value || 'percentage'} onValueChange={field.onChange}>
-                                                    <SegmentedControlButton value="percentage">Percentage</SegmentedControlButton>
-                                                    <SegmentedControlButton value="absolute">Absolute</SegmentedControlButton>
-                                                </SegmentedControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                            )}
-                                        />
-                                         <FormField
-                                            control={form.control}
                                             name="splitPaymentSettings.splitPaymentTipsValue"
                                             render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>Tips Split Value</FormLabel>
-                                                <FormControl>
-                                                     <div className="relative flex items-center">
-                                                        {splitTipsType === 'percentage' ? 
-                                                            <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /> :
-                                                            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                                        }
-                                                        <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} className="pl-10 bg-background"/>
-                                                    </div>
-                                                </FormControl>
+                                                <FormLabel>Tips Split</FormLabel>
+                                                <div className="flex items-center gap-2">
+                                                    <FormControl>
+                                                        <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} className="bg-background"/>
+                                                    </FormControl>
+                                                    <FormField
+                                                        control={form.control}
+                                                        name="splitPaymentSettings.splitPaymentTipsType"
+                                                        render={({ field: typeField }) => (
+                                                            <FormControl>
+                                                                <SegmentedControl value={typeField.value || 'percentage'} onValueChange={typeField.onChange}>
+                                                                    <SegmentedControlButton value="percentage" title="Percentage"><Percent className="h-4 w-4"/></SegmentedControlButton>
+                                                                    <SegmentedControlButton value="absolute" title="Absolute"><DollarSign className="h-4 w-4"/></SegmentedControlButton>
+                                                                </SegmentedControl>
+                                                            </FormControl>
+                                                        )}
+                                                    />
+                                                </div>
                                                 <FormMessage />
                                             </FormItem>
                                             )}
@@ -897,5 +878,3 @@ export default function JourneyForm({
       </Card>
   );
 }
-
-    
