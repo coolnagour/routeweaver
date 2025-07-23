@@ -113,7 +113,7 @@ export default function JourneyForm({
 
   const currentStops = useWatch({ control: form.control, name: 'stops' });
   const isHoldOn = useWatch({ control: form.control, name: 'holdOn' });
-  const splitPaymentEnabled = useWatch({ control: form.control, name: 'split_payment_settings.split_payment_enabled' });
+  const splitPaymentEnabled = useWatch({ control: form.control, name: 'splitPaymentSettings.splitPaymentEnabled' });
   
   const isEditingExisting = !!initialData.bookingServerId;
 
@@ -512,7 +512,7 @@ export default function JourneyForm({
                 
                 <Collapsible className="mt-4">
                     <CollapsibleTrigger asChild>
-                        <Button variant="link" size="sm" className="p-0 h-auto">
+                        <Button type="button" variant="link" size="sm" className="p-0 h-auto">
                             <ChevronsUpDown className="h-4 w-4 mr-2" />
                             Extra Booking Information
                         </Button>
@@ -637,14 +637,14 @@ export default function JourneyForm({
                         </div>
                          <Collapsible>
                             <CollapsibleTrigger asChild>
-                                <Button variant="link" size="sm" className="p-0 h-auto flex items-center gap-2">
+                                <Button type="button" variant="link" size="sm" className="p-0 h-auto flex items-center gap-2">
                                      <Wallet className="h-4 w-4" /> Split Payment Settings
                                 </Button>
                             </CollapsibleTrigger>
                             <CollapsibleContent className="space-y-4 pt-2">
                                 <FormField
                                     control={form.control}
-                                    name="split_payment_settings.split_payment_enabled"
+                                    name="splitPaymentSettings.splitPaymentEnabled"
                                     render={({ field }) => (
                                         <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-muted/20">
                                             <div className="space-y-0.5">
@@ -667,7 +667,7 @@ export default function JourneyForm({
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <FormField
                                             control={form.control}
-                                            name="split_payment_settings.split_payment_type"
+                                            name="splitPaymentSettings.splitPaymentType"
                                             render={({ field }) => (
                                             <FormItem className="space-y-3">
                                                 <FormLabel>Payment Split Type</FormLabel>
@@ -689,7 +689,7 @@ export default function JourneyForm({
                                         />
                                          <FormField
                                             control={form.control}
-                                            name="split_payment_settings.split_payment_value"
+                                            name="splitPaymentSettings.splitPaymentValue"
                                             render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel>Payment Split Value</FormLabel>
@@ -704,7 +704,7 @@ export default function JourneyForm({
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <FormField
                                             control={form.control}
-                                            name="split_payment_settings.split_payment_min_amount"
+                                            name="splitPaymentSettings.splitPaymentMinAmount"
                                             render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel>Min Amount (Optional)</FormLabel>
@@ -717,7 +717,7 @@ export default function JourneyForm({
                                         />
                                          <FormField
                                             control={form.control}
-                                            name="split_payment_settings.split_payment_threshold_amount"
+                                            name="splitPaymentSettings.splitPaymentThresholdAmount"
                                             render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel>Threshold Amount (Optional)</FormLabel>
@@ -732,7 +732,7 @@ export default function JourneyForm({
                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <FormField
                                             control={form.control}
-                                            name="split_payment_settings.split_payment_extras_type"
+                                            name="splitPaymentSettings.splitPaymentExtrasType"
                                             render={({ field }) => (
                                             <FormItem className="space-y-3">
                                                 <FormLabel>Extras Split Type</FormLabel>
@@ -748,7 +748,7 @@ export default function JourneyForm({
                                         />
                                          <FormField
                                             control={form.control}
-                                            name="split_payment_settings.split_payment_extras_value"
+                                            name="splitPaymentSettings.splitPaymentExtrasValue"
                                             render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel>Extras Split Value</FormLabel>
@@ -763,7 +763,7 @@ export default function JourneyForm({
                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <FormField
                                             control={form.control}
-                                            name="split_payment_settings.split_payment_tolls_type"
+                                            name="splitPaymentSettings.splitPaymentTollsType"
                                             render={({ field }) => (
                                             <FormItem className="space-y-3">
                                                 <FormLabel>Tolls Split Type</FormLabel>
@@ -779,7 +779,7 @@ export default function JourneyForm({
                                         />
                                          <FormField
                                             control={form.control}
-                                            name="split_payment_settings.split_payment_tolls_value"
+                                            name="splitPaymentSettings.splitPaymentTollsValue"
                                             render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel>Tolls Split Value</FormLabel>
@@ -794,7 +794,7 @@ export default function JourneyForm({
                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <FormField
                                             control={form.control}
-                                            name="split_payment_settings.split_payment_tips_type"
+                                            name="splitPaymentSettings.splitPaymentTipsType"
                                             render={({ field }) => (
                                             <FormItem className="space-y-3">
                                                 <FormLabel>Tips Split Type</FormLabel>
@@ -810,7 +810,7 @@ export default function JourneyForm({
                                         />
                                          <FormField
                                             control={form.control}
-                                            name="split_payment_settings.split_payment_tips_value"
+                                            name="splitPaymentSettings.splitPaymentTipsValue"
                                             render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel>Tips Split Value</FormLabel>

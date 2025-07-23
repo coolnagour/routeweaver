@@ -109,25 +109,29 @@ export async function updateBooking(server: ServerConfig, { booking, siteId, acc
     }
 
     // Add split payment settings if they exist
-    if (booking.split_payment_settings) {
-        const { split_payment_enabled, ...settings } = booking.split_payment_settings;
+    if (booking.splitPaymentSettings) {
+        const { splitPaymentEnabled, splitPaymentType, splitPaymentValue, splitPaymentMinAmount, splitPaymentThresholdAmount, splitPaymentExtrasType, splitPaymentExtrasValue, splitPaymentTollsType, splitPaymentTollsValue, splitPaymentTipsType, splitPaymentTipsValue } = booking.splitPaymentSettings;
         payload.split_payment_settings = {
-            split_payment_enabled: split_payment_enabled ? 1 : 0,
-            ...settings,
-            // Convert numeric values to strings for the API
-            split_payment_value: settings.split_payment_value.toString(),
-            split_payment_min_amount: settings.split_payment_min_amount?.toString(),
-            split_payment_threshold_amount: settings.split_payment_threshold_amount?.toString(),
-            split_payment_extras_value: settings.split_payment_extras_value.toString(),
-            split_payment_tolls_value: settings.split_payment_tolls_value.toString(),
-            split_payment_tips_value: settings.split_payment_tips_value.toString(),
+            split_payment_enabled: splitPaymentEnabled ? 1 : 0,
+            split_payment_type: splitPaymentType,
+            split_payment_value: splitPaymentValue.toString(),
+            split_payment_min_amount: splitPaymentMinAmount?.toString(),
+            split_payment_threshold_amount: splitPaymentThresholdAmount?.toString(),
+            split_payment_extras_type: splitPaymentExtrasType,
+            split_payment_extras_value: splitPaymentExtrasValue.toString(),
+            split_payment_tolls_type: splitPaymentTollsType,
+            split_payment_tolls_value: splitPaymentTollsValue.toString(),
+            split_payment_tips_type: splitPaymentTipsType,
+            split_payment_tips_value: splitPaymentTipsValue.toString(),
         };
     }
 
     // If there is nothing to update, just return the booking as is.
     if (Object.keys(payload).length === 0) {
         console.log(`[updateBooking] No payment changes detected for booking ${booking.bookingServerId}. Skipping API call.`);
-        return { perma_id: booking.bookingServerId }; // Return a structure that mimics the API response
+        // Mimic the structure of a successful API call for consistency in the flow.
+        const existingBooking = await getBookingById(server, booking.bookingServerId);
+        return { ...existingBooking, perma_id: booking.bookingServerId };
     }
     
     const response = await callIcabbiApi({

@@ -43,17 +43,17 @@ export const StopSchema = z.object({
 export type Stop = z.infer<typeof StopSchema>;
 
 const SplitPaymentSettingsSchema = z.object({
-  split_payment_enabled: z.boolean().default(false),
-  split_payment_type: z.enum(['percentage', 'absolute']).default('percentage'),
-  split_payment_value: z.number().default(100),
-  split_payment_min_amount: z.number().optional(),
-  split_payment_threshold_amount: z.number().optional(),
-  split_payment_extras_type: z.enum(['percentage', 'absolute']).default('percentage'),
-  split_payment_extras_value: z.number().default(100),
-  split_payment_tolls_type: z.enum(['percentage', 'absolute']).default('percentage'),
-  split_payment_tolls_value: z.number().default(0),
-  split_payment_tips_type: z.enum(['percentage', 'absolute']).default('percentage'),
-  split_payment_tips_value: z.number().default(0),
+  splitPaymentEnabled: z.boolean().default(false),
+  splitPaymentType: z.enum(['percentage', 'absolute']).default('percentage'),
+  splitPaymentValue: z.number().default(100),
+  splitPaymentMinAmount: z.number().optional(),
+  splitPaymentThresholdAmount: z.number().optional(),
+  splitPaymentExtrasType: z.enum(['percentage', 'absolute']).default('percentage'),
+  splitPaymentExtrasValue: z.number().default(100),
+  splitPaymentTollsType: z.enum(['percentage', 'absolute']).default('percentage'),
+  splitPaymentTollsValue: z.number().default(0),
+  splitPaymentTipsType: z.enum(['percentage', 'absolute']).default('percentage'),
+  splitPaymentTipsValue: z.number().default(0),
 });
 export type SplitPaymentSettings = z.infer<typeof SplitPaymentSettingsSchema>;
 
@@ -70,7 +70,7 @@ export const BookingSchema = z.object({
   cost: z.number().optional(),
   instructions: z.string().optional(), // Booking-level instructions
   holdOn: z.boolean().optional(),
-  split_payment_settings: SplitPaymentSettingsSchema.optional(),
+  splitPaymentSettings: SplitPaymentSettingsSchema.optional(),
 });
 export type Booking = z.infer<typeof BookingSchema>;
 
@@ -184,7 +184,7 @@ const GenkitBookingSchema = z.object({
   cost: z.number().optional(),
   instructions: z.string().optional(),
   holdOn: z.boolean().optional(),
-  split_payment_settings: SplitPaymentSettingsSchema.optional(),
+  splitPaymentSettings: SplitPaymentSettingsSchema.optional(),
 });
 
 // Stored template has string dates
