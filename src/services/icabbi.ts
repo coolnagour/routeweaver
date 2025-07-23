@@ -96,8 +96,40 @@ export async function updateBooking(server: ServerConfig, { booking, siteId, acc
     if (!booking.bookingServerId) {
         throw new Error("Booking must have a bookingServerId to be updated.");
     }
-    const payload = formatBookingForApi({ booking, server, siteId, accountId });
 
+    // For updates, we only want to send payment-related fields.
+    const payload: any = {};
+    
+    if (typeof booking.price === 'number' || typeof booking.cost === 'number') {
+        payload.payment = {
+            price: booking.price || 0,
+            cost: booking.cost || 0,
+            fixed: 1,
+        };
+    }
+
+    // Add split payment settings if they exist
+    if (booking.split_payment_settings) {
+        const { split_payment_enabled, ...settings } = booking.split_payment_settings;
+        payload.split_payment_settings = {
+            split_payment_enabled: split_payment_enabled ? 1 : 0,
+            ...settings,
+            // Convert numeric values to strings for the API
+            split_payment_value: settings.split_payment_value.toString(),
+            split_payment_min_amount: settings.split_payment_min_amount?.toString(),
+            split_payment_threshold_amount: settings.split_payment_threshold_amount?.toString(),
+            split_payment_extras_value: settings.split_payment_extras_value.toString(),
+            split_payment_tolls_value: settings.split_payment_tolls_value.toString(),
+            split_payment_tips_value: settings.split_payment_tips_value.toString(),
+        };
+    }
+
+    // If there is nothing to update, just return the booking as is.
+    if (Object.keys(payload).length === 0) {
+        console.log(`[updateBooking] No payment changes detected for booking ${booking.bookingServerId}. Skipping API call.`);
+        return { perma_id: booking.bookingServerId }; // Return a structure that mimics the API response
+    }
+    
     const response = await callIcabbiApi({
         server,
         method: 'POST',
@@ -107,31 +139,6 @@ export async function updateBooking(server: ServerConfig, { booking, siteId, acc
     
     return response.body.booking;
 }
-
-export async function updateBookingPayment(server: ServerConfig, bookingId: number, price?: number, cost?: number) {
-    if (typeof price !== 'number' && typeof cost !== 'number') {
-        throw new Error("Either price or cost must be provided to update payment.");
-    }
-    
-    const payload = {
-        payment: {
-            price: price || 0,
-            cost: cost || 0,
-            fixed: 1,
-        }
-    };
-
-    // The payment endpoint is on the booking itself, not a sub-resource.
-    const response = await callIcabbiApi({
-        server,
-        method: 'POST',
-        endpoint: `bookings/update/${bookingId}`,
-        body: payload,
-    });
-
-    return response.body.booking;
-}
-
 
 export async function getBookingById(server: ServerConfig, permaId: number) {
     const response = await callIcabbiApi({

@@ -9,7 +9,7 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { JourneyInputSchema, JourneyOutputSchema, ServerConfigSchema } from '@/types';
-import { createBooking, createJourney, updateBooking, updateBookingPayment } from '@/services/icabbi';
+import { createBooking, createJourney, updateBooking } from '@/services/icabbi';
 import type { Booking, JourneyOutput, Stop } from '@/types';
 import { generateJourneyPayload } from './journey-payload-flow';
 
@@ -60,15 +60,7 @@ const saveJourneyFlow = ai.defineFlow(
         let result: any;
         let isUpdate = false;
         
-        const originalBooking = originalBookingMap.get(booking.id);
-        const hasPaymentChanged = originalBooking && (originalBooking.price !== booking.price || originalBooking.cost !== booking.cost);
-
-        if (booking.bookingServerId && hasPaymentChanged) {
-            // This booking exists and only its payment has changed.
-            console.log(`[Journey Flow] Updating payment for existing booking with server ID: ${booking.bookingServerId}`);
-            result = await updateBookingPayment(server, booking.bookingServerId, booking.price, booking.cost);
-            isUpdate = true;
-        } else if (booking.bookingServerId) {
+        if (booking.bookingServerId) {
           // This booking already exists on the server, so we update it.
           console.log(`[Journey Flow] Updating existing booking with server ID: ${booking.bookingServerId}`);
           result = await updateBooking(server, { booking, siteId, accountId });
