@@ -141,7 +141,12 @@ export async function updateBooking(server: ServerConfig, { booking, siteId, acc
         body: payload,
     });
     
-    return response.body.booking;
+    // The update response may not contain the full booking object, so we merge it
+    // with the perma_id for consistency in the journey flow.
+    const permaId = response.body?.booking?.perma_id || booking.bookingServerId;
+    const updatedBookingData = await getBookingById(server, permaId);
+    
+    return { ...updatedBookingData, perma_id: permaId };
 }
 
 export async function getBookingById(server: ServerConfig, permaId: number) {

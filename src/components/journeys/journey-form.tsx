@@ -18,7 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { CalendarIcon, MapPin, PlusCircle, X, User, Phone, Clock, MessageSquare, ChevronsUpDown, Sparkles, Loader2, Info, Hash, Car, Map, DollarSign, Lock, ShieldQuestion, Wallet } from 'lucide-react';
+import { CalendarIcon, MapPin, PlusCircle, X, User, Phone, Clock, MessageSquare, ChevronsUpDown, Sparkles, Loader2, Info, Hash, Car, Map, DollarSign, Lock, ShieldQuestion, Wallet, Percent } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, setHours, setMinutes } from 'date-fns';
 import type { Booking, Stop, SuggestionInput, StopType, Location } from '@/types';
@@ -114,6 +114,10 @@ export default function JourneyForm({
   const currentStops = useWatch({ control: form.control, name: 'stops' });
   const isHoldOn = useWatch({ control: form.control, name: 'holdOn' });
   const splitPaymentEnabled = useWatch({ control: form.control, name: 'splitPaymentSettings.splitPaymentEnabled' });
+  const splitPaymentType = useWatch({ control: form.control, name: 'splitPaymentSettings.splitPaymentType' });
+  const splitExtrasType = useWatch({ control: form.control, name: 'splitPaymentSettings.splitPaymentExtrasType' });
+  const splitTollsType = useWatch({ control: form.control, name: 'splitPaymentSettings.splitPaymentTollsType' });
+  const splitTipsType = useWatch({ control: form.control, name: 'splitPaymentSettings.splitPaymentTipsType' });
   
   const isEditingExisting = !!initialData.bookingServerId;
 
@@ -694,7 +698,13 @@ export default function JourneyForm({
                                             <FormItem>
                                                 <FormLabel>Payment Split Value</FormLabel>
                                                 <FormControl>
-                                                    <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} />
+                                                    <div className="relative flex items-center">
+                                                        {splitPaymentType === 'percentage' ? 
+                                                            <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /> :
+                                                            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                                        }
+                                                        <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} className="pl-10 bg-background"/>
+                                                    </div>
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
@@ -709,7 +719,10 @@ export default function JourneyForm({
                                             <FormItem>
                                                 <FormLabel>Min Amount (Optional)</FormLabel>
                                                 <FormControl>
-                                                    <Input type="number" placeholder="e.g. 10" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} />
+                                                    <div className="relative flex items-center">
+                                                        <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                                        <Input type="number" placeholder="e.g. 10" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} className="pl-10 bg-background"/>
+                                                    </div>
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
@@ -722,7 +735,10 @@ export default function JourneyForm({
                                             <FormItem>
                                                 <FormLabel>Threshold Amount (Optional)</FormLabel>
                                                 <FormControl>
-                                                    <Input type="number" placeholder="e.g. 50" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} />
+                                                    <div className="relative flex items-center">
+                                                        <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                                        <Input type="number" placeholder="e.g. 50" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} className="pl-10 bg-background"/>
+                                                    </div>
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
@@ -753,7 +769,13 @@ export default function JourneyForm({
                                             <FormItem>
                                                 <FormLabel>Extras Split Value</FormLabel>
                                                 <FormControl>
-                                                    <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} />
+                                                    <div className="relative flex items-center">
+                                                        {splitExtrasType === 'percentage' ? 
+                                                            <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /> :
+                                                            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                                        }
+                                                        <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} className="pl-10 bg-background"/>
+                                                    </div>
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
@@ -784,7 +806,13 @@ export default function JourneyForm({
                                             <FormItem>
                                                 <FormLabel>Tolls Split Value</FormLabel>
                                                 <FormControl>
-                                                    <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} />
+                                                     <div className="relative flex items-center">
+                                                        {splitTollsType === 'percentage' ? 
+                                                            <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /> :
+                                                            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                                        }
+                                                        <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} className="pl-10 bg-background"/>
+                                                    </div>
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
@@ -815,7 +843,13 @@ export default function JourneyForm({
                                             <FormItem>
                                                 <FormLabel>Tips Split Value</FormLabel>
                                                 <FormControl>
-                                                    <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} />
+                                                     <div className="relative flex items-center">
+                                                        {splitTipsType === 'percentage' ? 
+                                                            <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /> :
+                                                            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                                        }
+                                                        <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} className="pl-10 bg-background"/>
+                                                    </div>
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
