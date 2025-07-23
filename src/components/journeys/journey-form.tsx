@@ -694,7 +694,7 @@ export default function JourneyForm({
                                             <FormItem>
                                                 <FormLabel>Payment Split Value</FormLabel>
                                                 <FormControl>
-                                                    <Input type="number" placeholder="100" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} />
+                                                    <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
@@ -753,7 +753,7 @@ export default function JourneyForm({
                                             <FormItem>
                                                 <FormLabel>Extras Split Value</FormLabel>
                                                 <FormControl>
-                                                    <Input type="number" placeholder="100" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} />
+                                                    <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>

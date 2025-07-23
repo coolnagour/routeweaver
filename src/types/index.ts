@@ -45,11 +45,11 @@ export type Stop = z.infer<typeof StopSchema>;
 const SplitPaymentSettingsSchema = z.object({
   splitPaymentEnabled: z.boolean().default(false),
   splitPaymentType: z.enum(['percentage', 'absolute']).default('percentage'),
-  splitPaymentValue: z.number().default(100),
+  splitPaymentValue: z.number().default(0),
   splitPaymentMinAmount: z.number().optional(),
   splitPaymentThresholdAmount: z.number().optional(),
   splitPaymentExtrasType: z.enum(['percentage', 'absolute']).default('percentage'),
-  splitPaymentExtrasValue: z.number().default(100),
+  splitPaymentExtrasValue: z.number().default(0),
   splitPaymentTollsType: z.enum(['percentage', 'absolute']).default('percentage'),
   splitPaymentTollsValue: z.number().default(0),
   splitPaymentTipsType: z.enum(['percentage', 'absolute']).default('percentage'),
@@ -124,6 +124,8 @@ export interface JourneyTemplate {
   bookings: TemplateBooking[];
   account?: Account | null;
   site?: Site | null;
+  price?: number;
+  cost?: number;
   enable_messaging_service?: boolean;
 }
 
@@ -199,6 +201,8 @@ export const JourneyTemplateSchema = z.object({
   bookings: z.array(TemplateBookingSchema),
   account: AccountSchema.nullable().optional(),
   site: SiteSchema.nullable().optional(),
+  price: z.number().optional(),
+  cost: z.number().optional(),
   enable_messaging_service: z.boolean().optional(),
 });
 
