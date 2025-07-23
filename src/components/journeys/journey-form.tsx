@@ -34,7 +34,6 @@ import { Switch } from '../ui/switch';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
 import { useServer } from '@/context/server-context';
-import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 
 // Create a form-specific schema by extending the base BookingSchema to handle Date objects
 const FormBookingSchema = BookingSchema.extend({
@@ -91,7 +90,8 @@ const SegmentedControl = ({ value, onValueChange, children }: { value: string, o
                            e.preventDefault();
                            onValueChange(child.props.value)
                         },
-                        'data-state': value === child.props.value ? 'active' : 'inactive'
+                        'data-state': value === child.props.value ? 'active' : 'inactive',
+                        type: 'button',
                     } as React.HTMLAttributes<HTMLElement>);
                 }
                 return child;
@@ -137,7 +137,17 @@ export default function JourneyForm({
   
   const form = useForm<BookingFormData>({
     resolver: zodResolver(FormBookingSchema),
-    defaultValues: { ...initialData, stops: sortedInitialStops },
+    defaultValues: {
+        ...initialData,
+        stops: sortedInitialStops.map(s => ({...s, name: s.name ?? ''})),
+        splitPaymentSettings: {
+            ...initialData.splitPaymentSettings,
+            splitPaymentValue: initialData.splitPaymentSettings?.splitPaymentValue ?? 0,
+            splitPaymentExtrasValue: initialData.splitPaymentSettings?.splitPaymentExtrasValue ?? 0,
+            splitPaymentTollsValue: initialData.splitPaymentSettings?.splitPaymentTollsValue ?? 0,
+            splitPaymentTipsValue: initialData.splitPaymentSettings?.splitPaymentTipsValue ?? 0,
+        },
+    },
   });
   
   const { fields: stopFields, insert: insertStop, remove: removeStop, update, replace } = useFieldArray({
@@ -149,17 +159,26 @@ export default function JourneyForm({
     const sortedStops = [...initialData.stops].sort((a,b) => a.order - b.order);
     form.reset({
       ...initialData,
-      stops: sortedStops.map(s => ({ ...s, dateTime: s.dateTime ? new Date(s.dateTime) : undefined }))
+      stops: sortedStops.map(s => ({
+          ...s,
+          dateTime: s.dateTime ? new Date(s.dateTime) : undefined,
+          name: s.name ?? '',
+          phone: s.phone ?? '',
+          instructions: s.instructions ?? '',
+      })),
+      instructions: initialData.instructions ?? '',
+      customerId: initialData.customerId ?? '',
+      externalBookingId: initialData.externalBookingId ?? '',
+      vehicleType: initialData.vehicleType ?? '',
+      externalAreaCode: initialData.externalAreaCode ?? '',
+      price: initialData.price,
+      cost: initialData.cost,
     });
   }, [initialData, form]);
 
   const currentStops = useWatch({ control: form.control, name: 'stops' });
   const isHoldOn = useWatch({ control: form.control, name: 'holdOn' });
   const splitPaymentEnabled = useWatch({ control: form.control, name: 'splitPaymentSettings.splitPaymentEnabled' });
-  const splitPaymentType = useWatch({ control: form.control, name: 'splitPaymentSettings.splitPaymentType' });
-  const splitExtrasType = useWatch({ control: form.control, name: 'splitPaymentSettings.splitPaymentExtrasType' });
-  const splitTollsType = useWatch({ control: form.control, name: 'splitPaymentSettings.splitPaymentTollsType' });
-  const splitTipsType = useWatch({ control: form.control, name: 'splitPaymentSettings.splitPaymentTipsType' });
   
   const isEditingExisting = !!initialData.bookingServerId;
 
@@ -176,10 +195,10 @@ export default function JourneyForm({
                 order: 0,
                 location: firstStop?.location || emptyLocation,
                 stopType: 'pickup' as const,
-                name: firstStop?.name,
-                phone: firstStop?.phone,
+                name: firstStop?.name ?? '',
+                phone: firstStop?.phone ?? '',
                 dateTime: firstStop?.dateTime,
-                instructions: firstStop?.instructions,
+                instructions: firstStop?.instructions ?? '',
             };
             const dropoffStop = {
                 id: uuidv4(),
@@ -718,9 +737,23 @@ export default function JourneyForm({
                                             <FormItem>
                                                 <FormLabel>Payment Split</FormLabel>
                                                 <div className="flex items-center gap-2">
-                                                    <FormControl>
-                                                        <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} className="bg-background"/>
-                                                    </FormControl>
+                                                    <div className="relative flex-grow">
+                                                        <FormField
+                                                            control={form.control}
+                                                            name="splitPaymentSettings.splitPaymentType"
+                                                            render={({ field: typeField }) => (
+                                                                <>
+                                                                    {typeField.value === 'absolute' 
+                                                                        ? <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /> 
+                                                                        : <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /> 
+                                                                    }
+                                                                </>
+                                                            )}
+                                                        />
+                                                        <FormControl>
+                                                            <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} className="bg-background pl-10"/>
+                                                        </FormControl>
+                                                    </div>
                                                     <FormField
                                                         control={form.control}
                                                         name="splitPaymentSettings.splitPaymentType"
@@ -749,7 +782,7 @@ export default function JourneyForm({
                                                 <FormControl>
                                                     <div className="relative flex items-center">
                                                         <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                                        <Input type="number" placeholder="e.g. 10" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} className="pl-10 bg-background"/>
+                                                        <Input type="number" placeholder="e.g. 10" {...field} onChange={e => field.onChange(e.target.value ? e.target.valueAsNumber : undefined)} value={field.value ?? ''} className="pl-10 bg-background"/>
                                                     </div>
                                                 </FormControl>
                                                 <FormMessage />
@@ -765,7 +798,7 @@ export default function JourneyForm({
                                                 <FormControl>
                                                     <div className="relative flex items-center">
                                                         <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                                        <Input type="number" placeholder="e.g. 50" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} className="pl-10 bg-background"/>
+                                                        <Input type="number" placeholder="e.g. 50" {...field} onChange={e => field.onChange(e.target.value ? e.target.valueAsNumber : undefined)} value={field.value ?? ''} className="pl-10 bg-background"/>
                                                     </div>
                                                 </FormControl>
                                                 <FormMessage />
@@ -781,21 +814,35 @@ export default function JourneyForm({
                                             <FormItem>
                                                 <FormLabel>Extras Split</FormLabel>
                                                 <div className="flex items-center gap-2">
-                                                <FormControl>
-                                                    <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} className="bg-background"/>
-                                                </FormControl>
-                                                <FormField
-                                                    control={form.control}
-                                                    name="splitPaymentSettings.splitPaymentExtrasType"
-                                                    render={({ field: typeField }) => (
+                                                    <div className="relative flex-grow">
+                                                        <FormField
+                                                            control={form.control}
+                                                            name="splitPaymentSettings.splitPaymentExtrasType"
+                                                            render={({ field: typeField }) => (
+                                                                <>
+                                                                    {typeField.value === 'absolute' 
+                                                                        ? <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /> 
+                                                                        : <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /> 
+                                                                    }
+                                                                </>
+                                                            )}
+                                                        />
                                                         <FormControl>
-                                                        <SegmentedControl value={typeField.value || 'percentage'} onValueChange={typeField.onChange}>
-                                                            <SegmentedControlButton value="percentage" title="Percentage"><Percent className="h-4 w-4"/></SegmentedControlButton>
-                                                            <SegmentedControlButton value="absolute" title="Absolute"><DollarSign className="h-4 w-4"/></SegmentedControlButton>
-                                                        </SegmentedControl>
+                                                            <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} className="bg-background pl-10"/>
                                                         </FormControl>
-                                                    )}
-                                                />
+                                                    </div>
+                                                    <FormField
+                                                        control={form.control}
+                                                        name="splitPaymentSettings.splitPaymentExtrasType"
+                                                        render={({ field: typeField }) => (
+                                                            <FormControl>
+                                                                <SegmentedControl value={typeField.value || 'percentage'} onValueChange={typeField.onChange}>
+                                                                    <SegmentedControlButton value="percentage" title="Percentage"><Percent className="h-4 w-4"/></SegmentedControlButton>
+                                                                    <SegmentedControlButton value="absolute" title="Absolute"><DollarSign className="h-4 w-4"/></SegmentedControlButton>
+                                                                </SegmentedControl>
+                                                            </FormControl>
+                                                        )}
+                                                    />
                                                 </div>
                                                 <FormMessage />
                                             </FormItem>
@@ -810,9 +857,23 @@ export default function JourneyForm({
                                             <FormItem>
                                                 <FormLabel>Tolls Split</FormLabel>
                                                 <div className="flex items-center gap-2">
-                                                    <FormControl>
-                                                        <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} className="bg-background"/>
-                                                    </FormControl>
+                                                    <div className="relative flex-grow">
+                                                         <FormField
+                                                            control={form.control}
+                                                            name="splitPaymentSettings.splitPaymentTollsType"
+                                                            render={({ field: typeField }) => (
+                                                                <>
+                                                                    {typeField.value === 'absolute' 
+                                                                        ? <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /> 
+                                                                        : <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /> 
+                                                                    }
+                                                                </>
+                                                            )}
+                                                        />
+                                                        <FormControl>
+                                                            <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} className="bg-background pl-10"/>
+                                                        </FormControl>
+                                                    </div>
                                                     <FormField
                                                         control={form.control}
                                                         name="splitPaymentSettings.splitPaymentTollsType"
@@ -839,9 +900,23 @@ export default function JourneyForm({
                                             <FormItem>
                                                 <FormLabel>Tips Split</FormLabel>
                                                 <div className="flex items-center gap-2">
-                                                    <FormControl>
-                                                        <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} className="bg-background"/>
-                                                    </FormControl>
+                                                    <div className="relative flex-grow">
+                                                        <FormField
+                                                            control={form.control}
+                                                            name="splitPaymentSettings.splitPaymentTipsType"
+                                                            render={({ field: typeField }) => (
+                                                                <>
+                                                                    {typeField.value === 'absolute' 
+                                                                        ? <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /> 
+                                                                        : <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /> 
+                                                                    }
+                                                                </>
+                                                            )}
+                                                        />
+                                                        <FormControl>
+                                                            <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} className="bg-background pl-10"/>
+                                                        </FormControl>
+                                                    </div>
                                                     <FormField
                                                         control={form.control}
                                                         name="splitPaymentSettings.splitPaymentTipsType"

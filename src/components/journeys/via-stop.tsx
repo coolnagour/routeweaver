@@ -138,7 +138,7 @@ export default function ViaStop({
                      <FormControl>
                          <div className="relative flex items-center">
                              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                             <Input placeholder="e.g. John Smith" {...field} className="pl-10 pr-10 bg-background" disabled={isLocked} />
+                             <Input placeholder="e.g. John Smith" {...field} value={field.value ?? ''} className="pl-10 pr-10 bg-background" disabled={isLocked} />
                              <Button type="button" variant="ghost" size="icon" className="absolute right-1 h-8 w-8 text-primary" onClick={() => onGenerateField('name', `stops.${index}.name`, index)} disabled={generatingFields[`stops.${index}.name-name`] || isLocked}>
                                 {generatingFields[`stops.${index}.name-name`] ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                             </Button>
@@ -157,7 +157,7 @@ export default function ViaStop({
                      <FormControl>
                          <div className="relative flex items-center">
                              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                             <Input placeholder="e.g. +15551234567" {...field} className="pl-10 pr-10 bg-background" disabled={isLocked} />
+                             <Input placeholder="e.g. +15551234567" {...field} value={field.value ?? ''} className="pl-10 pr-10 bg-background" disabled={isLocked} />
                              <Button type="button" variant="ghost" size="icon" className="absolute right-1 h-8 w-8 text-primary" onClick={() => onGenerateField('phone', `stops.${index}.phone`, index)} disabled={generatingFields[`stops.${index}.phone-phone`] || isLocked}>
                                 {generatingFields[`stops.${index}.phone-phone`] ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                              </Button>
@@ -273,7 +273,7 @@ export default function ViaStop({
                              <FormControl>
                                  <div className="relative flex items-center">
                                      <MessageSquare className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                     <Input placeholder="e.g., Gate code #1234" {...field} className="pl-10 pr-10 bg-background" disabled={isLocked}/>
+                                     <Input placeholder="e.g., Gate code #1234" {...field} value={field.value ?? ''} className="pl-10 pr-10 bg-background" disabled={isLocked}/>
                                      <Button type="button" variant="ghost" size="icon" className="absolute right-1 h-8 w-8 text-primary" onClick={() => onGenerateField('instructions', `stops.${index}.instructions`, index, stopType)} disabled={generatingFields[`stops.${index}.instructions-instructions`] || isLocked}>
                                         {generatingFields[`stops.${index}.instructions-instructions`] ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                                      </Button>
