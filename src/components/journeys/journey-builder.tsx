@@ -170,24 +170,21 @@ function JourneyBuilderInner({
     setEnableMessaging((initialData as Journey)?.enable_messaging_service || false);
   }, [initialData, initialSite, initialAccount]);
 
-  useEffect(() => {
-    async function fetchSites() {
-        if (server) {
-            setIsFetchingSites(true);
-            try {
-                const fetchedSites = await getSites(server);
-                setSites(fetchedSites);
-            } catch (error) {
-                console.error("Failed to fetch sites:", error);
-                toast({ variant: 'destructive', title: 'Error fetching sites', description: 'Could not retrieve sites for the selected server.'});
-                setSites([]);
-            } finally {
-                setIsFetchingSites(false);
-            }
+  const handleFetchSites = useCallback(async () => {
+    if (server && sites.length === 0) { // Only fetch if sites are not already loaded
+        setIsFetchingSites(true);
+        try {
+            const fetchedSites = await getSites(server);
+            setSites(fetchedSites);
+        } catch (error) {
+            console.error("Failed to fetch sites:", error);
+            toast({ variant: 'destructive', title: 'Error fetching sites', description: 'Could not retrieve sites for the selected server.'});
+            setSites([]);
+        } finally {
+            setIsFetchingSites(false);
         }
     }
-    fetchSites();
-  }, [server, toast]);
+  }, [server, sites.length, toast]);
 
   const handleSaveJourneyLocally = async () => {
     if (!server?.uuid) {
@@ -444,6 +441,9 @@ function JourneyBuilderInner({
                                 const site = sites.find(s => s.id === Number(value));
                                 setSelectedSite(site || null);
                             }} 
+                            onOpenChange={(open) => {
+                                if (open) handleFetchSites();
+                            }}
                             disabled={isFetchingSites}
                         >
                             <SelectTrigger>
@@ -730,5 +730,6 @@ export default function JourneyBuilder(props: JourneyBuilderProps) {
     </MapSelectionProvider>
   )
 }
+    
 
     
