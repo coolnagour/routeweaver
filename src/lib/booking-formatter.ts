@@ -105,5 +105,22 @@ export const formatBookingForApi = ({ booking, server, siteId, accountId }: Book
         payload.instructions = booking.instructions;
     }
 
+    // Add split payment settings if enabled
+    if (booking.split_payment_settings?.split_payment_enabled) {
+        const { split_payment_enabled, ...settings } = booking.split_payment_settings;
+        payload.split_payment_settings = {
+            split_payment_enabled: 1,
+            ...settings,
+            // Convert numeric values to strings for the API
+            split_payment_value: settings.split_payment_value.toString(),
+            split_payment_min_amount: settings.split_payment_min_amount?.toString(),
+            split_payment_threshold_amount: settings.split_payment_threshold_amount?.toString(),
+            split_payment_extras_value: settings.split_payment_extras_value.toString(),
+            split_payment_tolls_value: settings.split_payment_tolls_value.toString(),
+            split_payment_tips_value: settings.split_payment_tips_value.toString(),
+        };
+    }
+
+
     return payload;
 };

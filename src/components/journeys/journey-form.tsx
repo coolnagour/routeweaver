@@ -18,7 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { CalendarIcon, MapPin, PlusCircle, X, User, Phone, Clock, MessageSquare, ChevronsUpDown, Sparkles, Loader2, Info, Hash, Car, Map, DollarSign, Lock, ShieldQuestion } from 'lucide-react';
+import { CalendarIcon, MapPin, PlusCircle, X, User, Phone, Clock, MessageSquare, ChevronsUpDown, Sparkles, Loader2, Info, Hash, Car, Map, DollarSign, Lock, ShieldQuestion, Wallet } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, setHours, setMinutes } from 'date-fns';
 import type { Booking, Stop, SuggestionInput, StopType, Location } from '@/types';
@@ -33,6 +33,7 @@ import { Switch } from '../ui/switch';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
 import { useServer } from '@/context/server-context';
+import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 
 // Create a form-specific schema by extending the base BookingSchema to handle Date objects
 const FormBookingSchema = BookingSchema.extend({
@@ -112,6 +113,7 @@ export default function JourneyForm({
 
   const currentStops = useWatch({ control: form.control, name: 'stops' });
   const isHoldOn = useWatch({ control: form.control, name: 'holdOn' });
+  const splitPaymentEnabled = useWatch({ control: form.control, name: 'split_payment_settings.split_payment_enabled' });
   
   const isEditingExisting = !!initialData.bookingServerId;
 
@@ -633,6 +635,198 @@ export default function JourneyForm({
                             )}
                         />
                         </div>
+                         <Collapsible>
+                            <CollapsibleTrigger asChild>
+                                <Button variant="link" size="sm" className="p-0 h-auto flex items-center gap-2">
+                                     <Wallet className="h-4 w-4" /> Split Payment Settings
+                                </Button>
+                            </CollapsibleTrigger>
+                            <CollapsibleContent className="space-y-4 pt-2">
+                                <FormField
+                                    control={form.control}
+                                    name="split_payment_settings.split_payment_enabled"
+                                    render={({ field }) => (
+                                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-muted/20">
+                                            <div className="space-y-0.5">
+                                                <FormLabel>Enable Split Payments</FormLabel>
+                                                <p className="text-sm text-muted-foreground">
+                                                    Allow payment for this booking to be split.
+                                                </p>
+                                            </div>
+                                            <FormControl>
+                                                <Switch
+                                                    checked={field.value}
+                                                    onCheckedChange={field.onChange}
+                                                />
+                                            </FormControl>
+                                        </FormItem>
+                                    )}
+                                />
+                                {splitPaymentEnabled && (
+                                <div className="p-4 border rounded-lg space-y-4 bg-muted/20">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <FormField
+                                            control={form.control}
+                                            name="split_payment_settings.split_payment_type"
+                                            render={({ field }) => (
+                                            <FormItem className="space-y-3">
+                                                <FormLabel>Payment Split Type</FormLabel>
+                                                <FormControl>
+                                                    <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex space-x-4">
+                                                        <FormItem className="flex items-center space-x-2 space-y-0">
+                                                            <FormControl><RadioGroupItem value="percentage" /></FormControl>
+                                                            <FormLabel className="font-normal">Percentage</FormLabel>
+                                                        </FormItem>
+                                                        <FormItem className="flex items-center space-x-2 space-y-0">
+                                                            <FormControl><RadioGroupItem value="absolute" /></FormControl>
+                                                            <FormLabel className="font-normal">Absolute</FormLabel>
+                                                        </FormItem>
+                                                    </RadioGroup>
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                            )}
+                                        />
+                                         <FormField
+                                            control={form.control}
+                                            name="split_payment_settings.split_payment_value"
+                                            render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Payment Split Value</FormLabel>
+                                                <FormControl>
+                                                    <Input type="number" placeholder="100" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                            )}
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <FormField
+                                            control={form.control}
+                                            name="split_payment_settings.split_payment_min_amount"
+                                            render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Min Amount (Optional)</FormLabel>
+                                                <FormControl>
+                                                    <Input type="number" placeholder="e.g. 10" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                            )}
+                                        />
+                                         <FormField
+                                            control={form.control}
+                                            name="split_payment_settings.split_payment_threshold_amount"
+                                            render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Threshold Amount (Optional)</FormLabel>
+                                                <FormControl>
+                                                    <Input type="number" placeholder="e.g. 50" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                            )}
+                                        />
+                                    </div>
+                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <FormField
+                                            control={form.control}
+                                            name="split_payment_settings.split_payment_extras_type"
+                                            render={({ field }) => (
+                                            <FormItem className="space-y-3">
+                                                <FormLabel>Extras Split Type</FormLabel>
+                                                <FormControl>
+                                                    <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex space-x-4">
+                                                        <FormItem className="flex items-center space-x-2 space-y-0"><FormControl><RadioGroupItem value="percentage" /></FormControl><FormLabel className="font-normal">Percentage</FormLabel></FormItem>
+                                                        <FormItem className="flex items-center space-x-2 space-y-0"><FormControl><RadioGroupItem value="absolute" /></FormControl><FormLabel className="font-normal">Absolute</FormLabel></FormItem>
+                                                    </RadioGroup>
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                            )}
+                                        />
+                                         <FormField
+                                            control={form.control}
+                                            name="split_payment_settings.split_payment_extras_value"
+                                            render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Extras Split Value</FormLabel>
+                                                <FormControl>
+                                                    <Input type="number" placeholder="100" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                            )}
+                                        />
+                                    </div>
+                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <FormField
+                                            control={form.control}
+                                            name="split_payment_settings.split_payment_tolls_type"
+                                            render={({ field }) => (
+                                            <FormItem className="space-y-3">
+                                                <FormLabel>Tolls Split Type</FormLabel>
+                                                <FormControl>
+                                                    <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex space-x-4">
+                                                         <FormItem className="flex items-center space-x-2 space-y-0"><FormControl><RadioGroupItem value="percentage" /></FormControl><FormLabel className="font-normal">Percentage</FormLabel></FormItem>
+                                                         <FormItem className="flex items-center space-x-2 space-y-0"><FormControl><RadioGroupItem value="absolute" /></FormControl><FormLabel className="font-normal">Absolute</FormLabel></FormItem>
+                                                    </RadioGroup>
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                            )}
+                                        />
+                                         <FormField
+                                            control={form.control}
+                                            name="split_payment_settings.split_payment_tolls_value"
+                                            render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Tolls Split Value</FormLabel>
+                                                <FormControl>
+                                                    <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                            )}
+                                        />
+                                    </div>
+                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <FormField
+                                            control={form.control}
+                                            name="split_payment_settings.split_payment_tips_type"
+                                            render={({ field }) => (
+                                            <FormItem className="space-y-3">
+                                                <FormLabel>Tips Split Type</FormLabel>
+                                                <FormControl>
+                                                    <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex space-x-4">
+                                                         <FormItem className="flex items-center space-x-2 space-y-0"><FormControl><RadioGroupItem value="percentage" /></FormControl><FormLabel className="font-normal">Percentage</FormLabel></FormItem>
+                                                         <FormItem className="flex items-center space-x-2 space-y-0"><FormControl><RadioGroupItem value="absolute" /></FormControl><FormLabel className="font-normal">Absolute</FormLabel></FormItem>
+                                                    </RadioGroup>
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                            )}
+                                        />
+                                         <FormField
+                                            control={form.control}
+                                            name="split_payment_settings.split_payment_tips_value"
+                                            render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Tips Split Value</FormLabel>
+                                                <FormControl>
+                                                    <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                            )}
+                                        />
+                                    </div>
+
+                                </div>
+                                )}
+                            </CollapsibleContent>
+                        </Collapsible>
                     </CollapsibleContent>
                     </Collapsible>
 
