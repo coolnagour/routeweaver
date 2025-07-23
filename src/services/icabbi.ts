@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import type { ServerConfig } from "@/types";
@@ -13,7 +14,15 @@ interface IcabbiApiCallOptions {
 }
 
 export async function callIcabbiApi({ server, method, endpoint, body }: IcabbiApiCallOptions) {
-    let url = `https://${server.host}/${server.apiPath}/${endpoint}`;
+    let url;
+    // Check if the host already includes a protocol
+    if (server.host.startsWith('http://') || server.host.startsWith('https://')) {
+        url = `${server.host}/${server.apiPath}/${endpoint}`;
+    } else {
+        // Default to https if no protocol is specified
+        url = `https://${server.host}/${server.apiPath}/${endpoint}`;
+    }
+
     const separator = url.includes('?') ? '&' : '?';
     url += `${separator}app_key=${server.appKey}`;
 
@@ -265,3 +274,5 @@ export async function searchAccountsByName(server: ServerConfig, query?: string,
 
   return [];
 }
+
+    

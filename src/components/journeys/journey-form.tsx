@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -78,6 +79,42 @@ interface JourneyFormProps {
 }
 
 const emptyLocation = { address: '', lat: 0, lng: 0 };
+
+const SegmentedControl = ({ value, onValueChange, children }: { value: string, onValueChange: (value: string) => void, children: React.ReactNode }) => {
+    return (
+        <div className="flex w-full items-center gap-1 rounded-md bg-muted p-1">
+            {React.Children.map(children, (child) => {
+                if (React.isValidElement(child)) {
+                    return React.cloneElement(child, {
+                        onClick: () => onValueChange(child.props.value),
+                        'data-state': value === child.props.value ? 'active' : 'inactive'
+                    } as React.HTMLAttributes<HTMLElement>);
+                }
+                return child;
+            })}
+        </div>
+    );
+};
+
+const SegmentedControlButton = React.forwardRef<
+  React.ElementRef<typeof Button>,
+  React.ComponentProps<typeof Button>
+>(({ className, ...props }, ref) => {
+    return (
+        <Button
+            ref={ref}
+            variant="ghost"
+            size="sm"
+            className={cn(
+                "flex-1 justify-center text-muted-foreground hover:text-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm",
+                className
+            )}
+            {...props}
+        />
+    )
+});
+SegmentedControlButton.displayName = 'SegmentedControlButton';
+
 
 export default function JourneyForm({ 
     initialData, 
@@ -673,20 +710,12 @@ export default function JourneyForm({
                                             control={form.control}
                                             name="splitPaymentSettings.splitPaymentType"
                                             render={({ field }) => (
-                                            <FormItem className="space-y-3">
+                                            <FormItem className="space-y-2">
                                                 <FormLabel>Payment Split Type</FormLabel>
-                                                <FormControl>
-                                                    <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex space-x-4">
-                                                        <FormItem className="flex items-center space-x-2 space-y-0">
-                                                            <FormControl><RadioGroupItem value="percentage" /></FormControl>
-                                                            <FormLabel className="font-normal">Percentage</FormLabel>
-                                                        </FormItem>
-                                                        <FormItem className="flex items-center space-x-2 space-y-0">
-                                                            <FormControl><RadioGroupItem value="absolute" /></FormControl>
-                                                            <FormLabel className="font-normal">Absolute</FormLabel>
-                                                        </FormItem>
-                                                    </RadioGroup>
-                                                </FormControl>
+                                                    <SegmentedControl value={field.value || 'percentage'} onValueChange={field.onChange}>
+                                                        <SegmentedControlButton value="percentage">Percentage</SegmentedControlButton>
+                                                        <SegmentedControlButton value="absolute">Absolute</SegmentedControlButton>
+                                                    </SegmentedControl>
                                                 <FormMessage />
                                             </FormItem>
                                             )}
@@ -750,14 +779,12 @@ export default function JourneyForm({
                                             control={form.control}
                                             name="splitPaymentSettings.splitPaymentExtrasType"
                                             render={({ field }) => (
-                                            <FormItem className="space-y-3">
+                                            <FormItem className="space-y-2">
                                                 <FormLabel>Extras Split Type</FormLabel>
-                                                <FormControl>
-                                                    <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex space-x-4">
-                                                        <FormItem className="flex items-center space-x-2 space-y-0"><FormControl><RadioGroupItem value="percentage" /></FormControl><FormLabel className="font-normal">Percentage</FormLabel></FormItem>
-                                                        <FormItem className="flex items-center space-x-2 space-y-0"><FormControl><RadioGroupItem value="absolute" /></FormControl><FormLabel className="font-normal">Absolute</FormLabel></FormItem>
-                                                    </RadioGroup>
-                                                </FormControl>
+                                                <SegmentedControl value={field.value || 'percentage'} onValueChange={field.onChange}>
+                                                    <SegmentedControlButton value="percentage">Percentage</SegmentedControlButton>
+                                                    <SegmentedControlButton value="absolute">Absolute</SegmentedControlButton>
+                                                </SegmentedControl>
                                                 <FormMessage />
                                             </FormItem>
                                             )}
@@ -787,14 +814,12 @@ export default function JourneyForm({
                                             control={form.control}
                                             name="splitPaymentSettings.splitPaymentTollsType"
                                             render={({ field }) => (
-                                            <FormItem className="space-y-3">
+                                            <FormItem className="space-y-2">
                                                 <FormLabel>Tolls Split Type</FormLabel>
-                                                <FormControl>
-                                                    <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex space-x-4">
-                                                         <FormItem className="flex items-center space-x-2 space-y-0"><FormControl><RadioGroupItem value="percentage" /></FormControl><FormLabel className="font-normal">Percentage</FormLabel></FormItem>
-                                                         <FormItem className="flex items-center space-x-2 space-y-0"><FormControl><RadioGroupItem value="absolute" /></FormControl><FormLabel className="font-normal">Absolute</FormLabel></FormItem>
-                                                    </RadioGroup>
-                                                </FormControl>
+                                                <SegmentedControl value={field.value || 'percentage'} onValueChange={field.onChange}>
+                                                    <SegmentedControlButton value="percentage">Percentage</SegmentedControlButton>
+                                                    <SegmentedControlButton value="absolute">Absolute</SegmentedControlButton>
+                                                </SegmentedControl>
                                                 <FormMessage />
                                             </FormItem>
                                             )}
@@ -824,14 +849,12 @@ export default function JourneyForm({
                                             control={form.control}
                                             name="splitPaymentSettings.splitPaymentTipsType"
                                             render={({ field }) => (
-                                            <FormItem className="space-y-3">
+                                            <FormItem className="space-y-2">
                                                 <FormLabel>Tips Split Type</FormLabel>
-                                                <FormControl>
-                                                    <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex space-x-4">
-                                                         <FormItem className="flex items-center space-x-2 space-y-0"><FormControl><RadioGroupItem value="percentage" /></FormControl><FormLabel className="font-normal">Percentage</FormLabel></FormItem>
-                                                         <FormItem className="flex items-center space-x-2 space-y-0"><FormControl><RadioGroupItem value="absolute" /></FormControl><FormLabel className="font-normal">Absolute</FormLabel></FormItem>
-                                                    </RadioGroup>
-                                                </FormControl>
+                                                <SegmentedControl value={field.value || 'percentage'} onValueChange={field.onChange}>
+                                                    <SegmentedControlButton value="percentage">Percentage</SegmentedControlButton>
+                                                    <SegmentedControlButton value="absolute">Absolute</SegmentedControlButton>
+                                                </SegmentedControl>
                                                 <FormMessage />
                                             </FormItem>
                                             )}
@@ -874,3 +897,5 @@ export default function JourneyForm({
       </Card>
   );
 }
+
+    
