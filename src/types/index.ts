@@ -1,4 +1,5 @@
 
+
 import { z } from 'zod';
 
 export const ServerConfigSchema = z.object({
@@ -46,8 +47,8 @@ const SplitPaymentSettingsSchema = z.object({
   splitPaymentEnabled: z.boolean().default(false),
   splitPaymentType: z.enum(['percentage', 'absolute']).default('percentage'),
   splitPaymentValue: z.number().default(0),
-  splitPaymentMinAmount: z.number().optional(),
-  splitPaymentThresholdAmount: z.number().optional(),
+  splitPaymentMinAmount: z.number().nullable().optional(),
+  splitPaymentThresholdAmount: z.number().nullable().optional(),
   splitPaymentExtrasType: z.enum(['percentage', 'absolute']).default('percentage'),
   splitPaymentExtrasValue: z.number().default(0),
   splitPaymentTollsType: z.enum(['percentage', 'absolute']).default('percentage'),
@@ -238,3 +239,4 @@ export const SuggestionOutputSchema = z.object({
   suggestion: z.string(),
 });
 export type SuggestionOutput = z.infer<typeof SuggestionOutputSchema>;
+
