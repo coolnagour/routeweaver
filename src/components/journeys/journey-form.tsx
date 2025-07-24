@@ -100,8 +100,8 @@ function JourneyFormInner({
     }));
   };
   
-  const [editingBookingId, setEditingBookingId] = useState<string | null>(null);
   const [bookings, setBookings] = useState<Booking[]>(() => getInitialBookings(initialData));
+  const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [journeyPreview, setJourneyPreview] = useState<JourneyPreviewState>({ orderedStops: [], journeyPayload: null, bookings: [], bookingPayloads: [], isLoading: false });
@@ -272,19 +272,19 @@ function JourneyFormInner({
         return;
     }
 
-    const templateData = {
+    const templateData: any = {
       name: templateName,
       bookings: bookings.map(b => {
-        const { price, cost, ...bookingWithoutPrice } = b;
         const newBooking: any = {
-          ...bookingWithoutPrice,
+          ...b,
           stops: b.stops.map(s => ({ 
               ...s,
               dateTime: s.dateTime?.toISOString(),
           })),
         };
-        if (typeof price === 'number') newBooking.price = price;
-        if (typeof cost === 'number') newBooking.cost = cost;
+        // Explicitly check for undefined to allow 0 values to be saved
+        if (b.price === undefined) delete newBooking.price;
+        if (b.cost === undefined) delete newBooking.cost;
         return newBooking;
       }),
       site: selectedSite,
@@ -445,9 +445,17 @@ function JourneyFormInner({
       holdOn: false,
     };
     
-    setBookings(prev => [...prev, newBooking]);
-    setEditingBookingId(newBookingId);
+    setEditingBooking(newBooking);
   };
+
+  const handleEditBooking = (bookingId: string) => {
+    const bookingToEdit = bookings.find(b => b.id === bookingId);
+    if (bookingToEdit) {
+      // Use a deep copy to prevent direct mutation of state before saving
+      setEditingBooking(JSON.parse(JSON.stringify(bookingToEdit)));
+    }
+  };
+
 
   const handleSaveBooking = (bookingToSave: Booking) => {
     console.log('[JourneyForm] handleSaveBooking:', JSON.stringify(bookingToSave, null, 2));
@@ -456,29 +464,38 @@ function JourneyFormInner({
       ...bookingToSave,
       stops: [...bookingToSave.stops].sort((a, b) => a.order - b.order)
     };
-    setBookings(prev => prev.map(b => b.id === sortedBooking.id ? sortedBooking : b));
-    setEditingBookingId(null);
+
+    setBookings(prev => {
+        const newBookings = [...prev];
+        const index = newBookings.findIndex(b => b.id === sortedBooking.id);
+        if (index > -1) {
+            newBookings[index] = sortedBooking;
+        } else {
+            newBookings.push(sortedBooking);
+        }
+        return newBookings;
+    });
+
+    setEditingBooking(null);
   };
   
   const handleCancelEdit = (bookingId: string) => {
-    const booking = bookings.find(b => b.id === bookingId);
-    // If it was a new booking that was cancelled, remove it from the array
-    if (booking && !booking.bookingServerId && !booking.stops.some(s => s.location.address)) {
-        setBookings(prev => prev.filter(b => b.id !== bookingId));
+    const bookingExists = bookings.some(b => b.id === bookingId);
+    // If it was a brand new booking that was cancelled, it won't exist in the main `bookings` array yet.
+    if (!bookingExists) {
+        // No need to do anything, just close the form.
     }
-    setEditingBookingId(null);
+    setEditingBooking(null);
   };
 
   const handleRemoveBooking = (bookingId: string) => {
     setBookings(prev => prev.filter(b => b.id !== bookingId));
-    setEditingBookingId(null); // Ensure we exit edit mode if the booking is deleted
+    setEditingBooking(null); // Ensure we exit edit mode if the booking is deleted
   };
 
   const title = getTitle();
   const publishButtonText = (initialData as Journey)?.status === 'Scheduled' ? 'Update Published Journey' : 'Publish';
   
-  const editingBookingData = editingBookingId ? bookings.find(b => b.id === editingBookingId) ?? null : null;
-
   const journeyMapComponent = (
       <JourneyMap 
           stops={journeyPreview.orderedStops}
@@ -597,9 +614,9 @@ function JourneyFormInner({
 
             <BookingManager
               bookings={bookings}
-              editingBookingData={editingBookingData}
+              editingBookingData={editingBooking}
               onAddNewBooking={handleAddNewBooking}
-              onEditBooking={setEditingBookingId}
+              onEditBooking={handleEditBooking}
               onSaveBooking={handleSaveBooking}
               onCancelEdit={handleCancelEdit}
               onRemoveBooking={handleRemoveBooking}
