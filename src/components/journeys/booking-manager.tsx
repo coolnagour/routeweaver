@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import type { Booking, Stop } from '@/types';
@@ -38,7 +38,7 @@ interface BookingManagerProps {
 }
 
 
-export default function BookingManager({ 
+function BookingManager({ 
     bookings, 
     setBookings,
     isJourneyPriceSet,
@@ -51,6 +51,14 @@ export default function BookingManager({
   const [liveStatus, setLiveStatus] = useState<{ bookingId: string; status: string | null; isLoading: boolean } | null>(null);
   const [isNewBooking, setIsNewBooking] = useState(false);
   
+  // This effect ensures that when the form is closed, the state is clean.
+  // It helps prevent race conditions where the form might re-open with stale data.
+  useEffect(() => {
+    if (editingBookingData === null) {
+      setIsNewBooking(false);
+    }
+  }, [editingBookingData]);
+
   const handleAddNewBooking = () => {
     const newBookingId = uuidv4();
     const newPickupStopId = uuidv4();
@@ -78,8 +86,7 @@ export default function BookingManager({
   const handleSaveBooking = (bookingToSave: Booking) => {
     const newBookings = bookings.map(b => (b.id === bookingToSave.id ? bookingToSave : b));
     setBookings(newBookings);
-    setEditingBookingData(null);
-    setIsNewBooking(false);
+    setEditingBookingData(null); // Close the form
   };
   
   const handleCancelEdit = (bookingId: string) => {
@@ -87,7 +94,6 @@ export default function BookingManager({
       setBookings(bookings.filter(b => b.id !== bookingId));
     }
     setEditingBookingData(null);
-    setIsNewBooking(false);
   };
 
   const handleRemoveBooking = async (bookingId: string) => {
@@ -412,3 +418,5 @@ export default function BookingManager({
     </Card>
   );
 }
+
+export default React.memo(BookingManager);
