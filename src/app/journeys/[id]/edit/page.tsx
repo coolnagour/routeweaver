@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { saveJourney } from '@/ai/flows/journey-flow';
 import { useServer } from '@/context/server-context';
 import { v4 as uuidv4 } from 'uuid';
+import SaveTemplateDialog from '@/components/journeys/save-template-dialog';
 
 export default function EditJourneyPage() {
   const router = useRouter();
@@ -23,6 +24,8 @@ export default function EditJourneyPage() {
   const { journeys, addOrUpdateJourney, loading: journeysLoading } = useJourneys();
   const { addOrUpdateTemplate } = useTemplates();
   const [journey, setJourney] = useState<Journey | null>(null);
+  const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false);
+  const [journeyToSaveAsTemplate, setJourneyToSaveAsTemplate] = useState<Journey | JourneyTemplate | null>(null);
 
   useEffect(() => {
     if (journeyId && !journeysLoading) {
@@ -85,12 +88,7 @@ export default function EditJourneyPage() {
     router.push('/journeys');
   }
 
-  const handleSaveAsTemplate = async (journeyData: Journey | JourneyTemplate) => {
-    if (!server?.uuid) {
-      toast({ variant: 'destructive', title: 'Server not configured' });
-      return;
-    }
-    
+  const handleOpenSaveTemplateDialog = (journeyData: Journey | JourneyTemplate) => {
     if (!journeyData.site || !journeyData.account) {
         toast({
             variant: 'destructive',
@@ -99,20 +97,26 @@ export default function EditJourneyPage() {
         });
         return;
     }
+    setJourneyToSaveAsTemplate(journeyData);
+    setIsTemplateDialogOpen(true);
+  };
 
-    const name = window.prompt("Enter a name for the new template:");
-    if (!name) return;
+  const handleSaveAsTemplate = async (name: string) => {
+    if (!server?.uuid || !journeyToSaveAsTemplate) {
+      toast({ variant: 'destructive', title: 'Server not configured or data missing' });
+      return;
+    }
 
     const newTemplate: JourneyTemplate = {
       id: uuidv4(),
       serverScope: server.uuid,
       name,
-      bookings: journeyData.bookings || [],
-      site: journeyData.site,
-      account: journeyData.account,
-      price: journeyData.price,
-      cost: journeyData.cost,
-      enable_messaging_service: journeyData.enable_messaging_service,
+      bookings: journeyToSaveAsTemplate.bookings || [],
+      site: journeyToSaveAsTemplate.site,
+      account: journeyToSaveAsTemplate.account,
+      price: journeyToSaveAsTemplate.price,
+      cost: journeyToSaveAsTemplate.cost,
+      enable_messaging_service: journeyToSaveAsTemplate.enable_messaging_service,
     };
     
     await addOrUpdateTemplate(newTemplate);
@@ -132,13 +136,20 @@ export default function EditJourneyPage() {
   }
 
   return (
-    <JourneyForm
-      key={journey.id}
-      initialData={journey}
-      onSave={handleSaveJourney}
-      onPublish={handlePublishJourney}
-      onSaveTemplate={handleSaveAsTemplate}
-      isEditing={true}
-    />
+    <>
+      <JourneyForm
+        key={journey.id}
+        initialData={journey}
+        onSave={handleSaveJourney}
+        onPublish={handlePublishJourney}
+        onSaveTemplate={handleOpenSaveTemplateDialog}
+        isEditing={true}
+      />
+      <SaveTemplateDialog
+        isOpen={isTemplateDialogOpen}
+        onOpenChange={setIsTemplateDialogOpen}
+        onSave={handleSaveAsTemplate}
+      />
+    </>
   );
 }

@@ -10,6 +10,7 @@ import { useJourneys } from '@/hooks/use-journeys';
 import { useTemplates } from '@/hooks/use-templates';
 import { useServer } from '@/context/server-context';
 import { v4 as uuidv4 } from 'uuid';
+import SaveTemplateDialog from '@/components/journeys/save-template-dialog';
 
 export default function NewJourneyPage() {
   const router = useRouter();
@@ -18,6 +19,8 @@ export default function NewJourneyPage() {
   const { addOrUpdateTemplate } = useTemplates();
   const { server } = useServer();
   const [initialData, setInitialData] = useState<Partial<Journey>>({});
+  const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false);
+  const [journeyToSaveAsTemplate, setJourneyToSaveAsTemplate] = useState<Journey | JourneyTemplate | null>(null);
 
   useEffect(() => {
     const templateToLoad = sessionStorage.getItem('templateToLoad');
@@ -62,13 +65,8 @@ export default function NewJourneyPage() {
     router.push(`/journeys/${newJourney.id}/edit`);
   };
 
-  const handleSaveAsTemplate = async (journeyData: Journey | JourneyTemplate) => {
-    if (!server?.uuid) {
-      toast({ variant: 'destructive', title: 'Server not configured', description: 'Cannot save a template without a server.' });
-      return;
-    }
-
-    if (!journeyData.site || !journeyData.account) {
+  const handleOpenSaveTemplateDialog = (journeyData: Journey | JourneyTemplate) => {
+     if (!journeyData.site || !journeyData.account) {
         toast({
             variant: 'destructive',
             title: 'Information Missing',
@@ -76,22 +74,26 @@ export default function NewJourneyPage() {
         });
         return;
     }
+    setJourneyToSaveAsTemplate(journeyData);
+    setIsTemplateDialogOpen(true);
+  };
 
-    const name = window.prompt("Enter a name for the new template:");
-    if (!name) {
-      return; // User cancelled
+  const handleSaveAsTemplate = async (name: string) => {
+    if (!server?.uuid || !journeyToSaveAsTemplate) {
+      toast({ variant: 'destructive', title: 'Server not configured or data missing' });
+      return;
     }
     
     const newTemplate: JourneyTemplate = {
       id: uuidv4(),
       serverScope: server.uuid,
       name: name,
-      bookings: journeyData.bookings || [],
-      site: journeyData.site,
-      account: journeyData.account,
-      price: journeyData.price,
-      cost: journeyData.cost,
-      enable_messaging_service: journeyData.enable_messaging_service,
+      bookings: journeyToSaveAsTemplate.bookings || [],
+      site: journeyToSaveAsTemplate.site,
+      account: journeyToSaveAsTemplate.account,
+      price: journeyToSaveAsTemplate.price,
+      cost: journeyToSaveAsTemplate.cost,
+      enable_messaging_service: journeyToSaveAsTemplate.enable_messaging_service,
     };
     
     await addOrUpdateTemplate(newTemplate);
@@ -103,11 +105,20 @@ export default function NewJourneyPage() {
   };
 
 
-  return <JourneyForm 
-    key={initialData ? (initialData as Journey).id : 'new'} 
-    initialData={initialData}
-    onSave={handleSaveDraft}
-    onSaveTemplate={handleSaveAsTemplate}
-    isEditing={false}
-  />;
+  return (
+    <>
+      <JourneyForm 
+        key={initialData ? (initialData as Journey).id : 'new'} 
+        initialData={initialData}
+        onSave={handleSaveDraft}
+        onSaveTemplate={handleOpenSaveTemplateDialog}
+        isEditing={false}
+      />
+      <SaveTemplateDialog
+        isOpen={isTemplateDialogOpen}
+        onOpenChange={setIsTemplateDialogOpen}
+        onSave={handleSaveAsTemplate}
+      />
+    </>
+  );
 }
