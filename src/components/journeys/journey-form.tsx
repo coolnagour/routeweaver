@@ -94,8 +94,9 @@ function JourneyFormInner({
     });
     
     const initialSite = data.site;
-    if(initialSite && !sites.some(s => s.id === initialSite.id)) {
-        setSites(prev => [initialSite, ...prev]);
+    if (initialSite) {
+        // Start with only the initial site to prevent duplicates before fetch
+        setSites([initialSite]);
     }
   }, [initialData]);
 
@@ -153,23 +154,31 @@ function JourneyFormInner({
   }
 
   const handleFetchSites = useCallback(async () => {
-    if (server) { 
-        setIsFetchingSites(true);
-        try {
-            const fetchedSites = await getSites(server);
-            const currentSelectedSite = journeyData.site;
-            if (currentSelectedSite && !fetchedSites.some(s => s.id === currentSelectedSite.id)) {
-              setSites([currentSelectedSite, ...fetchedSites]);
-            } else {
-              setSites(fetchedSites);
-            }
-        } catch (error) {
-            console.error("Failed to fetch sites:", error);
-            toast({ variant: 'destructive', title: 'Error fetching sites', description: 'Could not retrieve sites for the selected server.'});
-            setSites([]);
-        } finally {
-            setIsFetchingSites(false);
-        }
+    if (server) {
+      setIsFetchingSites(true);
+      try {
+        const fetchedSites = await getSites(server);
+        const currentSelectedSite = journeyData.site;
+  
+        // Combine fetched sites with the current selected site (if any)
+        const combinedSites = currentSelectedSite ? [currentSelectedSite, ...fetchedSites] : fetchedSites;
+  
+        // De-duplicate using a Map to ensure each site ID is unique
+        const uniqueSitesMap = new Map<number, Site>();
+        combinedSites.forEach(site => {
+          if (!uniqueSitesMap.has(site.id)) {
+            uniqueSitesMap.set(site.id, site);
+          }
+        });
+  
+        setSites(Array.from(uniqueSitesMap.values()));
+      } catch (error) {
+        console.error("Failed to fetch sites:", error);
+        toast({ variant: 'destructive', title: 'Error fetching sites', description: 'Could not retrieve sites for the selected server.' });
+        setSites([]);
+      } finally {
+        setIsFetchingSites(false);
+      }
     }
   }, [server, toast, journeyData.site]);
 
