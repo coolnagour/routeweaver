@@ -86,8 +86,16 @@ function BookingManager({
   };
 
   const handleSaveBooking = (bookingToSave: Booking) => {
+    console.log('[BookingManager] handleSaveBooking triggered. Received data from form:', JSON.stringify(bookingToSave, null, 2));
+    console.log('[BookingManager] Current bookings state (before update):', JSON.stringify(bookings, null, 2));
+
     const newBookings = bookings.map(b => (b.id === bookingToSave.id ? bookingToSave : b));
+
+    console.log('[BookingManager] New bookings array (after map):', JSON.stringify(newBookings, null, 2));
+    
     setBookings(newBookings);
+    console.log('[BookingManager] setBookings called with new array.');
+
     setEditingBookingData(null); // Close the form
   };
   
