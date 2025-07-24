@@ -39,6 +39,7 @@ interface JourneyFormProps {
   initialSite?: Site | null; // For loading from template
   initialAccount?: Account | null; // For loading from template
   onUpdateJourney?: (journey: Journey) => void;
+  onUpdateTemplate?: (bookings: Booking[]) => void;
 }
 
 interface JourneyPreviewState {
@@ -71,7 +72,8 @@ function JourneyFormInner({
   journeyId,
   initialSite,
   initialAccount,
-  onUpdateJourney
+  onUpdateJourney,
+  onUpdateTemplate,
 }: JourneyFormProps) {
   const { toast } = useToast();
   const router = useRouter();
@@ -181,6 +183,13 @@ function JourneyFormInner({
     setJourneyCost(initialData?.cost);
     setEnableMessaging((initialData as Journey)?.enable_messaging_service || false);
   }, [initialData, initialAccount, resolvedInitialSite]);
+  
+  const handleSetBookings = (newBookings: Booking[]) => {
+      setBookings(newBookings);
+      if (isEditingTemplate && onUpdateTemplate) {
+          onUpdateTemplate(newBookings);
+      }
+  }
 
   const handleFetchSites = useCallback(async () => {
     if (server) { 
@@ -541,7 +550,7 @@ function JourneyFormInner({
 
             <BookingManager
               bookings={bookings}
-              setBookings={setBookings}
+              setBookings={handleSetBookings}
               isJourneyPriceSet={hasJourneyLevelPrice}
             />
             

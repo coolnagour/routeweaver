@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import useIndexedDB from '@/hooks/use-indexed-db';
 import JourneyForm from '@/components/journeys/journey-form';
-import type { JourneyTemplate } from '@/types';
+import type { JourneyTemplate, Journey, Booking } from '@/types';
 import { useServer } from '@/context/server-context';
 import { Loader2 } from 'lucide-react';
 
@@ -42,6 +42,17 @@ export default function EditTemplatePage() {
     }
   }, [templateId, templates, router]);
 
+  const handleUpdateTemplate = (updatedBookings: Booking[]) => {
+    if (template) {
+        const newTemplate: JourneyTemplate = {
+            ...template,
+            bookings: updatedBookings,
+        };
+        setTemplate(newTemplate);
+    }
+  }
+
+
   if (loading || !template) {
     return (
         <div className="flex h-screen w-full items-center justify-center">
@@ -55,6 +66,7 @@ export default function EditTemplatePage() {
       key={template.id}
       initialData={template}
       isEditingTemplate={true}
+      onUpdateTemplate={handleUpdateTemplate}
     />
   );
 }
