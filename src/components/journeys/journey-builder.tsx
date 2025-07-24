@@ -167,7 +167,7 @@ function JourneyBuilderInner({
     setTemplateName((initialData as JourneyTemplate)?.name || '');
     
     // When editing a template, or loading a journey from a template, set site/account
-    const site = initialSite || (initialData as Journey | JourneyTemplate)?.site || null;
+    const site = resolvedInitialSite;
     setSelectedSite(site);
     if(site && !sites.some(s => s.id === site.id)) {
         setSites(prev => [...prev, site]);
@@ -178,14 +178,20 @@ function JourneyBuilderInner({
     setJourneyPrice(initialData?.price);
     setJourneyCost(initialData?.cost);
     setEnableMessaging((initialData as Journey)?.enable_messaging_service || false);
-  }, [initialData, initialSite, initialAccount, sites]);
+  }, [initialData, initialAccount, resolvedInitialSite, sites]);
 
   const handleFetchSites = useCallback(async () => {
     if (server) { 
         setIsFetchingSites(true);
         try {
             const fetchedSites = await getSites(server);
-            setSites(fetchedSites);
+            // Ensure the currently selected site is in the list if it was loaded from initialData
+            const currentSelectedSite = selectedSite;
+            if (currentSelectedSite && !fetchedSites.some(s => s.id === currentSelectedSite.id)) {
+              setSites([currentSelectedSite, ...fetchedSites]);
+            } else {
+              setSites(fetchedSites);
+            }
         } catch (error) {
             console.error("Failed to fetch sites:", error);
             toast({ variant: 'destructive', title: 'Error fetching sites', description: 'Could not retrieve sites for the selected server.'});
@@ -194,7 +200,7 @@ function JourneyBuilderInner({
             setIsFetchingSites(false);
         }
     }
-  }, [server, toast]);
+  }, [server, toast, selectedSite]);
 
   const handleSaveJourneyLocally = async () => {
     if (!server?.uuid) {
@@ -290,6 +296,11 @@ function JourneyBuilderInner({
       cost: journeyCost,
       enable_messaging_service: enableMessaging,
     };
+    
+    // Explicitly check for undefined to allow 0 values to be saved
+    if (journeyPrice === undefined) delete templateData.price;
+    if (journeyCost === undefined) delete templateData.cost;
+
 
     if (isEditingTemplate && initialData?.id) {
         const updatedTemplate: JourneyTemplate = {
