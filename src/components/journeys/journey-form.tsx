@@ -216,6 +216,8 @@ function JourneyFormInner({
       return;
     }
     
+    console.log('[JourneyForm] handleSaveJourneyLocally - Journey data before saving:', JSON.stringify({bookings, selectedSite, selectedAccount, journeyPrice, journeyCost, enableMessaging}, null, 2));
+
     if (isEditingJourney && journeyId) {
         const journeyToUpdate: Journey = {
             ...(initialData as Journey),
@@ -228,7 +230,7 @@ function JourneyFormInner({
             cost: journeyCost,
             enable_messaging_service: enableMessaging,
         };
-        console.log('[JourneyForm] handleSaveJourneyLocally (Update):', JSON.stringify(journeyToUpdate, null, 2));
+        console.log('[JourneyForm] About to save updated journey to DB:', JSON.stringify(journeyToUpdate, null, 2));
         await addOrUpdateJourney(journeyToUpdate);
         toast({
             title: 'Journey Updated!',
@@ -249,7 +251,7 @@ function JourneyFormInner({
             cost: journeyCost,
             enable_messaging_service: enableMessaging,
         };
-        console.log('[JourneyForm] handleSaveJourneyLocally (New):', JSON.stringify(newJourney, null, 2));
+        console.log('[JourneyForm] About to save new journey to DB:', JSON.stringify(newJourney, null, 2));
         await addOrUpdateJourney(newJourney);
         toast({
             title: 'Journey Saved!',
@@ -310,6 +312,7 @@ function JourneyFormInner({
             id: initialData.id,
             serverScope: (initialData as JourneyTemplate).serverScope || server.uuid,
         };
+        console.log('[JourneyForm] handleSaveTemplate (Update):', JSON.stringify(updatedTemplate, null, 2));
         addTemplate(updatedTemplate);
         toast({
             title: "Template Updated!",
@@ -322,6 +325,7 @@ function JourneyFormInner({
             serverScope: server.uuid,
             ...templateData,
         };
+        console.log('[JourneyForm] handleSaveTemplate (New):', JSON.stringify(newTemplate, null, 2));
         addTemplate(newTemplate);
         toast({
             title: "Template Saved!",
