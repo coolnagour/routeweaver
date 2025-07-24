@@ -102,6 +102,7 @@ export const SiteSchema = z.object({
 export const JourneySchema = z.object({
   id: z.string(),
   serverScope: z.string(),
+  name: z.string().optional(), // For templates primarily
   journeyServerId: z.number().optional(),
   bookings: z.array(BookingSchema),
   status: z.enum(['Draft', 'Scheduled', 'Completed', 'Cancelled']),
@@ -114,21 +115,12 @@ export const JourneySchema = z.object({
 });
 export type Journey = z.infer<typeof JourneySchema>;
 
+// JourneyTemplate now aligns with Journey, but with a required name and no status.
+export const JourneyTemplateSchema = JourneySchema.extend({
+    name: z.string().min(1, "Template name is required"),
+}).omit({ status: true });
+export type JourneyTemplate = z.infer<typeof JourneyTemplateSchema>;
 
-// Stored template has string dates
-export type TemplateBooking = Omit<Booking, 'stops' | 'bookingServerId'> & { stops: Stop[] };
-
-export interface JourneyTemplate {
-  id: string;
-  serverScope: string; // To link template to a server config
-  name: string;
-  bookings: TemplateBooking[];
-  account?: Account | null;
-  site?: Site | null;
-  price?: number;
-  cost?: number;
-  enable_messaging_service?: boolean;
-}
 
 // Type for AI-generated template suggestions before they are fully structured
 export type AITemplateSuggestion = {
@@ -188,23 +180,6 @@ const GenkitBookingSchema = z.object({
   instructions: z.string().optional(),
   holdOn: z.boolean().optional(),
   splitPaymentSettings: SplitPaymentSettingsSchema.optional(),
-});
-
-// Stored template has string dates
-export const TemplateBookingSchema = GenkitBookingSchema.extend({
-  stops: z.array(GenkitStopSchema),
-}).omit({ bookingServerId: true });
-
-export const JourneyTemplateSchema = z.object({
-  id: z.string(),
-  serverScope: z.string(),
-  name: z.string(),
-  bookings: z.array(TemplateBookingSchema),
-  account: AccountSchema.nullable().optional(),
-  site: SiteSchema.nullable().optional(),
-  price: z.number().optional(),
-  cost: z.number().optional(),
-  enable_messaging_service: z.boolean().optional(),
 });
 
 export const JourneyInputSchema = z.object({

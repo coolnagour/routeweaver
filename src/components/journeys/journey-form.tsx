@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -30,15 +29,12 @@ import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { ScrollArea } from '../ui/scroll-area';
 
 interface JourneyFormProps {
-  initialData?: Partial<JourneyTemplate> | Partial<Journey> | null;
+  initialData?: Partial<Journey> | null;
   isEditing?: boolean;
   isTemplate?: boolean;
-  onSave?: (data: Omit<Journey, 'id' | 'serverScope' | 'status'>) => void;
-  onSaveTemplate?: (data: Omit<JourneyTemplate, 'id' | 'serverScope'>) => void;
+  onSave?: (data: Journey) => void;
+  onSaveTemplate?: (data: Journey) => void;
   onUseTemplate?: () => void;
-  // New props for lifted state
-  bookings: Booking[];
-  setBookings: (bookings: Booking[]) => void;
 }
 
 interface JourneyPreviewState {
@@ -68,16 +64,15 @@ function JourneyFormInner({
   onSave,
   onSaveTemplate,
   onUseTemplate,
-  bookings,
-  setBookings,
 }: JourneyFormProps) {
   const { toast } = useToast();
   const router = useRouter();
   const { server } = useServer();
   const [, , addTemplateDb] = useIndexedDB<JourneyTemplate>('journey-templates', [], server?.uuid);
-  
-  const [templateName, setTemplateName] = useState((initialData as JourneyTemplate)?.name || '');
-  
+
+  const [name, setName] = useState(initialData?.name || '');
+  const [bookings, setBookings] = useState<Booking[]>([]);
+
   const resolvedInitialSite = (initialData as Journey | JourneyTemplate)?.site || null;
   const [sites, setSites] = useState<Site[]>(resolvedInitialSite ? [resolvedInitialSite] : []);
   const [isFetchingSites, setIsFetchingSites] = useState(false);
@@ -99,6 +94,32 @@ function JourneyFormInner({
   const hasJourneyLevelPrice = typeof journeyPrice === 'number' || typeof journeyCost === 'number';
 
   const { setSelectedLocation, isMapInSelectionMode } = useMapSelection();
+
+  useEffect(() => {
+    setName(initialData?.name || '');
+    const initialBookings = JSON.parse(JSON.stringify(initialData?.bookings || [])).map((b: any) => ({
+      ...b,
+      id: b.id || uuidv4(),
+      stops: b.stops.map((s: any, index: number) => ({
+        ...s,
+        id: s.id || uuidv4(),
+        order: s.order ?? index,
+        dateTime: s.dateTime ? new Date(s.dateTime) : undefined,
+      })),
+    }));
+    setBookings(initialBookings);
+    
+    const site = resolvedInitialSite;
+    setSelectedSite(site);
+    if(site && !sites.some(s => s.id === site.id)) {
+        setSites(prev => [...prev, site]);
+    }
+    setSelectedAccount(resolvedInitialAccount);
+    setJourneyPrice(initialData?.price);
+    setJourneyCost(initialData?.cost);
+    setEnableMessaging(initialData?.enable_messaging_service || false);
+  }, [initialData]);
+
 
   const debounce = <F extends (...args: any[]) => void>(func: F, delay: number) => {
     let timeoutId: ReturnType<typeof setTimeout>;
@@ -146,19 +167,6 @@ function JourneyFormInner({
   useEffect(() => {
     debouncedFetchPreview(bookings, (initialData as Journey)?.journeyServerId, enableMessaging, selectedSite, selectedAccount);
   }, [bookings, initialData, debouncedFetchPreview, enableMessaging, selectedSite, selectedAccount]);
-  
-  useEffect(() => {
-    setTemplateName((initialData as JourneyTemplate)?.name || '');
-    const site = resolvedInitialSite;
-    setSelectedSite(site);
-    if(site && !sites.some(s => s.id === site.id)) {
-        setSites(prev => [...prev, site]);
-    }
-    setSelectedAccount(resolvedInitialAccount);
-    setJourneyPrice(initialData?.price);
-    setJourneyCost(initialData?.cost);
-    setEnableMessaging(initialData?.enable_messaging_service || false);
-  }, [initialData]);
 
   const handleFetchSites = useCallback(async () => {
     if (server) { 
@@ -181,9 +189,9 @@ function JourneyFormInner({
     }
   }, [server, toast, selectedSite]);
 
-  const handleSaveDraftOrJourney = () => {
+  const handleSaveAction = () => {
     if (!onSave) return;
-    if (bookings.length === 0) {
+    if (bookings.length === 0 && !isTemplate) {
       toast({
         variant: 'destructive',
         title: 'Cannot save empty journey',
@@ -191,48 +199,65 @@ function JourneyFormInner({
       });
       return;
     }
-    onSave({
-        bookings,
-        site: selectedSite,
-        account: selectedAccount,
-        price: journeyPrice,
-        cost: journeyCost,
-        enable_messaging_service: enableMessaging,
-        journeyServerId: (initialData as Journey)?.journeyServerId,
-        orderedStops: journeyPreview.orderedStops,
-    });
-  };
 
-  const handleSaveTemplateAction = () => {
-    const action = onSaveTemplate || handleCreateNewTemplate;
-    if (!templateName) {
+    const currentJourneyData = {
+      ...initialData,
+      id: initialData?.id || uuidv4(),
+      name: isTemplate ? name : initialData?.name,
+      bookings,
+      site: selectedSite,
+      account: selectedAccount,
+      price: journeyPrice,
+      cost: journeyCost,
+      enable_messaging_service: enableMessaging,
+      journeyServerId: initialData?.journeyServerId,
+      orderedStops: journeyPreview.orderedStops,
+      status: initialData?.status || 'Draft',
+    } as Journey
+
+    onSave(currentJourneyData);
+  };
+  
+  const handleSaveTemplateAction = async () => {
+    if (!name) {
         toast({ title: 'Template name required', variant: 'destructive' });
         return;
     }
-    action({
-        name: templateName,
-        bookings: bookings,
-        site: selectedSite,
-        account: selectedAccount,
-        price: journeyPrice,
-        cost: journeyCost,
-        enable_messaging_service: enableMessaging,
-    });
-  };
+     const currentData = {
+      ...initialData,
+      id: initialData?.id || uuidv4(),
+      name,
+      bookings,
+      site: selectedSite,
+      account: selectedAccount,
+      price: journeyPrice,
+      cost: journeyCost,
+      enable_messaging_service: enableMessaging,
+      status: 'Draft',
+    } as Journey;
 
-  const handleCreateNewTemplate = async (templateData: Omit<JourneyTemplate, 'id' | 'serverScope'>) => {
-    if (!server?.uuid) return;
-    const newTemplate: JourneyTemplate = {
-        id: uuidv4(),
-        serverScope: server.uuid,
-        ...templateData,
-    };
-    await addTemplateDb(newTemplate);
-    toast({
-        title: "Template Saved!",
-        description: `Template "${templateName}" has been saved.`,
-    });
-    setTemplateName('');
+    if (onSaveTemplate) {
+      onSaveTemplate(currentData);
+    } else {
+        if (!server?.uuid) return;
+        const newTemplate: JourneyTemplate = {
+            id: uuidv4(),
+            serverScope: server.uuid,
+            name,
+            bookings,
+            site: selectedSite,
+            account: selectedAccount,
+            price: journeyPrice,
+            cost: journeyCost,
+            enable_messaging_service: enableMessaging,
+        };
+        await addTemplateDb(newTemplate);
+        toast({
+            title: "Template Saved!",
+            description: `Template "${name}" has been saved.`,
+        });
+        setName('');
+    }
   };
 
   async function handlePublishJourney() {
@@ -269,6 +294,7 @@ function JourneyFormInner({
         
         if (onSave) {
             onSave({
+                ...journeyToPublish,
                 bookings: result.bookings,
                 status: 'Scheduled',
                 journeyServerId: result.journeyServerId,
@@ -300,7 +326,7 @@ function JourneyFormInner({
   }
   
   const getTitle = () => {
-    if (isTemplate) return `Editing Template: ${initialData?.name}`;
+    if (isTemplate) return isEditing ? `Editing Template: ${initialData?.name}` : 'Create New Template';
     if (isEditing) {
       const journeyData = initialData as Journey;
       return journeyData?.journeyServerId ? `Editing Journey (ID: ${journeyData.journeyServerId})` : 'Editing Journey Draft';
@@ -503,12 +529,12 @@ function JourneyFormInner({
                                 id="template-name"
                                 type="text"
                                 placeholder={isTemplate ? "Template Name" : "Enter name to save..."}
-                                value={templateName}
-                                onChange={(e) => setTemplateName(e.target.value)}
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
                                 className="bg-background h-10"
                             />
                         </div>
-                        <Button variant="outline" onClick={handleSaveTemplateAction} disabled={bookings.length === 0 || !templateName}>
+                        <Button variant="outline" onClick={handleSaveTemplateAction} disabled={bookings.length === 0 || !name}>
                             <Save className="mr-2 h-4 w-4" /> {isTemplate ? 'Update Template' : 'Save as Template'}
                         </Button>
                     </div>
@@ -522,7 +548,7 @@ function JourneyFormInner({
                             </Button>
                         ) : (
                             <>
-                            <Button variant="outline" onClick={handleSaveDraftOrJourney} disabled={!onSave || bookings.length === 0} className="flex-1">
+                            <Button variant="outline" onClick={handleSaveAction} disabled={!onSave || bookings.length === 0} className="flex-1">
                                 <Save className="mr-2 h-4 w-4" /> {isEditing ? 'Update Journey' : 'Save Draft'}
                             </Button>
                             
@@ -638,47 +664,9 @@ function JourneyFormInner({
 
 
 export default function JourneyForm(props: JourneyFormProps) {
-  // New wrapper to provide bookings state if not provided by parent
-  const [internalBookings, setInternalBookings] = useState<Booking[]>(() => {
-    if (props.initialData?.bookings) {
-      return JSON.parse(JSON.stringify(props.initialData.bookings)).map((b: any) => ({
-        ...b,
-        id: b.id || uuidv4(),
-        stops: b.stops.map((s: any, index: number) => ({
-          ...s,
-          id: s.id || uuidv4(),
-          order: s.order ?? index,
-          dateTime: s.dateTime ? new Date(s.dateTime) : undefined
-        }))
-      }));
-    }
-    return [];
-  });
-  
-  const bookings = props.bookings ?? internalBookings;
-  const setBookings = props.setBookings ?? setInternalBookings;
-
-  useEffect(() => {
-    // Sync internal state if initialData changes
-    if (props.initialData?.bookings) {
-      const newBookings = JSON.parse(JSON.stringify(props.initialData.bookings)).map((b: any) => ({
-        ...b,
-        id: b.id || uuidv4(),
-        stops: b.stops.map((s: any, index: number) => ({
-          ...s,
-          id: s.id || uuidv4(),
-          order: s.order ?? index,
-          dateTime: s.dateTime ? new Date(s.dateTime) : undefined
-        }))
-      }));
-      setInternalBookings(newBookings);
-    }
-  }, [props.initialData]);
-
-
   return (
     <MapSelectionProvider>
-      <JourneyFormInner {...props} bookings={bookings} setBookings={setBookings} />
+      <JourneyFormInner {...props} />
     </MapSelectionProvider>
   )
 }

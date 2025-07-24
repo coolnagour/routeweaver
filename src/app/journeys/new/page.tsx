@@ -1,11 +1,10 @@
 
-
 'use client';
 
 import JourneyForm from '@/components/journeys/journey-form';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import type { Journey, JourneyTemplate, Booking } from '@/types';
+import type { Journey, JourneyTemplate } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { useJourneys } from '@/hooks/use-journeys';
 import { useServer } from '@/context/server-context';
@@ -16,26 +15,18 @@ export default function NewJourneyPage() {
   const { toast } = useToast();
   const { addOrUpdateJourney } = useJourneys();
   const { server } = useServer();
-  const [initialData, setInitialData] = useState<JourneyTemplate | null>(null);
-  
-  // State for bookings is now managed here
-  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [initialData, setInitialData] = useState<Partial<Journey> | null>(null);
 
   useEffect(() => {
     const templateToLoad = sessionStorage.getItem('templateToLoad');
     if (templateToLoad) {
       try {
-        const parsedTemplate = JSON.parse(templateToLoad);
-        setInitialData(parsedTemplate);
-        // Initialize bookings from the template
-        const initialBookings = JSON.parse(JSON.stringify(parsedTemplate.bookings)).map((b: any) => ({
-          ...b,
-          stops: b.stops.map((s: any) => ({
-            ...s,
-            dateTime: s.dateTime ? new Date(s.dateTime) : undefined
-          }))
-        }));
-        setBookings(initialBookings);
+        const parsedTemplate: JourneyTemplate = JSON.parse(templateToLoad);
+        const journeyFromTemplate: Partial<Journey> = {
+            ...parsedTemplate,
+            status: 'Draft',
+        }
+        setInitialData(journeyFromTemplate);
       } catch (e) {
         console.error("Failed to parse template from sessionStorage", e);
       } finally {
@@ -59,7 +50,6 @@ export default function NewJourneyPage() {
       serverScope: server.uuid,
       status: 'Draft',
       ...journeyData,
-      bookings: bookings, // Use the state from this page
     };
     
     await addOrUpdateJourney(newJourney);
@@ -71,11 +61,9 @@ export default function NewJourneyPage() {
   };
 
   return <JourneyForm 
-    key={initialData ? initialData.id : 'new'} 
+    key={initialData ? (initialData as JourneyTemplate).id : 'new'} 
     initialData={initialData}
     onSave={handleSaveDraft}
     isEditing={false}
-    bookings={bookings}
-    setBookings={setBookings}
   />;
 }
