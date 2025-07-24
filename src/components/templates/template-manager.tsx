@@ -6,7 +6,7 @@ import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { useTemplates } from '@/hooks/use-templates';
 import type { JourneyTemplate, Stop } from '@/types';
-import { FileText, Users, Trash2, Bot, Package, Edit, Building, Building2, Upload, Download } from 'lucide-react';
+import { FileText, Users, Trash2, Bot, Package, Edit, Building, Building2, Upload, Download, Loader2 } from 'lucide-react';
 import AiTemplateModal from './ai-template-modal';
 import { useToast } from '@/hooks/use-toast';
 import { useServer } from '@/context/server-context';
@@ -28,7 +28,7 @@ interface TemplateManagerProps {
 export default function TemplateManager({ onLoadTemplate }: TemplateManagerProps) {
   const { server } = useServer();
   const router = useRouter();
-  const { templates, addOrUpdateTemplate, deleteTemplate } = useTemplates();
+  const { templates, addOrUpdateTemplate, deleteTemplate, loading } = useTemplates();
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -222,7 +222,12 @@ export default function TemplateManager({ onLoadTemplate }: TemplateManagerProps
             </div>
         </CardHeader>
         <CardContent>
-            {templates && templates.length > 0 ? (
+            {loading ? (
+                 <div className="text-center py-16">
+                    <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+                    <p className="mt-2 text-muted-foreground">Loading templates...</p>
+                 </div>
+            ) : templates && templates.length > 0 ? (
                 <div className="space-y-4">
                     <div className="flex items-center space-x-2 border-b pb-2">
                         <Checkbox 
@@ -285,7 +290,7 @@ export default function TemplateManager({ onLoadTemplate }: TemplateManagerProps
                     <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
                     <h3 className="mt-4 text-lg font-medium">No Templates Found</h3>
                     <p className="mt-1 text-sm text-muted-foreground">
-                    { !templates ? "Loading templates..." : 'Click "Create with AI" or "Import" to get started.'}
+                        Click "Create with AI" or "Import" to get started.
                     </p>
                 </div>
             )}
