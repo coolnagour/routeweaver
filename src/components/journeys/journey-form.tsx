@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -97,7 +98,7 @@ function JourneyFormInner({
     }));
   };
   
-  const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
+  const [editingBookingId, setEditingBookingId] = useState<string | null>(null);
   const [bookings, setBookings] = useState<Booking[]>(() => getInitialBookings(initialData));
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -443,6 +444,8 @@ function JourneyFormInner({
   const title = getTitle();
   const publishButtonText = (initialData as Journey)?.status === 'Scheduled' ? 'Update Published Journey' : 'Publish';
   
+  const editingBookingData = editingBookingId ? bookings.find(b => b.id === editingBookingId) ?? null : null;
+
   const journeyMapComponent = (
       <JourneyMap 
           stops={journeyPreview.orderedStops}
@@ -560,11 +563,11 @@ function JourneyFormInner({
             </Card>
 
             <BookingManager 
-            bookings={bookings} 
-            setBookings={setBookings}
-            editingBooking={editingBooking}
-            setEditingBooking={setEditingBooking}
-            isJourneyPriceSet={hasJourneyLevelPrice}
+              bookings={bookings} 
+              setBookings={setBookings}
+              editingBookingData={editingBookingData}
+              setEditingBookingId={setEditingBookingId}
+              isJourneyPriceSet={hasJourneyLevelPrice}
             />
             
             <Card>

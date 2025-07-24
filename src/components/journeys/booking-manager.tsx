@@ -34,8 +34,8 @@ const getPassengersFromStops = (stops: Stop[]) => {
 interface BookingManagerProps {
   bookings: Booking[];
   setBookings: React.Dispatch<React.SetStateAction<Booking[]>>;
-  editingBooking: Booking | null;
-  setEditingBooking: React.Dispatch<React.SetStateAction<Booking | null>>;
+  editingBookingData: Booking | null;
+  setEditingBookingId: React.Dispatch<React.SetStateAction<string | null>>;
   isJourneyPriceSet: boolean;
 }
 
@@ -44,8 +44,8 @@ const emptyLocation = { address: '', lat: 0, lng: 0 };
 export default function BookingManager({ 
     bookings, 
     setBookings, 
-    editingBooking,
-    setEditingBooking,
+    editingBookingData,
+    setEditingBookingId,
     isJourneyPriceSet,
 }: BookingManagerProps) {
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
@@ -55,8 +55,8 @@ export default function BookingManager({
   const [liveStatus, setLiveStatus] = useState<{ bookingId: string; status: string | null; isLoading: boolean } | null>(null);
 
 
-  const handleEditBooking = (booking: Booking) => {
-    setEditingBooking(booking);
+  const handleEditBooking = (bookingId: string) => {
+    setEditingBookingId(bookingId);
   };
 
   const handleAddNewBooking = () => {
@@ -72,7 +72,7 @@ export default function BookingManager({
     };
     
     setBookings(prev => [...prev, newBooking]);
-    setEditingBooking(newBooking);
+    setEditingBookingId(newBookingId);
   };
   
   const handleSaveBooking = (bookingToSave: Booking) => {
@@ -83,7 +83,7 @@ export default function BookingManager({
       stops: [...bookingToSave.stops].sort((a, b) => a.order - b.order)
     };
     setBookings(prev => prev.map(b => b.id === sortedBooking.id ? sortedBooking : b));
-    setEditingBooking(null);
+    setEditingBookingId(null);
   };
   
   const handleRemoveBooking = async (bookingId: string) => {
@@ -116,7 +116,7 @@ export default function BookingManager({
     }
     
     setBookings(bookings.filter(b => b.id !== bookingId));
-    setEditingBooking(null);
+    setEditingBookingId(null);
   }
 
   const handleCancelEdit = (bookingId: string) => {
@@ -125,7 +125,7 @@ export default function BookingManager({
     if (booking && !booking.bookingServerId && !booking.stops.some(s => s.location.address)) {
         setBookings(prev => prev.filter(b => b.id !== bookingId));
     }
-    setEditingBooking(null);
+    setEditingBookingId(null);
   };
   
   const handleSendEvent = async (booking: Booking, eventType: string, eventLabel: string) => {
@@ -203,12 +203,12 @@ export default function BookingManager({
   // Specific logic for Hold On bookings
   const isHoldOnMadeContactEnabled = currentStatus === 'ENROUTE' || currentStatus === 'ARRIVED';
 
-  if (editingBooking) {
-    const isFirstBooking = bookings.length > 0 && bookings[0].id === editingBooking.id;
+  if (editingBookingData) {
+    const isFirstBooking = bookings.length > 0 && bookings[0].id === editingBookingData.id;
     return (
       <BookingForm 
-        key={editingBooking.id}
-        initialData={editingBooking} 
+        key={editingBookingData.id}
+        initialData={editingBookingData} 
         onSave={handleSaveBooking}
         onCancel={handleCancelEdit}
         isJourneyPriceSet={isJourneyPriceSet}
@@ -275,7 +275,7 @@ export default function BookingManager({
                                           </DropdownMenuContent>
                                       </DropdownMenu>
                                   )}
-                                  <Button variant="ghost" size="icon" onClick={() => handleEditBooking(booking)}>
+                                  <Button variant="ghost" size="icon" onClick={() => handleEditBooking(booking.id)}>
                                     <Edit className="h-4 w-4" />
                                   </Button>
                                   <AlertDialog>
@@ -378,7 +378,7 @@ export default function BookingManager({
                               </DropdownMenu>
                           )}
 
-                          <Button variant="ghost" size="icon" onClick={() => handleEditBooking(booking)}>
+                          <Button variant="ghost" size="icon" onClick={() => handleEditBooking(booking.id)}>
                             <Edit className="h-4 w-4" />
                           </Button>
 
