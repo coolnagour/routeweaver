@@ -15,7 +15,7 @@ export default function NewJourneyPage() {
   const { toast } = useToast();
   const { addOrUpdateJourney } = useJourneys();
   const { server } = useServer();
-  const [initialData, setInitialData] = useState<Partial<Journey> | null>(null);
+  const [initialData, setInitialData] = useState<Partial<Journey>>({});
 
   useEffect(() => {
     const templateToLoad = sessionStorage.getItem('templateToLoad');
@@ -35,7 +35,7 @@ export default function NewJourneyPage() {
     }
   }, []);
   
-  const handleSaveDraft = async (journeyData: Omit<Journey, 'id' | 'serverScope' | 'status'>) => {
+  const handleSaveDraft = async (journeyData: Journey | JourneyTemplate) => {
     if (!server?.uuid) {
       toast({
         variant: 'destructive',
@@ -61,7 +61,7 @@ export default function NewJourneyPage() {
   };
 
   return <JourneyForm 
-    key={initialData ? (initialData as JourneyTemplate).id : 'new'} 
+    key={initialData ? (initialData as Journey).id : 'new'} 
     initialData={initialData}
     onSave={handleSaveDraft}
     isEditing={false}

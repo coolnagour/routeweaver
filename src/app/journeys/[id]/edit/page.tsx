@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import JourneyForm from '@/components/journeys/journey-form';
-import type { Journey } from '@/types';
+import type { Journey, JourneyTemplate } from '@/types';
 import { Loader2 } from 'lucide-react';
 import { useJourneys } from '@/hooks/use-journeys';
 import { useToast } from '@/hooks/use-toast';
@@ -34,20 +34,14 @@ export default function EditJourneyPage() {
     }
   }, [journeyId, journeys, router, journeysLoading]);
   
-  const handleSaveJourney = async (updatedJourneyData: Omit<Journey, 'id' | 'serverScope'>) => {
+  const handleSaveJourney = async (updatedJourneyData: Journey | JourneyTemplate) => {
     if (!journey) return;
 
-    const journeyToUpdate: Journey = {
-        ...journey,
-        ...updatedJourneyData,
-    };
-    
-    await addOrUpdateJourney(journeyToUpdate);
+    await addOrUpdateJourney(updatedJourneyData as Journey);
     toast({
         title: 'Journey Updated!',
         description: `Your journey has been successfully updated.`,
     });
-    setJourney(journeyToUpdate); // Update local state to reflect changes immediately
   };
 
   if (journeysLoading || !journey) {

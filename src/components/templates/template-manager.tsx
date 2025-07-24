@@ -1,9 +1,10 @@
 
+
 'use client';
 
 import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import useIndexedDB from '@/hooks/use-indexed-db';
+import { useTemplates } from '@/hooks/use-templates';
 import type { JourneyTemplate, Stop } from '@/types';
 import { FileText, Users, Trash2, Bot, Package, Edit, Building, Building2, Upload, Download } from 'lucide-react';
 import AiTemplateModal from './ai-template-modal';
@@ -27,7 +28,7 @@ interface TemplateManagerProps {
 export default function TemplateManager({ onLoadTemplate }: TemplateManagerProps) {
   const { server } = useServer();
   const router = useRouter();
-  const [templates, , addTemplate, deleteTemplate] = useIndexedDB<JourneyTemplate>('journey-templates', [], server?.uuid);
+  const { templates, addOrUpdateTemplate, deleteTemplate } = useTemplates();
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -84,7 +85,7 @@ export default function TemplateManager({ onLoadTemplate }: TemplateManagerProps
     if (!newTemplate.name) {
         newTemplate.name = "AI Generated Template";
     }
-    addTemplate(newTemplate);
+    addOrUpdateTemplate(newTemplate);
   }
 
   const getTotalPassengers = (template: JourneyTemplate) => {
@@ -174,9 +175,9 @@ export default function TemplateManager({ onLoadTemplate }: TemplateManagerProps
         toast({ title: 'No server selected', description: 'Cannot import templates without a server context.', variant: 'destructive' });
         return;
     }
-    const templatesWithScope = selectedTemplates.map(t => ({...t, serverScope: server.uuid! }));
+    const templatesWithScope = selectedTemplates.map(t => ({...t, serverScope: server.uuid!, id: uuidv4() }));
     
-    Promise.all(templatesWithScope.map(t => addTemplate(t))).then(() => {
+    Promise.all(templatesWithScope.map(t => addOrUpdateTemplate(t))).then(() => {
         toast({
             title: "Import Successful",
             description: `${selectedTemplates.length} new template(s) have been added.`

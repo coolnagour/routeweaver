@@ -102,7 +102,7 @@ export const SiteSchema = z.object({
 export const JourneySchema = z.object({
   id: z.string(),
   serverScope: z.string(),
-  name: z.string().optional(), // For templates primarily
+  name: z.string().optional(), // Name is optional for journeys, but required for templates
   journeyServerId: z.number().optional(),
   bookings: z.array(BookingSchema),
   status: z.enum(['Draft', 'Scheduled', 'Completed', 'Cancelled']),
@@ -115,7 +115,7 @@ export const JourneySchema = z.object({
 });
 export type Journey = z.infer<typeof JourneySchema>;
 
-// JourneyTemplate now aligns with Journey, but with a required name and no status.
+// A Template is now a Journey with a required name and no status.
 export const JourneyTemplateSchema = JourneySchema.extend({
     name: z.string().min(1, "Template name is required"),
 }).omit({ status: true });
