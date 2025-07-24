@@ -282,22 +282,18 @@ function JourneyFormInner({
               dateTime: s.dateTime?.toISOString(),
           })),
         };
-        // Explicitly check for undefined to allow 0 values to be saved
-        if (b.price === undefined) delete newBooking.price;
-        if (b.cost === undefined) delete newBooking.cost;
+        if (typeof b.price !== 'undefined') newBooking.price = b.price; else delete newBooking.price;
+        if (typeof b.cost !== 'undefined') newBooking.cost = b.cost; else delete newBooking.cost;
         return newBooking;
       }),
       site: selectedSite,
       account: selectedAccount,
-      price: journeyPrice,
-      cost: journeyCost,
       enable_messaging_service: enableMessaging,
     };
     
-    // Explicitly check for undefined to allow 0 values to be saved
-    if (journeyPrice === undefined) delete templateData.price;
-    if (journeyCost === undefined) delete templateData.cost;
-
+    if (typeof journeyPrice !== 'undefined') templateData.price = journeyPrice; else delete templateData.price;
+    if (typeof journeyCost !== 'undefined') templateData.cost = journeyCost; else delete templateData.cost;
+    
     console.log('[JourneyForm LOG] handleSaveTemplate - Template data being saved:', JSON.stringify(templateData, null, 2));
 
     if (isEditingTemplate && initialData?.id) {
@@ -449,10 +445,10 @@ function JourneyFormInner({
   };
 
   const handleEditBooking = (bookingId: string) => {
+    console.log('[JourneyForm LOG] handleEditBooking - Current bookings state:', JSON.stringify(bookings, null, 2));
     const bookingToEdit = bookings.find(b => b.id === bookingId);
     console.log('[JourneyForm LOG] handleEditBooking - Found booking to edit:', JSON.stringify(bookingToEdit, null, 2));
     if (bookingToEdit) {
-      // Use a deep copy to prevent direct mutation of state before saving
       setEditingBooking(JSON.parse(JSON.stringify(bookingToEdit)));
     }
   };
@@ -461,29 +457,20 @@ function JourneyFormInner({
   const handleSaveBooking = (bookingToSave: Booking) => {
     console.log('[JourneyForm LOG] handleSaveBooking - Received booking to save:', JSON.stringify(bookingToSave, null, 2));
     
-    // Ensure stops are sorted by order before saving
     const sortedBooking = {
       ...bookingToSave,
       stops: [...bookingToSave.stops].sort((a, b) => a.order - b.order)
     };
 
-    setBookings(prev => {
-        const newBookings = [...prev];
-        const index = newBookings.findIndex(b => b.id === sortedBooking.id);
-        
-        console.log(`[JourneyForm LOG] handleSaveBooking - current bookings list (before update):`, JSON.stringify(newBookings, null, 2));
+    const newBookings = bookings.map(b => (b.id === sortedBooking.id ? sortedBooking : b));
+    
+    if (!newBookings.some(b => b.id === sortedBooking.id)) {
+        newBookings.push(sortedBooking);
+    }
 
-        if (index > -1) {
-            newBookings[index] = sortedBooking;
-        } else {
-            newBookings.push(sortedBooking);
-        }
-        
-        console.log(`[JourneyForm LOG] handleSaveBooking - updated bookings list (after update):`, JSON.stringify(newBookings, null, 2));
-        
-        return newBookings;
-    });
-
+    console.log(`[JourneyForm LOG] handleSaveBooking - updated bookings list (before set state):`, JSON.stringify(newBookings, null, 2));
+    setBookings(newBookings);
+    
     setEditingBooking(null);
   };
   
