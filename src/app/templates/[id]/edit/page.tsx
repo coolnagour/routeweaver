@@ -29,7 +29,6 @@ export default function EditTemplatePage() {
       const foundTemplate = templates.find(t => t.id === templateId);
       if (foundTemplate) {
         setTemplate(foundTemplate);
-        setLoading(false);
       } else {
         // This condition might be met temporarily if templates for the wrong server are loaded.
         // We wait for the correct templates to load before deciding to redirect.
@@ -39,6 +38,7 @@ export default function EditTemplatePage() {
             router.push('/templates');
         }
       }
+      setLoading(false);
     }
   }, [templateId, templates, router]);
 

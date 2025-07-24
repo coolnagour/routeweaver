@@ -305,6 +305,7 @@ function JourneyFormInner({
     if (journeyPrice === undefined) delete templateData.price;
     if (journeyCost === undefined) delete templateData.cost;
 
+    console.log('[JourneyForm] handleSaveTemplate - Template data being saved:', JSON.stringify(templateData, null, 2));
 
     if (isEditingTemplate && initialData?.id) {
         const updatedTemplate: JourneyTemplate = {
