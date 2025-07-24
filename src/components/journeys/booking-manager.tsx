@@ -51,9 +51,6 @@ export default function BookingManager({
   const [liveStatus, setLiveStatus] = useState<{ bookingId: string; status: string | null; isLoading: boolean } | null>(null);
   const [isNewBooking, setIsNewBooking] = useState(false);
   
-  console.log('[BookingManager Render] Received bookings prop:', JSON.stringify(bookings, null, 2));
-
-
   const handleAddNewBooking = () => {
     const newBookingId = uuidv4();
     const newPickupStopId = uuidv4();
@@ -72,7 +69,6 @@ export default function BookingManager({
   
   const handleEditBooking = (bookingId: string) => {
     const bookingToEdit = bookings.find(b => b.id === bookingId);
-    console.log('[BookingManager handleEditBooking] Found booking to edit:', JSON.stringify(bookingToEdit, null, 2));
     if (bookingToEdit) {
       setEditingBookingData(JSON.parse(JSON.stringify(bookingToEdit)));
       setIsNewBooking(false);
@@ -80,11 +76,7 @@ export default function BookingManager({
   };
 
   const handleSaveBooking = (bookingToSave: Booking) => {
-    console.log('[BookingManager handleSaveBooking] Received booking to save from form:', JSON.stringify(bookingToSave, null, 2));
-    
     const newBookings = bookings.map(b => (b.id === bookingToSave.id ? bookingToSave : b));
-    
-    console.log('[BookingManager handleSaveBooking] newBookings array before setting state:', JSON.stringify(newBookings, null, 2));
     setBookings(newBookings);
     setEditingBookingData(null);
     setIsNewBooking(false);
@@ -420,5 +412,3 @@ export default function BookingManager({
     </Card>
   );
 }
-
-    
