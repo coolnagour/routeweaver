@@ -49,6 +49,8 @@ interface JourneyPreviewState {
   isLoading: boolean;
 }
 
+const emptyLocation = { address: '', lat: 0, lng: 0 };
+
 const generateDebugBookingPayloads = (bookings: Booking[], server: any, site?: Site, account?: Account) => {
     if (!server || !site || !account) return [];
 
@@ -272,29 +274,19 @@ function JourneyFormInner({
 
     const templateData = {
       name: templateName,
-      bookings: bookings.map(b => ({
-        id: b.id,
-        holdOn: b.holdOn,
-        stops: b.stops.map(s => ({ 
-            id: s.id,
-            order: s.order,
-            location: s.location,
-            stopType: s.stopType,
-            name: s.name,
-            phone: s.phone,
-            pickupStopId: s.pickupStopId,
-            dateTime: s.dateTime?.toISOString(),
-            instructions: s.instructions
-        })),
-        customerId: b.customerId,
-        externalBookingId: b.externalBookingId,
-        vehicleType: b.vehicleType,
-        externalAreaCode: b.externalAreaCode,
-        price: b.price,
-        cost: b.cost,
-        instructions: b.instructions,
-        splitPaymentSettings: b.splitPaymentSettings,
-      })),
+      bookings: bookings.map(b => {
+        const { price, cost, ...bookingWithoutPrice } = b;
+        const newBooking: any = {
+          ...bookingWithoutPrice,
+          stops: b.stops.map(s => ({ 
+              ...s,
+              dateTime: s.dateTime?.toISOString(),
+          })),
+        };
+        if (typeof price === 'number') newBooking.price = price;
+        if (typeof cost === 'number') newBooking.cost = cost;
+        return newBooking;
+      }),
       site: selectedSite,
       account: selectedAccount,
       price: journeyPrice,
@@ -440,6 +432,47 @@ function JourneyFormInner({
   const handleLocationSelectedFromMap = (location: Location) => {
     setSelectedLocation(location);
   };
+  
+  const handleAddNewBooking = () => {
+    const newBookingId = uuidv4();
+    const newPickupStopId = uuidv4();
+    const newBooking: Booking = {
+      id: newBookingId,
+      stops: [
+        { id: newPickupStopId, order: 0, location: emptyLocation, stopType: 'pickup', name: '', phone: '', dateTime: undefined, instructions: '' },
+        { id: uuidv4(), order: 1, location: emptyLocation, stopType: 'dropoff', pickupStopId: newPickupStopId, instructions: '' }
+      ],
+      holdOn: false,
+    };
+    
+    setBookings(prev => [...prev, newBooking]);
+    setEditingBookingId(newBookingId);
+  };
+
+  const handleSaveBooking = (bookingToSave: Booking) => {
+    console.log('[JourneyForm] handleSaveBooking:', JSON.stringify(bookingToSave, null, 2));
+    // Ensure stops are sorted by order before saving
+    const sortedBooking = {
+      ...bookingToSave,
+      stops: [...bookingToSave.stops].sort((a, b) => a.order - b.order)
+    };
+    setBookings(prev => prev.map(b => b.id === sortedBooking.id ? sortedBooking : b));
+    setEditingBookingId(null);
+  };
+  
+  const handleCancelEdit = (bookingId: string) => {
+    const booking = bookings.find(b => b.id === bookingId);
+    // If it was a new booking that was cancelled, remove it from the array
+    if (booking && !booking.bookingServerId && !booking.stops.some(s => s.location.address)) {
+        setBookings(prev => prev.filter(b => b.id !== bookingId));
+    }
+    setEditingBookingId(null);
+  };
+
+  const handleRemoveBooking = (bookingId: string) => {
+    setBookings(prev => prev.filter(b => b.id !== bookingId));
+    setEditingBookingId(null); // Ensure we exit edit mode if the booking is deleted
+  };
 
   const title = getTitle();
   const publishButtonText = (initialData as Journey)?.status === 'Scheduled' ? 'Update Published Journey' : 'Publish';
@@ -562,11 +595,14 @@ function JourneyFormInner({
             </CardContent>
             </Card>
 
-            <BookingManager 
-              bookings={bookings} 
-              setBookings={setBookings}
+            <BookingManager
+              bookings={bookings}
               editingBookingData={editingBookingData}
-              setEditingBookingId={setEditingBookingId}
+              onAddNewBooking={handleAddNewBooking}
+              onEditBooking={setEditingBookingId}
+              onSaveBooking={handleSaveBooking}
+              onCancelEdit={handleCancelEdit}
+              onRemoveBooking={handleRemoveBooking}
               isJourneyPriceSet={hasJourneyLevelPrice}
             />
             

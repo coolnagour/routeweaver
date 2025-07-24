@@ -136,21 +136,7 @@ export default function BookingForm({
   
   const form = useForm<BookingFormData>({
     resolver: zodResolver(FormBookingSchema),
-    defaultValues: {
-        ...initialData,
-        stops: sortedInitialStops.map(s => ({...s, name: s.name ?? ''})),
-        price: initialData.price ?? undefined,
-        cost: initialData.cost ?? undefined,
-        splitPaymentSettings: {
-            ...initialData.splitPaymentSettings,
-            splitPaymentValue: initialData.splitPaymentSettings?.splitPaymentValue ?? undefined,
-            splitPaymentExtrasValue: initialData.splitPaymentSettings?.splitPaymentExtrasValue ?? undefined,
-            splitPaymentTollsValue: initialData.splitPaymentSettings?.splitPaymentTollsValue ?? undefined,
-            splitPaymentTipsValue: initialData.splitPaymentSettings?.splitPaymentTipsValue ?? undefined,
-            splitPaymentMinAmount: initialData.splitPaymentSettings?.splitPaymentMinAmount ?? undefined,
-            splitPaymentThresholdAmount: initialData.splitPaymentSettings?.splitPaymentThresholdAmount ?? undefined,
-        },
-    },
+    defaultValues: initialData,
   });
   
   const { fields: stopFields, insert: insertStop, remove: removeStop, update, replace } = useFieldArray({
@@ -160,7 +146,7 @@ export default function BookingForm({
   
   useEffect(() => {
     const sortedStops = [...initialData.stops].sort((a,b) => a.order - b.order);
-    form.reset({
+    const formData = {
       ...initialData,
       stops: sortedStops.map(s => ({
           ...s,
@@ -185,7 +171,8 @@ export default function BookingForm({
         splitPaymentMinAmount: initialData.splitPaymentSettings?.splitPaymentMinAmount ?? undefined,
         splitPaymentThresholdAmount: initialData.splitPaymentSettings?.splitPaymentThresholdAmount ?? undefined,
       },
-    });
+    };
+    form.reset(formData);
   }, [initialData, form]);
 
   const currentStops = useWatch({ control: form.control, name: 'stops' });
