@@ -5,33 +5,32 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import useIndexedDB from '@/hooks/use-indexed-db';
 import JourneyForm from '@/components/journeys/journey-form';
-import type { JourneyTemplate, Journey, Booking } from '@/types';
+import type { JourneyTemplate } from '@/types';
 import { useServer } from '@/context/server-context';
 import { Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 export default function EditTemplatePage() {
   const router = useRouter();
   const params = useParams();
   const { server } = useServer();
+  const { toast } = useToast();
   const templateId = params.id ? decodeURIComponent(params.id as string) : undefined;
 
-  const [templates, , , , refreshTemplates] = useIndexedDB<JourneyTemplate>('journey-templates', [], server?.uuid);
+  const [templates, setTemplates, addTemplate, , refreshTemplates] = useIndexedDB<JourneyTemplate>('journey-templates', [], server?.uuid);
   const [template, setTemplate] = useState<JourneyTemplate | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // When the server context changes, we should re-fetch templates.
     refreshTemplates();
   }, [server?.uuid, refreshTemplates]);
 
   useEffect(() => {
-    if (templateId && templates !== null) { // `templates` can be `null` initially from `useIndexedDB`
+    if (templateId && templates !== null) {
       const foundTemplate = templates.find(t => t.id === templateId);
       if (foundTemplate) {
         setTemplate(foundTemplate);
       } else {
-        // This condition might be met temporarily if templates for the wrong server are loaded.
-        // We wait for the correct templates to load before deciding to redirect.
         const isStillLoading = templates === null;
         if (!isStillLoading) {
             console.error(`Template with id ${templateId} not found.`);
@@ -42,16 +41,39 @@ export default function EditTemplatePage() {
     }
   }, [templateId, templates, router]);
 
-  const handleUpdateTemplate = (updatedBookings: Booking[]) => {
-    if (template) {
-        const newTemplate: JourneyTemplate = {
-            ...template,
-            bookings: updatedBookings,
-        };
-        setTemplate(newTemplate);
-    }
-  }
+  const handleUpdateTemplate = async (updatedTemplateData: Omit<JourneyTemplate, 'id' | 'serverScope'>) => {
+    if (!template || !server?.uuid) return;
+    
+    const updatedTemplate: JourneyTemplate = {
+        id: template.id,
+        serverScope: server.uuid,
+        name: updatedTemplateData.name, // name is now managed in JourneyForm
+        bookings: updatedTemplateData.bookings,
+        site: updatedTemplateData.site,
+        account: updatedTemplateData.account,
+        price: updatedTemplateData.price,
+        cost: updatedTemplateData.cost,
+        enable_messaging_service: updatedTemplateData.enable_messaging_service,
+    };
+    
+    await addTemplate(updatedTemplate);
+    setTemplate(updatedTemplate); // Update local state
+    toast({
+        title: "Template Updated!",
+        description: `Template "${updatedTemplate.name}" has been saved.`,
+    });
+  };
 
+  const handleUseTemplate = () => {
+    if (!template) return;
+    try {
+      sessionStorage.setItem('templateToLoad', JSON.stringify(template));
+      router.push('/journeys/new');
+    } catch(e) {
+      console.error("Failed to save template to session storage", e);
+      toast({ title: "Could not load template", description: "There was an error while trying to use this template.", variant: "destructive" });
+    }
+  };
 
   if (loading || !template) {
     return (
@@ -65,8 +87,10 @@ export default function EditTemplatePage() {
     <JourneyForm
       key={template.id}
       initialData={template}
-      isEditingTemplate={true}
-      onUpdateTemplate={handleUpdateTemplate}
+      isEditing={true}
+      isTemplate={true}
+      onSaveTemplate={handleUpdateTemplate}
+      onUseTemplate={handleUseTemplate}
     />
   );
 }

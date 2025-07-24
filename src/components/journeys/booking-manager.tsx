@@ -1,8 +1,8 @@
 
+
 'use client';
 
-import * as React from 'react';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import type { Booking, Stop } from '@/types';
@@ -22,7 +22,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -35,16 +34,18 @@ const emptyLocation = { address: '', lat: 0, lng: 0 };
 interface BookingManagerProps {
   bookings: Booking[];
   setBookings: (bookings: Booking[]) => void;
+  editingBooking: Booking | null;
+  setEditingBooking: (booking: Booking | null) => void;
   isJourneyPriceSet: boolean;
 }
-
 
 function BookingManager({ 
     bookings, 
     setBookings,
+    editingBooking,
+    setEditingBooking,
     isJourneyPriceSet,
 }: BookingManagerProps) {
-  const [editingBookingData, setEditingBookingData] = useState<Booking | null>(null);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [isSendingEvent, setIsSendingEvent] = useState<string | null>(null);
   const { server } = useServer();
@@ -52,15 +53,6 @@ function BookingManager({
   const [liveStatus, setLiveStatus] = useState<{ bookingId: string; status: string | null; isLoading: boolean } | null>(null);
   const [isNewBooking, setIsNewBooking] = useState(false);
   
-  useEffect(() => {
-    if (editingBookingData) {
-      // Form is open, do nothing
-    } else {
-      // Form is closed, reset the new booking flag
-      setIsNewBooking(false);
-    }
-  }, [editingBookingData]);
-
   const handleAddNewBooking = () => {
     const newBookingId = uuidv4();
     const newPickupStopId = uuidv4();
@@ -73,37 +65,29 @@ function BookingManager({
       holdOn: false,
     };
     setBookings([...bookings, newBooking]);
-    setEditingBookingData(newBooking);
+    setEditingBooking(newBooking);
     setIsNewBooking(true);
   };
   
   const handleEditBooking = (bookingId: string) => {
     const bookingToEdit = bookings.find(b => b.id === bookingId);
     if (bookingToEdit) {
-      setEditingBookingData(JSON.parse(JSON.stringify(bookingToEdit)));
+      setEditingBooking({ ...bookingToEdit });
       setIsNewBooking(false);
     }
   };
 
   const handleSaveBooking = (bookingToSave: Booking) => {
-    console.log('[BookingManager] handleSaveBooking triggered. Received data from form:', JSON.stringify(bookingToSave, null, 2));
-    console.log('[BookingManager] Current bookings state (before update):', JSON.stringify(bookings, null, 2));
-
     const newBookings = bookings.map(b => (b.id === bookingToSave.id ? bookingToSave : b));
-
-    console.log('[BookingManager] New bookings array (after map):', JSON.stringify(newBookings, null, 2));
-    
     setBookings(newBookings);
-    console.log('[BookingManager] setBookings called with new array.');
-
-    setEditingBookingData(null); // Close the form
+    setEditingBooking(null);
   };
   
   const handleCancelEdit = (bookingId: string) => {
     if (isNewBooking) {
       setBookings(bookings.filter(b => b.id !== bookingId));
     }
-    setEditingBookingData(null);
+    setEditingBooking(null);
   };
 
   const handleRemoveBooking = async (bookingId: string) => {
@@ -193,7 +177,7 @@ function BookingManager({
 
   const getTotalPassengers = (bookings: Booking[]) => {
       return bookings.reduce((total, booking) => {
-          if (booking.holdOn) return total; // Don't count passengers from hold on bookings
+          if (booking.holdOn) return total;
           return total + getPassengersFromStops(booking.stops).length;
       }, 0);
   }
@@ -210,18 +194,17 @@ function BookingManager({
   const isPaymentDropOffEnabled = currentStatus === 'DROPPINGOFF';
   const isNoShowEnabled = currentStatus === 'ENROUTE' || currentStatus === 'ARRIVED';
   
-  // Specific logic for Hold On bookings
   const isHoldOnMadeContactEnabled = currentStatus === 'ENROUTE' || currentStatus === 'ARRIVED';
 
-  if (editingBookingData) {
+  if (editingBooking) {
     return (
         <BookingForm
-          key={editingBookingData.id}
-          initialData={editingBookingData}
+          key={editingBooking.id}
+          initialData={editingBooking}
           onSave={handleSaveBooking}
           onCancel={handleCancelEdit}
           isJourneyPriceSet={isJourneyPriceSet}
-          isFirstBooking={bookings.length > 0 && bookings[0].id === editingBookingData.id}
+          isFirstBooking={bookings.length > 0 && bookings[0].id === editingBooking.id}
         />
     )
   }

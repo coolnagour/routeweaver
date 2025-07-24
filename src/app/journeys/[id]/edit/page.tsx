@@ -7,37 +7,50 @@ import JourneyForm from '@/components/journeys/journey-form';
 import type { Journey } from '@/types';
 import { Loader2 } from 'lucide-react';
 import { useJourneys } from '@/hooks/use-journeys';
+import { useToast } from '@/hooks/use-toast';
 
 export default function EditJourneyPage() {
   const router = useRouter();
   const params = useParams();
+  const { toast } = useToast();
   const journeyId = params.id ? decodeURIComponent(params.id as string) : undefined;
 
-  const { journeys, loading: journeysLoading } = useJourneys();
+  const { journeys, addOrUpdateJourney, loading: journeysLoading } = useJourneys();
   const [journey, setJourney] = useState<Journey | null>(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Wait until the journeys have been loaded from the database.
     if (journeyId && !journeysLoading) {
-      // The journeys array can be null initially, so we wait for it to be populated.
       if (journeys === null) {
-        return; // Still loading, wait for the next effect run.
+        return; 
       }
 
       const foundJourney = journeys.find(j => j.id === journeyId);
       if (foundJourney) {
         setJourney(foundJourney);
-        setLoading(false);
       } else {
-        // Only if journeys are loaded and the journey is not found, we redirect.
         console.error(`Journey with id ${journeyId} not found.`);
         router.push('/journeys');
       }
     }
   }, [journeyId, journeys, router, journeysLoading]);
+  
+  const handleSaveJourney = async (updatedJourneyData: Omit<Journey, 'id' | 'serverScope'>) => {
+    if (!journey) return;
 
-  if (loading || journeysLoading || !journey) {
+    const journeyToUpdate: Journey = {
+        ...journey,
+        ...updatedJourneyData,
+    };
+    
+    await addOrUpdateJourney(journeyToUpdate);
+    toast({
+        title: 'Journey Updated!',
+        description: `Your journey has been successfully updated.`,
+    });
+    setJourney(journeyToUpdate); // Update local state to reflect changes immediately
+  };
+
+  if (journeysLoading || !journey) {
     return (
         <div className="flex h-screen w-full items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin" />
@@ -49,8 +62,8 @@ export default function EditJourneyPage() {
     <JourneyForm
       key={journey.id}
       initialData={journey}
-      isEditingJourney={true}
-      journeyId={journey.id}
+      onSave={handleSaveJourney}
+      isEditing={true}
     />
   );
 }

@@ -8,12 +8,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import useIndexedDB from '@/hooks/use-indexed-db';
-import { useJourneys } from '@/hooks/use-journeys';
 import { saveJourney } from '@/ai/flows/journey-flow';
 import { generateJourneyPayload } from '@/ai/flows/journey-payload-flow';
 import { getSites } from '@/services/icabbi';
-import type { Booking, Journey, JourneyTemplate, Account, JourneyPayloadOutput, Stop, Location, Site } from '@/types';
-import { Save, Building, Loader2, Send, ChevronsUpDown, Code, DollarSign, Info, MessageSquare, GripVertical } from 'lucide-react';
+import type { Booking, Journey, JourneyTemplate, Account, Stop, Location, Site } from '@/types';
+import { Save, Building, Loader2, Send, ChevronsUpDown, Code, DollarSign, Info, MessageSquare, GripVertical, FileText } from 'lucide-react';
 import BookingManager from './booking-manager';
 import { useServer } from '@/context/server-context';
 import { useRouter } from 'next/navigation';
@@ -32,14 +31,11 @@ import { ScrollArea } from '../ui/scroll-area';
 
 interface JourneyFormProps {
   initialData?: Partial<JourneyTemplate> | Partial<Journey> | null;
-  onNewJourneyClick?: () => void;
-  isEditingTemplate?: boolean;
-  isEditingJourney?: boolean;
-  journeyId?: string;
-  initialSite?: Site | null; // For loading from template
-  initialAccount?: Account | null; // For loading from template
-  onUpdateJourney?: (journey: Journey) => void;
-  onUpdateTemplate?: (bookings: Booking[]) => void;
+  isEditing?: boolean;
+  isTemplate?: boolean;
+  onSave?: (data: Omit<Journey, 'id' | 'serverScope' | 'status'>) => void;
+  onSaveTemplate?: (data: Omit<JourneyTemplate, 'id' | 'serverScope'>) => void;
+  onUseTemplate?: () => void;
 }
 
 interface JourneyPreviewState {
@@ -49,8 +45,6 @@ interface JourneyPreviewState {
   bookingPayloads: any[];
   isLoading: boolean;
 }
-
-const emptyLocation = { address: '', lat: 0, lng: 0 };
 
 const generateDebugBookingPayloads = (bookings: Booking[], server: any, site?: Site, account?: Account) => {
     if (!server || !site || !account) return [];
@@ -66,27 +60,25 @@ const generateDebugBookingPayloads = (bookings: Booking[], server: any, site?: S
 
 function JourneyFormInner({
   initialData, 
-  onNewJourneyClick, 
-  isEditingTemplate = false,
-  isEditingJourney = false,
-  journeyId,
-  initialSite,
-  initialAccount,
-  onUpdateJourney,
-  onUpdateTemplate,
+  isEditing = false,
+  isTemplate = false,
+  onSave,
+  onSaveTemplate,
+  onUseTemplate,
 }: JourneyFormProps) {
   const { toast } = useToast();
   const router = useRouter();
   const { server } = useServer();
-  const { journeys: allJourneys, addOrUpdateJourney } = useJourneys();
-  const [, , addTemplate, ,] = useIndexedDB<JourneyTemplate>('journey-templates', [], server?.uuid);
-  const [templateName, setTemplateName] = useState('');
+  const [, , addTemplateDb] = useIndexedDB<JourneyTemplate>('journey-templates', [], server?.uuid);
   
-  const resolvedInitialSite = initialSite || (initialData as Journey | JourneyTemplate)?.site || null;
+  const [templateName, setTemplateName] = useState((initialData as JourneyTemplate)?.name || '');
+  
+  const resolvedInitialSite = (initialData as Journey | JourneyTemplate)?.site || null;
   const [sites, setSites] = useState<Site[]>(resolvedInitialSite ? [resolvedInitialSite] : []);
   const [isFetchingSites, setIsFetchingSites] = useState(false);
   const [selectedSite, setSelectedSite] = useState<Site | null>(resolvedInitialSite);
-  const [selectedAccount, setSelectedAccount] = useState<Account | null>(initialAccount || (initialData as Journey | JourneyTemplate)?.account || null);
+  const resolvedInitialAccount = (initialData as Journey | JourneyTemplate)?.account || null;
+  const [selectedAccount, setSelectedAccount] = useState<Account | null>(resolvedInitialAccount);
   
   const getInitialBookings = (data: Partial<JourneyTemplate | Journey> | null | undefined): Booking[] => {
     if (!data || !data.bookings) return [];
@@ -103,19 +95,20 @@ function JourneyFormInner({
   };
   
   const [bookings, setBookings] = useState<Booking[]>(() => getInitialBookings(initialData));
+  const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [journeyPreview, setJourneyPreview] = useState<JourneyPreviewState>({ orderedStops: [], journeyPayload: null, bookings: [], bookingPayloads: [], isLoading: false });
 
-  const [journeyPrice, setJourneyPrice] = useState<number | undefined>(undefined);
-  const [journeyCost, setJourneyCost] = useState<number | undefined>(undefined);
-  const [enableMessaging, setEnableMessaging] = useState<boolean>(false);
+  const [journeyPrice, setJourneyPrice] = useState<number | undefined>(initialData?.price);
+  const [journeyCost, setJourneyCost] = useState<number | undefined>(initialData?.cost);
+  const [enableMessaging, setEnableMessaging] = useState<boolean>(initialData?.enable_messaging_service || false);
   
   const hasBookingLevelPrice = bookings.some(b => typeof b.price === 'number' || typeof b.cost === 'number');
   const hasJourneyLevelPrice = typeof journeyPrice === 'number' || typeof journeyCost === 'number';
 
   const { setSelectedLocation, isMapInSelectionMode } = useMapSelection();
-
 
   const debounce = <F extends (...args: any[]) => void>(func: F, delay: number) => {
     let timeoutId: ReturnType<typeof setTimeout>;
@@ -125,7 +118,7 @@ function JourneyFormInner({
     };
   };
 
-  const fetchPreview = useCallback(async (currentBookings: Booking[], journeyData: Partial<Journey> | null, site?: Site | null, account?: Account | null, messagingEnabled?: boolean) => {
+  const fetchPreview = useCallback(async (currentBookings: Booking[], journeyServerId?: number, messagingEnabled?: boolean, site?: Site | null, account?: Account | null) => {
     if (currentBookings.length === 0 || currentBookings.flatMap(b => b.stops).length < 2) {
       setJourneyPreview({ orderedStops: [], journeyPayload: null, isLoading: false, bookings: currentBookings, bookingPayloads: [] });
       return;
@@ -144,7 +137,7 @@ function JourneyFormInner({
 
         const { orderedStops, journeyPayload } = await generateJourneyPayload({ 
             bookings: tempBookingsForPreview, 
-            journeyServerId: journeyData?.journeyServerId,
+            journeyServerId: journeyServerId,
             enable_messaging_service: messagingEnabled,
         });
 
@@ -161,42 +154,29 @@ function JourneyFormInner({
   const debouncedFetchPreview = useCallback(debounce(fetchPreview, 750), [fetchPreview]);
 
   useEffect(() => {
-    debouncedFetchPreview(bookings, initialData, selectedSite, selectedAccount, enableMessaging);
-  }, [bookings, initialData, debouncedFetchPreview, selectedSite, selectedAccount, enableMessaging]);
+    debouncedFetchPreview(bookings, (initialData as Journey)?.journeyServerId, enableMessaging, selectedSite, selectedAccount);
+  }, [bookings, initialData, debouncedFetchPreview, enableMessaging, selectedSite, selectedAccount]);
   
   useEffect(() => {
-    // This effect ensures the builder's state is in sync with the initialData prop
     const initialBookings = getInitialBookings(initialData);
     setBookings(initialBookings);
     setTemplateName((initialData as JourneyTemplate)?.name || '');
-    
-    // When editing a template, or loading a journey from a template, set site/account
     const site = resolvedInitialSite;
     setSelectedSite(site);
     if(site && !sites.some(s => s.id === site.id)) {
         setSites(prev => [...prev, site]);
     }
-
-    setSelectedAccount(initialAccount || (initialData as Journey | JourneyTemplate)?.account || null);
-
+    setSelectedAccount(resolvedInitialAccount);
     setJourneyPrice(initialData?.price);
     setJourneyCost(initialData?.cost);
-    setEnableMessaging((initialData as Journey)?.enable_messaging_service || false);
-  }, [initialData, initialAccount, resolvedInitialSite]);
-  
-  const handleSetBookings = (newBookings: Booking[]) => {
-      setBookings(newBookings);
-      if (isEditingTemplate && onUpdateTemplate) {
-          onUpdateTemplate(newBookings);
-      }
-  }
+    setEnableMessaging(initialData?.enable_messaging_service || false);
+  }, [initialData]);
 
   const handleFetchSites = useCallback(async () => {
     if (server) { 
         setIsFetchingSites(true);
         try {
             const fetchedSites = await getSites(server);
-            // Ensure the currently selected site is in the list if it was loaded from initialData
             const currentSelectedSite = selectedSite;
             if (currentSelectedSite && !fetchedSites.some(s => s.id === currentSelectedSite.id)) {
               setSites([currentSelectedSite, ...fetchedSites]);
@@ -213,11 +193,8 @@ function JourneyFormInner({
     }
   }, [server, toast, selectedSite]);
 
-  const handleSaveJourneyLocally = async () => {
-    if (!server?.uuid) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Server not configured, cannot save journey.' });
-        return;
-    }
+  const handleSaveDraftOrJourney = () => {
+    if (!onSave) return;
     if (bookings.length === 0) {
       toast({
         variant: 'destructive',
@@ -226,118 +203,59 @@ function JourneyFormInner({
       });
       return;
     }
-    
-    if (isEditingJourney && journeyId) {
-        const journeyToUpdate: Journey = {
-            ...(initialData as Journey),
-            id: journeyId,
-            serverScope: server.uuid,
-            bookings: bookings,
-            site: selectedSite,
-            account: selectedAccount,
-            price: journeyPrice,
-            cost: journeyCost,
-            enable_messaging_service: enableMessaging,
-        };
-        await addOrUpdateJourney(journeyToUpdate);
-        toast({
-            title: 'Journey Updated!',
-            description: `Your journey has been successfully updated locally.`,
-        });
-        if (onUpdateJourney) {
-            onUpdateJourney(journeyToUpdate);
-        }
-    } else {
-        const newJourney: Journey = {
-            id: uuidv4(),
-            serverScope: server.uuid,
-            status: 'Draft',
-            bookings: bookings,
-            site: selectedSite,
-            account: selectedAccount,
-            price: journeyPrice,
-            cost: journeyCost,
-            enable_messaging_service: enableMessaging,
-        };
-        await addOrUpdateJourney(newJourney);
-        toast({
-            title: 'Journey Saved!',
-            description: 'Your journey has been saved as a draft.',
-        });
-        
-        router.push(`/journeys/${newJourney.id}/edit`);
-    }
-  }
+    onSave({
+        bookings,
+        site: selectedSite,
+        account: selectedAccount,
+        price: journeyPrice,
+        cost: journeyCost,
+        enable_messaging_service: enableMessaging,
+        journeyServerId: (initialData as Journey)?.journeyServerId,
+        orderedStops: journeyPreview.orderedStops,
+    });
+  };
 
-  const handleSaveTemplate = () => {
-    if (!server?.uuid) return;
+  const handleSaveTemplateAction = () => {
+    const action = onSaveTemplate || handleCreateNewTemplate;
     if (!templateName) {
         toast({ title: 'Template name required', variant: 'destructive' });
         return;
     }
+    action({
+        name: templateName,
+        bookings: bookings,
+        site: selectedSite,
+        account: selectedAccount,
+        price: journeyPrice,
+        cost: journeyCost,
+        enable_messaging_service: enableMessaging,
+    });
+  };
 
-    const templateData: any = {
-      name: templateName,
-      bookings: bookings.map(b => {
-        const newBooking: any = {
-          ...b,
-          stops: b.stops.map(s => ({ 
-              ...s,
-              dateTime: s.dateTime?.toISOString(),
-          })),
-        };
-        if (typeof b.price !== 'undefined') newBooking.price = b.price; else delete newBooking.price;
-        if (typeof b.cost !== 'undefined') newBooking.cost = b.cost; else delete newBooking.cost;
-        return newBooking;
-      }),
-      site: selectedSite,
-      account: selectedAccount,
-      enable_messaging_service: enableMessaging,
+  const handleCreateNewTemplate = async (templateData: Omit<JourneyTemplate, 'id' | 'serverScope'>) => {
+    if (!server?.uuid) return;
+    const newTemplate: JourneyTemplate = {
+        id: uuidv4(),
+        serverScope: server.uuid,
+        ...templateData,
     };
-    
-    if (typeof journeyPrice !== 'undefined') templateData.price = journeyPrice; else delete templateData.price;
-    if (typeof journeyCost !== 'undefined') templateData.cost = journeyCost; else delete templateData.cost;
-    
-    if (isEditingTemplate && initialData?.id) {
-        const updatedTemplate: JourneyTemplate = {
-            ...templateData,
-            id: initialData.id,
-            serverScope: (initialData as JourneyTemplate).serverScope || server.uuid,
-        };
-        addTemplate(updatedTemplate);
-        toast({
-            title: "Template Updated!",
-            description: `Template "${templateName}" has been saved.`,
-        });
-        router.push('/templates');
-    } else {
-        const newTemplate: JourneyTemplate = {
-            id: uuidv4(),
-            serverScope: server.uuid,
-            ...templateData,
-        };
-        addTemplate(newTemplate);
-        toast({
-            title: "Template Saved!",
-            description: `Template "${templateName}" has been saved.`,
-        });
-        setTemplateName('');
-    }
+    await addTemplateDb(newTemplate);
+    toast({
+        title: "Template Saved!",
+        description: `Template "${templateName}" has been saved.`,
+    });
+    setTemplateName('');
   };
 
   async function handlePublishJourney() {
-    if (!journeyId) {
-        toast({ variant: 'destructive', title: 'No journey selected', description: 'Please save a journey before publishing.' });
+    const journeyToPublish = initialData as Journey;
+    if (!journeyToPublish?.id) {
+        toast({ variant: 'destructive', title: 'No journey selected', description: 'Please save a journey draft before publishing.' });
         return;
     }
 
-    if (!selectedSite) {
-        toast({ variant: 'destructive', title: 'Site required', description: 'Please select a site for this journey.' });
-        return;
-    }
-
-    if (!selectedAccount) {
-        toast({ variant: 'destructive', title: 'Account required', description: 'Please select an account for this journey.' });
+    if (!selectedSite || !selectedAccount) {
+        toast({ variant: 'destructive', title: 'Site and Account Required', description: 'Please select a site and an account for this journey.' });
         return;
     }
     
@@ -349,41 +267,31 @@ function JourneyFormInner({
 
     setIsSubmitting(true);
     try {
-        const originalJourney = allJourneys?.find(j => j.id === journeyId);
-
-        const journeyToPublish: Journey = {
-            ...(initialData as Journey),
-            id: journeyId,
-            bookings: bookings,
-            serverScope: server.uuid,
-            site: selectedSite,
-            account: selectedAccount,
-            price: journeyPrice,
-            cost: journeyCost,
-            enable_messaging_service: enableMessaging,
-        };
-
         const result = await saveJourney({ 
-          bookings: journeyToPublish.bookings, 
+          bookings: bookings, 
           server, 
           siteId: selectedSite.id, 
           accountId: selectedAccount.id,
           journeyServerId: journeyToPublish.journeyServerId, 
-          price: journeyToPublish.price,
-          cost: journeyToPublish.cost,
-          enable_messaging_service: journeyToPublish.enable_messaging_service,
-          originalBookings: originalJourney?.bookings,
+          price: journeyPrice,
+          cost: journeyCost,
+          enable_messaging_service: enableMessaging,
+          originalBookings: journeyToPublish?.bookings,
         });
         
-        const publishedJourney: Journey = {
-            ...journeyToPublish,
-            journeyServerId: result.journeyServerId,
-            status: 'Scheduled',
-            bookings: result.bookings, 
-            orderedStops: result.orderedStops,
-        };
-        
-        await addOrUpdateJourney(publishedJourney);
+        if (onSave) {
+            onSave({
+                bookings: result.bookings,
+                status: 'Scheduled',
+                journeyServerId: result.journeyServerId,
+                orderedStops: result.orderedStops,
+                site: selectedSite,
+                account: selectedAccount,
+                price: journeyPrice,
+                cost: journeyCost,
+                enable_messaging_service: enableMessaging,
+            });
+        }
 
         toast({
           title: 'Journey Published!',
@@ -396,23 +304,19 @@ function JourneyFormInner({
         console.error("Failed to publish journey:", error);
         toast({
           variant: "destructive",
-          title: "Error",
-          description: error instanceof Error ? error.message : "Could not publish the journey. Please try again.",
+          title: "Error Publishing Journey",
+          description: error instanceof Error ? error.message : "Could not publish the journey.",
         });
       }
     setIsSubmitting(false);
   }
   
   const getTitle = () => {
-    if (isEditingTemplate) return `Editing Template: ${(initialData as JourneyTemplate)?.name}`;
-    if (isEditingJourney && initialData) {
+    if (isTemplate) return `Editing Template: ${initialData?.name}`;
+    if (isEditing) {
       const journeyData = initialData as Journey;
-      if (journeyData.journeyServerId) {
-        return `Editing Journey (ID: ${journeyData.journeyServerId})`;
-      }
-      return 'Editing Journey';
+      return journeyData?.journeyServerId ? `Editing Journey (ID: ${journeyData.journeyServerId})` : 'Editing Journey Draft';
     }
-    if ((initialData as JourneyTemplate)?.name) return `New Journey from: ${(initialData as JourneyTemplate).name}`;
     return 'Create a New Journey';
   };
 
@@ -430,7 +334,7 @@ function JourneyFormInner({
   };
   
   const title = getTitle();
-  const publishButtonText = (initialData as Journey)?.status === 'Scheduled' ? 'Update Published Journey' : 'Publish';
+  const publishButtonText = (initialData as Journey)?.status === 'Scheduled' ? 'Update Published Journey' : 'Publish Journey';
   
   const journeyMapComponent = (
       <JourneyMap 
@@ -460,7 +364,7 @@ function JourneyFormInner({
                                 setSelectedSite(site || null);
                             }} 
                             onOpenChange={(open) => {
-                                if (open) handleFetchSites();
+                                if (open && sites.length <= 1) handleFetchSites();
                             }}
                             disabled={isFetchingSites}
                         >
@@ -550,7 +454,9 @@ function JourneyFormInner({
 
             <BookingManager
               bookings={bookings}
-              setBookings={handleSetBookings}
+              setBookings={setBookings}
+              editingBooking={editingBooking}
+              setEditingBooking={setEditingBooking}
               isJourneyPriceSet={hasJourneyLevelPrice}
             />
             
@@ -602,38 +508,45 @@ function JourneyFormInner({
             
             <Card>
                 <CardFooter className="flex flex-wrap justify-between items-center bg-muted/50 p-4 rounded-b-lg gap-4">
-                    <div className="flex items-end gap-2 flex-grow min-w-[250px] w-full sm:w-auto">
+                     <div className="flex items-end gap-2 flex-grow min-w-[250px] w-full sm:w-auto">
                         <div className="flex-grow">
                             <Label htmlFor="template-name" className="text-xs">Template Name</Label>
                             <Input
                                 id="template-name"
                                 type="text"
-                                placeholder={isEditingTemplate ? "Template Name" : "Enter name to save..."}
+                                placeholder={isTemplate ? "Template Name" : "Enter name to save..."}
                                 value={templateName}
                                 onChange={(e) => setTemplateName(e.target.value)}
                                 className="bg-background h-10"
                             />
                         </div>
-                        <Button variant="outline" onClick={handleSaveTemplate} disabled={bookings.length === 0 || !templateName}>
-                            <Save className="mr-2 h-4 w-4" /> {isEditingTemplate ? 'Update' : 'Save as Template'}
+                        <Button variant="outline" onClick={handleSaveTemplateAction} disabled={bookings.length === 0 || !templateName}>
+                            <Save className="mr-2 h-4 w-4" /> {isTemplate ? 'Update Template' : 'Save as Template'}
                         </Button>
                     </div>
-                    
-                    {!isEditingTemplate && (
+
                     <div className="flex flex-col gap-2 flex-grow min-w-[250px] w-full sm:w-auto">
                         <Label className="text-xs">Journey Actions</Label>
                         <div className="flex gap-2">
-                            <Button variant="outline" onClick={handleSaveJourneyLocally} disabled={bookings.length === 0} className="flex-1">
-                                <Save className="mr-2 h-4 w-4" /> {isEditingJourney ? 'Update Journey' : 'Save Draft'}
+                        {isTemplate && onUseTemplate ? (
+                             <Button onClick={onUseTemplate} className="flex-1">
+                                <FileText className="mr-2 h-4 w-4" /> Use Template
+                            </Button>
+                        ) : (
+                            <>
+                            <Button variant="outline" onClick={handleSaveDraftOrJourney} disabled={!onSave || bookings.length === 0} className="flex-1">
+                                <Save className="mr-2 h-4 w-4" /> {isEditing ? 'Update Journey' : 'Save Draft'}
                             </Button>
                             
-                            <Button onClick={handlePublishJourney} disabled={isSubmitting || !journeyId || bookings.length === 0 || !selectedSite || !selectedAccount} className="flex-1">
+                            <Button onClick={handlePublishJourney} disabled={isSubmitting || !isEditing || bookings.length === 0 || !selectedSite || !selectedAccount} className="flex-1">
                                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
                                 {publishButtonText}
                             </Button>
+                            </>
+                        )}
                         </div>
                     </div>
-                    )}
+
                 </CardFooter>
             </Card>
 
@@ -701,7 +614,6 @@ function JourneyFormInner({
 
   return (
     <div className="py-4 lg:py-8 h-[calc(100vh-var(--header-height,0px))]">
-        {/* Mobile/Tablet Layout: Vertical Resizable Panels */}
         <div className="lg:hidden h-full">
              <PanelGroup direction="vertical">
                 <Panel defaultSize={40} minSize={20}>
@@ -717,8 +629,6 @@ function JourneyFormInner({
                 </Panel>
             </PanelGroup>
         </div>
-
-        {/* Desktop Layout: Horizontal Resizable Panels */}
         <div className="hidden lg:block h-full">
             <PanelGroup direction="horizontal">
                 <Panel defaultSize={50} minSize={30}>
