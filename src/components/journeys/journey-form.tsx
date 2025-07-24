@@ -36,6 +36,9 @@ interface JourneyFormProps {
   onSave?: (data: Omit<Journey, 'id' | 'serverScope' | 'status'>) => void;
   onSaveTemplate?: (data: Omit<JourneyTemplate, 'id' | 'serverScope'>) => void;
   onUseTemplate?: () => void;
+  // New props for lifted state
+  bookings: Booking[];
+  setBookings: (bookings: Booking[]) => void;
 }
 
 interface JourneyPreviewState {
@@ -65,6 +68,8 @@ function JourneyFormInner({
   onSave,
   onSaveTemplate,
   onUseTemplate,
+  bookings,
+  setBookings,
 }: JourneyFormProps) {
   const { toast } = useToast();
   const router = useRouter();
@@ -80,21 +85,6 @@ function JourneyFormInner({
   const resolvedInitialAccount = (initialData as Journey | JourneyTemplate)?.account || null;
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(resolvedInitialAccount);
   
-  const getInitialBookings = (data: Partial<JourneyTemplate | Journey> | null | undefined): Booking[] => {
-    if (!data || !data.bookings) return [];
-    return JSON.parse(JSON.stringify(data.bookings)).map((b: any) => ({
-      ...b,
-      id: b.id || uuidv4(),
-      stops: b.stops.map((s: any, index: number) => ({
-        ...s,
-        id: s.id || uuidv4(),
-        order: s.order ?? index,
-        dateTime: s.dateTime ? new Date(s.dateTime) : undefined
-      }))
-    }));
-  };
-  
-  const [bookings, setBookings] = useState<Booking[]>(() => getInitialBookings(initialData));
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -158,8 +148,6 @@ function JourneyFormInner({
   }, [bookings, initialData, debouncedFetchPreview, enableMessaging, selectedSite, selectedAccount]);
   
   useEffect(() => {
-    const initialBookings = getInitialBookings(initialData);
-    setBookings(initialBookings);
     setTemplateName((initialData as JourneyTemplate)?.name || '');
     const site = resolvedInitialSite;
     setSelectedSite(site);
@@ -650,9 +638,47 @@ function JourneyFormInner({
 
 
 export default function JourneyForm(props: JourneyFormProps) {
+  // New wrapper to provide bookings state if not provided by parent
+  const [internalBookings, setInternalBookings] = useState<Booking[]>(() => {
+    if (props.initialData?.bookings) {
+      return JSON.parse(JSON.stringify(props.initialData.bookings)).map((b: any) => ({
+        ...b,
+        id: b.id || uuidv4(),
+        stops: b.stops.map((s: any, index: number) => ({
+          ...s,
+          id: s.id || uuidv4(),
+          order: s.order ?? index,
+          dateTime: s.dateTime ? new Date(s.dateTime) : undefined
+        }))
+      }));
+    }
+    return [];
+  });
+  
+  const bookings = props.bookings ?? internalBookings;
+  const setBookings = props.setBookings ?? setInternalBookings;
+
+  useEffect(() => {
+    // Sync internal state if initialData changes
+    if (props.initialData?.bookings) {
+      const newBookings = JSON.parse(JSON.stringify(props.initialData.bookings)).map((b: any) => ({
+        ...b,
+        id: b.id || uuidv4(),
+        stops: b.stops.map((s: any, index: number) => ({
+          ...s,
+          id: s.id || uuidv4(),
+          order: s.order ?? index,
+          dateTime: s.dateTime ? new Date(s.dateTime) : undefined
+        }))
+      }));
+      setInternalBookings(newBookings);
+    }
+  }, [props.initialData]);
+
+
   return (
     <MapSelectionProvider>
-      <JourneyFormInner {...props} />
+      <JourneyFormInner {...props} bookings={bookings} setBookings={setBookings} />
     </MapSelectionProvider>
   )
 }
