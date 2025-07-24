@@ -1,6 +1,7 @@
 
 'use client';
 
+import * as React from 'react';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -51,10 +52,11 @@ function BookingManager({
   const [liveStatus, setLiveStatus] = useState<{ bookingId: string; status: string | null; isLoading: boolean } | null>(null);
   const [isNewBooking, setIsNewBooking] = useState(false);
   
-  // This effect ensures that when the form is closed, the state is clean.
-  // It helps prevent race conditions where the form might re-open with stale data.
   useEffect(() => {
-    if (editingBookingData === null) {
+    if (editingBookingData) {
+      // Form is open, do nothing
+    } else {
+      // Form is closed, reset the new booking flag
       setIsNewBooking(false);
     }
   }, [editingBookingData]);
