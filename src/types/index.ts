@@ -59,7 +59,7 @@ const SplitPaymentSettingsSchema = z.object({
 export type SplitPaymentSettings = z.infer<typeof SplitPaymentSettingsSchema>;
 
 const MetadataSchema = z.object({
-    key: z.string().min(1, "Key cannot be empty"),
+    key: z.string(),
     value: z.string(),
 });
 
