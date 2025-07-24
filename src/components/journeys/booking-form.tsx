@@ -69,7 +69,7 @@ const FormBookingSchema = BookingSchema.extend({
 
 type BookingFormData = z.infer<typeof FormBookingSchema>;
 
-interface JourneyFormProps {
+interface BookingFormProps {
   initialData: Booking;
   onSave: (booking: Booking) => void;
   onCancel: (bookingId: string) => void;
@@ -121,13 +121,13 @@ const SegmentedControlButton = React.forwardRef<
 SegmentedControlButton.displayName = 'SegmentedControlButton';
 
 
-export default function JourneyForm({ 
+export default function BookingForm({ 
     initialData, 
     onSave, 
     onCancel, 
     isJourneyPriceSet,
     isFirstBooking,
-}: JourneyFormProps) {
+}: BookingFormProps) {
   const { toast } = useToast();
   const { server } = useServer();
   const [generatingFields, setGeneratingFields] = useState<Record<string, boolean>>({});

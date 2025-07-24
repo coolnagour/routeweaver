@@ -1,11 +1,12 @@
 
+
 'use client';
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import type { Booking, Stop } from '@/types';
-import JourneyForm from './journey-form';
+import BookingForm from './booking-form';
 import { Edit, MapPin, Package, Trash2, UserPlus, Users, Phone, Clock, MessageSquare, Info, Loader2, MoreHorizontal } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { format } from 'date-fns';
@@ -204,7 +205,7 @@ export default function BookingManager({
   if (editingBooking) {
     const isFirstBooking = bookings.length > 0 && bookings[0].id === editingBooking.id;
     return (
-      <JourneyForm 
+      <BookingForm 
         key={editingBooking.id}
         initialData={editingBooking} 
         onSave={handleSaveBooking}
