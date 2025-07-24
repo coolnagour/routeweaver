@@ -7,14 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { saveJourney } from '@/ai/flows/journey-flow';
 import { generateJourneyPayload } from '@/ai/flows/journey-payload-flow';
 import { getSites } from '@/services/icabbi';
 import type { Booking, Journey, JourneyTemplate, Account, Stop, Location, Site } from '@/types';
 import { Save, Building, Loader2, Send, ChevronsUpDown, Code, DollarSign, Info, MessageSquare, GripVertical, FileText } from 'lucide-react';
 import BookingManager from './booking-manager';
 import { useServer } from '@/context/server-context';
-import { useRouter } from 'next/navigation';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import AccountAutocomplete from './account-autocomplete';
 import { v4 as uuidv4 } from 'uuid';
@@ -32,8 +30,10 @@ interface JourneyFormProps {
   initialData?: Partial<Journey | JourneyTemplate> | null;
   isEditing?: boolean;
   isTemplate?: boolean;
-  onSave?: (data: Journey | JourneyTemplate) => void;
+  onSave?: (data: Journey | JourneyTemplate) => Promise<void> | void;
+  onPublish?: (data: Journey | JourneyTemplate) => Promise<void> | void;
   onUseTemplate?: () => void;
+  onSaveTemplate?: (data: Journey | JourneyTemplate) => Promise<void> | void;
 }
 
 interface JourneyPreviewState {
@@ -61,10 +61,11 @@ function JourneyFormInner({
   isEditing = false,
   isTemplate = false,
   onSave,
+  onPublish,
   onUseTemplate,
+  onSaveTemplate,
 }: JourneyFormProps) {
   const { toast } = useToast();
-  const router = useRouter();
   const { server } = useServer();
   const [journeyData, setJourneyData] = useState<Partial<Journey | JourneyTemplate>>({});
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
@@ -94,9 +95,8 @@ function JourneyFormInner({
     });
     
     const initialSite = data.site;
-    if (initialSite) {
-        // Start with only the initial site to prevent duplicates before fetch
-        setSites([initialSite]);
+    if (initialSite && !sites.some(s => s.id === initialSite.id)) {
+        setSites(prevSites => [initialSite, ...prevSites.filter(s => s.id !== initialSite.id)]);
     }
   }, [initialData]);
 
@@ -152,6 +152,11 @@ function JourneyFormInner({
   const handleDataChange = (field: keyof (Journey | JourneyTemplate), value: any) => {
     setJourneyData(prev => ({...prev, [field]: value}));
   }
+  
+  const handleBookingsChange = (newBookings: Booking[]) => {
+    setJourneyData(prev => ({ ...prev, bookings: newBookings }));
+  };
+
 
   const handleFetchSites = useCallback(async () => {
     if (server) {
@@ -166,7 +171,7 @@ function JourneyFormInner({
         // De-duplicate using a Map to ensure each site ID is unique
         const uniqueSitesMap = new Map<number, Site>();
         combinedSites.forEach(site => {
-          if (!uniqueSitesMap.has(site.id)) {
+          if (site && typeof site.id !== 'undefined') {
             uniqueSitesMap.set(site.id, site);
           }
         });
@@ -203,54 +208,16 @@ function JourneyFormInner({
   };
 
   async function handlePublishJourney() {
-    const journeyToPublish = journeyData as Journey;
-    if (!journeyToPublish?.id) {
-        toast({ variant: 'destructive', title: 'No journey selected', description: 'Please save a journey draft before publishing.' });
-        return;
-    }
+    if (!onPublish) return;
 
     if (!journeyData.site || !journeyData.account) {
         toast({ variant: 'destructive', title: 'Site and Account Required', description: 'Please select a site and an account for this journey.' });
         return;
     }
-    
-    if (!server) {
-      toast({ variant: 'destructive', title: 'No Server Selected' });
-      router.push('/');
-      return;
-    }
 
     setIsSubmitting(true);
     try {
-        const result = await saveJourney({ 
-          bookings: journeyData.bookings || [], 
-          server, 
-          siteId: journeyData.site.id, 
-          accountId: journeyData.account.id,
-          journeyServerId: journeyData.journeyServerId, 
-          price: journeyData.price,
-          cost: journeyData.cost,
-          enable_messaging_service: journeyData.enable_messaging_service,
-          originalBookings: initialData?.bookings,
-        });
-        
-        if (onSave) {
-            onSave({
-                ...journeyToPublish,
-                bookings: result.bookings,
-                status: 'Scheduled',
-                journeyServerId: result.journeyServerId,
-                orderedStops: result.orderedStops,
-            });
-        }
-
-        toast({
-          title: 'Journey Published!',
-          description: result.message,
-        });
-        
-        router.push('/journeys');
-
+        await onPublish(journeyData as Journey);
       } catch (error) {
         console.error("Failed to publish journey:", error);
         toast({
@@ -418,7 +385,7 @@ function JourneyFormInner({
 
             <BookingManager
               bookings={journeyData.bookings || []}
-              setBookings={(newBookings) => handleDataChange('bookings', newBookings)}
+              setBookings={handleBookingsChange}
               editingBooking={editingBooking}
               setEditingBooking={setEditingBooking}
               isJourneyPriceSet={hasJourneyLevelPrice}
@@ -500,6 +467,16 @@ function JourneyFormInner({
                             )}
                         </div>
                     </div>
+                    {!isTemplate && onSaveTemplate && (
+                        <div className="flex flex-col gap-2 flex-grow min-w-[250px] w-full sm:w-auto">
+                           <Label className="text-xs">Template Actions</Label>
+                           <div className="flex gap-2">
+                            <Button variant="secondary" onClick={() => onSaveTemplate(journeyData)} disabled={(journeyData.bookings || []).length === 0} className="w-full">
+                                    <FileText className="mr-2 h-4 w-4" /> Save as Template
+                            </Button>
+                           </div>
+                        </div>
+                    )}
                 </CardFooter>
             </Card>
 

@@ -7,15 +7,21 @@ import JourneyForm from '@/components/journeys/journey-form';
 import type { Journey, JourneyTemplate } from '@/types';
 import { Loader2 } from 'lucide-react';
 import { useJourneys } from '@/hooks/use-journeys';
+import { useTemplates } from '@/hooks/use-templates';
 import { useToast } from '@/hooks/use-toast';
+import { saveJourney } from '@/ai/flows/journey-flow';
+import { useServer } from '@/context/server-context';
+import { v4 as uuidv4 } from 'uuid';
 
 export default function EditJourneyPage() {
   const router = useRouter();
   const params = useParams();
   const { toast } = useToast();
+  const { server } = useServer();
   const journeyId = params.id ? decodeURIComponent(params.id as string) : undefined;
 
   const { journeys, addOrUpdateJourney, loading: journeysLoading } = useJourneys();
+  const { addOrUpdateTemplate } = useTemplates();
   const [journey, setJourney] = useState<Journey | null>(null);
 
   useEffect(() => {
@@ -43,6 +49,79 @@ export default function EditJourneyPage() {
         description: `Your journey has been successfully updated.`,
     });
   };
+  
+  const handlePublishJourney = async (journeyToPublish: Journey | JourneyTemplate) => {
+     if (!server) {
+      toast({ variant: 'destructive', title: 'No Server Selected' });
+      router.push('/');
+      return;
+    }
+    
+    const result = await saveJourney({ 
+      bookings: journeyToPublish.bookings || [], 
+      server, 
+      siteId: journeyToPublish.site!.id, 
+      accountId: journeyToPublish.account!.id,
+      journeyServerId: journeyToPublish.journeyServerId, 
+      price: journeyToPublish.price,
+      cost: journeyToPublish.cost,
+      enable_messaging_service: journeyToPublish.enable_messaging_service,
+      originalBookings: journey?.bookings,
+    });
+    
+    await addOrUpdateJourney({
+        ...(journeyToPublish as Journey),
+        bookings: result.bookings,
+        status: 'Scheduled',
+        journeyServerId: result.journeyServerId,
+        orderedStops: result.orderedStops,
+    });
+
+    toast({
+      title: 'Journey Published!',
+      description: result.message,
+    });
+    
+    router.push('/journeys');
+  }
+
+  const handleSaveAsTemplate = async (journeyData: Journey | JourneyTemplate) => {
+    if (!server?.uuid) {
+      toast({ variant: 'destructive', title: 'Server not configured' });
+      return;
+    }
+    
+    if (!journeyData.site || !journeyData.account) {
+        toast({
+            variant: 'destructive',
+            title: 'Information Missing',
+            description: 'Please select a Site and Account before saving as a template.'
+        });
+        return;
+    }
+
+    const name = window.prompt("Enter a name for the new template:");
+    if (!name) return;
+
+    const newTemplate: JourneyTemplate = {
+      id: uuidv4(),
+      serverScope: server.uuid,
+      name,
+      bookings: journeyData.bookings || [],
+      site: journeyData.site,
+      account: journeyData.account,
+      price: journeyData.price,
+      cost: journeyData.cost,
+      enable_messaging_service: journeyData.enable_messaging_service,
+    };
+    
+    await addOrUpdateTemplate(newTemplate);
+    toast({
+      title: 'Template Saved!',
+      description: `The template "${name}" has been saved.`,
+    });
+    router.push(`/templates/${newTemplate.id}/edit`);
+  };
 
   if (journeysLoading || !journey) {
     return (
@@ -57,6 +136,8 @@ export default function EditJourneyPage() {
       key={journey.id}
       initialData={journey}
       onSave={handleSaveJourney}
+      onPublish={handlePublishJourney}
+      onSaveTemplate={handleSaveAsTemplate}
       isEditing={true}
     />
   );
