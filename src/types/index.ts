@@ -58,6 +58,10 @@ const SplitPaymentSettingsSchema = z.object({
 });
 export type SplitPaymentSettings = z.infer<typeof SplitPaymentSettingsSchema>;
 
+const MetadataSchema = z.object({
+    key: z.string().min(1, "Key cannot be empty"),
+    value: z.string(),
+});
 
 export const BookingSchema = z.object({
   id: z.string(),
@@ -72,6 +76,7 @@ export const BookingSchema = z.object({
   instructions: z.string().optional(), // Booking-level instructions
   holdOn: z.boolean().optional(),
   splitPaymentSettings: SplitPaymentSettingsSchema.optional(),
+  metadata: z.array(MetadataSchema).optional(),
 });
 export type Booking = z.infer<typeof BookingSchema>;
 
@@ -180,6 +185,7 @@ const GenkitBookingSchema = z.object({
   instructions: z.string().optional(),
   holdOn: z.boolean().optional(),
   splitPaymentSettings: SplitPaymentSettingsSchema.optional(),
+  metadata: z.array(MetadataSchema).optional(),
 });
 
 export const JourneyInputSchema = z.object({

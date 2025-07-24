@@ -123,6 +123,16 @@ export const formatBookingForApi = ({ booking, server, siteId, accountId }: Book
             split_payment_tips_value: splitPaymentTipsValue?.toString(),
         };
     }
+    
+    // Add metadata if it exists
+    if (booking.metadata && booking.metadata.length > 0) {
+        payload.app_metadata = booking.metadata.reduce((acc, item) => {
+            if (item.key) { // Ensure key is not empty
+                acc[item.key] = item.value;
+            }
+            return acc;
+        }, {} as Record<string, string>);
+    }
 
 
     return payload;

@@ -106,7 +106,7 @@ export async function updateBooking(server: ServerConfig, { booking, siteId, acc
         throw new Error("Booking must have a bookingServerId to be updated.");
     }
 
-    // For updates, we only want to send payment-related fields.
+    // For updates, we send payment, split payment, and metadata fields.
     const payload: any = {};
     
     if (typeof booking.price === 'number' || typeof booking.cost === 'number') {
@@ -134,10 +134,21 @@ export async function updateBooking(server: ServerConfig, { booking, siteId, acc
             split_payment_tips_value: splitPaymentTipsValue?.toString(),
         };
     }
+    
+    // Add metadata if it exists
+    if (booking.metadata && booking.metadata.length > 0) {
+        payload.app_metadata = booking.metadata.reduce((acc, item) => {
+            if (item.key) { // Ensure key is not empty
+                acc[item.key] = item.value;
+            }
+            return acc;
+        }, {} as Record<string, string>);
+    }
+
 
     // If there is nothing to update, just return the booking as is.
     if (Object.keys(payload).length === 0) {
-        console.log(`[updateBooking] No payment changes detected for booking ${booking.bookingServerId}. Skipping API call.`);
+        console.log(`[updateBooking] No payment or metadata changes detected for booking ${booking.bookingServerId}. Skipping API call.`);
         // Mimic the structure of a successful API call for consistency in the flow.
         const existingBooking = await getBookingById(server, booking.bookingServerId);
         return { ...existingBooking, perma_id: booking.bookingServerId };

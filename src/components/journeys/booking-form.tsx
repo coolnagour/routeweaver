@@ -18,7 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { CalendarIcon, MapPin, PlusCircle, X, User, Phone, Clock, MessageSquare, ChevronsUpDown, Sparkles, Loader2, Info, Hash, Car, Map, DollarSign, Lock, ShieldQuestion, Wallet, Percent } from 'lucide-react';
+import { CalendarIcon, MapPin, PlusCircle, X, User, Phone, Clock, MessageSquare, ChevronsUpDown, Sparkles, Loader2, Info, Hash, Car, Map, DollarSign, Lock, ShieldQuestion, Wallet, Percent, Key, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, setHours, setMinutes } from 'date-fns';
 import type { Booking, Stop, SuggestionInput, StopType, Location } from '@/types';
@@ -33,12 +33,17 @@ import { Switch } from '../ui/switch';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
 import { useServer } from '@/context/server-context';
+import { Separator } from '../ui/separator';
 
 // Create a form-specific schema by extending the base BookingSchema to handle Date objects
 const FormBookingSchema = BookingSchema.extend({
   stops: z.array(BookingSchema.shape.stops.element.extend({
     dateTime: z.date().optional(),
   })).min(1, 'At least one stop is required.'), // Min 1 for Hold On, min 2 for regular
+  metadata: z.array(z.object({
+      key: z.string(),
+      value: z.string(),
+  })).optional(),
 }).refine(data => {
     if (data.holdOn) return data.stops.length === 2 && data.stops[0].stopType === 'pickup' && data.stops[1].stopType === 'dropoff';
     return data.stops.length >= 2;
@@ -143,6 +148,11 @@ export default function BookingForm({
     control: form.control,
     name: "stops"
   });
+
+  const { fields: metadataFields, append: appendMetadata, remove: removeMetadata } = useFieldArray({
+    control: form.control,
+    name: "metadata"
+  });
   
   useEffect(() => {
     const sortedStops = [...initialData.stops].sort((a,b) => a.order - b.order);
@@ -171,6 +181,7 @@ export default function BookingForm({
         splitPaymentMinAmount: initialData.splitPaymentSettings?.splitPaymentMinAmount ?? undefined,
         splitPaymentThresholdAmount: initialData.splitPaymentSettings?.splitPaymentThresholdAmount ?? undefined,
       },
+      metadata: initialData.metadata || [],
     };
     form.reset(formData);
   }, [initialData, form]);
@@ -946,6 +957,48 @@ export default function BookingForm({
                                 )}
                             </CollapsibleContent>
                         </Collapsible>
+                        <Separator />
+                        <div>
+                            <h4 className="text-sm font-medium mb-2">Application Metadata</h4>
+                            <div className="space-y-2">
+                                {metadataFields.map((field, index) => (
+                                    <div key={field.id} className="flex items-center gap-2">
+                                        <FormField
+                                            control={form.control}
+                                            name={`metadata.${index}.key`}
+                                            render={({ field }) => (
+                                                <FormItem className="flex-1">
+                                                     <div className="relative flex items-center">
+                                                        <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                                        <Input {...field} placeholder="Key" className="pl-10 bg-background"/>
+                                                     </div>
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name={`metadata.${index}.value`}
+                                            render={({ field }) => (
+                                                <FormItem className="flex-1">
+                                                    <Input {...field} placeholder="Value" className="bg-background" />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <Button type="button" variant="ghost" size="icon" onClick={() => removeMetadata(index)}>
+                                            <Trash2 className="h-4 w-4 text-destructive" />
+                                        </Button>
+                                    </div>
+                                ))}
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => appendMetadata({ key: '', value: '' })}>
+                                    <PlusCircle className="mr-2 h-4 w-4" /> Add Metadata
+                                </Button>
+                            </div>
+                        </div>
+
                     </CollapsibleContent>
                     </Collapsible>
 
