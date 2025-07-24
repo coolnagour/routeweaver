@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState } from 'react';
@@ -35,7 +36,7 @@ interface BookingManagerProps {
   onAddNewBooking: () => void;
   onEditBooking: (bookingId: string) => void;
   onSaveBooking: (booking: Booking) => void;
-  onCancelEdit: (bookingId: string) => void;
+  onCancelEdit: () => void;
   onRemoveBooking: (bookingId: string) => void;
   isJourneyPriceSet: boolean;
 }
