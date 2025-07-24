@@ -76,10 +76,12 @@ function JourneyBuilderInner({
   const { journeys: allJourneys, addOrUpdateJourney } = useJourneys();
   const [, , addTemplate, ,] = useIndexedDB<JourneyTemplate>('journey-templates', [], server?.uuid);
   const [templateName, setTemplateName] = useState('');
-  const [sites, setSites] = useState<Site[]>([]);
+  
+  const resolvedInitialSite = initialSite || (initialData as Journey | JourneyTemplate)?.site || null;
+  const [sites, setSites] = useState<Site[]>(resolvedInitialSite ? [resolvedInitialSite] : []);
   const [isFetchingSites, setIsFetchingSites] = useState(false);
-  const [selectedSite, setSelectedSite] = useState<Site | null>(initialSite || (initialData as Journey)?.site || null);
-  const [selectedAccount, setSelectedAccount] = useState<Account | null>(initialAccount || (initialData as Journey)?.account || null);
+  const [selectedSite, setSelectedSite] = useState<Site | null>(resolvedInitialSite);
+  const [selectedAccount, setSelectedAccount] = useState<Account | null>(initialAccount || (initialData as Journey | JourneyTemplate)?.account || null);
   
   const getInitialBookings = (data: Partial<JourneyTemplate | Journey> | null | undefined): Booking[] => {
     if (!data || !data.bookings) return [];
@@ -165,16 +167,21 @@ function JourneyBuilderInner({
     setTemplateName((initialData as JourneyTemplate)?.name || '');
     
     // When editing a template, or loading a journey from a template, set site/account
-    setSelectedSite(initialSite || (initialData as Journey | JourneyTemplate)?.site || null);
+    const site = initialSite || (initialData as Journey | JourneyTemplate)?.site || null;
+    setSelectedSite(site);
+    if(site && !sites.some(s => s.id === site.id)) {
+        setSites(prev => [...prev, site]);
+    }
+
     setSelectedAccount(initialAccount || (initialData as Journey | JourneyTemplate)?.account || null);
 
     setJourneyPrice(initialData?.price);
     setJourneyCost(initialData?.cost);
     setEnableMessaging((initialData as Journey)?.enable_messaging_service || false);
-  }, [initialData, initialSite, initialAccount]);
+  }, [initialData, initialSite, initialAccount, sites]);
 
   const handleFetchSites = useCallback(async () => {
-    if (server && sites.length === 0) { // Only fetch if sites are not already loaded
+    if (server) { 
         setIsFetchingSites(true);
         try {
             const fetchedSites = await getSites(server);
@@ -187,7 +194,7 @@ function JourneyBuilderInner({
             setIsFetchingSites(false);
         }
     }
-  }, [server, sites.length, toast]);
+  }, [server, toast]);
 
   const handleSaveJourneyLocally = async () => {
     if (!server?.uuid) {
@@ -439,7 +446,7 @@ function JourneyBuilderInner({
                     <div>
                         <label className="text-sm font-medium mb-2 block">Site</label>
                         <Select 
-                            value={selectedSite?.id.toString()}
+                            value={selectedSite?.id.toString() || ''}
                             onValueChange={(value) => {
                                 const site = sites.find(s => s.id === Number(value));
                                 setSelectedSite(site || null);
