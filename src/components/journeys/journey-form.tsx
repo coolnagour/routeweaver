@@ -140,14 +140,16 @@ export default function JourneyForm({
     defaultValues: {
         ...initialData,
         stops: sortedInitialStops.map(s => ({...s, name: s.name ?? ''})),
+        price: initialData.price ?? undefined,
+        cost: initialData.cost ?? undefined,
         splitPaymentSettings: {
             ...initialData.splitPaymentSettings,
-            splitPaymentValue: initialData.splitPaymentSettings?.splitPaymentValue ?? null,
-            splitPaymentExtrasValue: initialData.splitPaymentSettings?.splitPaymentExtrasValue ?? null,
-            splitPaymentTollsValue: initialData.splitPaymentSettings?.splitPaymentTollsValue ?? null,
-            splitPaymentTipsValue: initialData.splitPaymentSettings?.splitPaymentTipsValue ?? null,
-            splitPaymentMinAmount: initialData.splitPaymentSettings?.splitPaymentMinAmount ?? null,
-            splitPaymentThresholdAmount: initialData.splitPaymentSettings?.splitPaymentThresholdAmount ?? null,
+            splitPaymentValue: initialData.splitPaymentSettings?.splitPaymentValue ?? undefined,
+            splitPaymentExtrasValue: initialData.splitPaymentSettings?.splitPaymentExtrasValue ?? undefined,
+            splitPaymentTollsValue: initialData.splitPaymentSettings?.splitPaymentTollsValue ?? undefined,
+            splitPaymentTipsValue: initialData.splitPaymentSettings?.splitPaymentTipsValue ?? undefined,
+            splitPaymentMinAmount: initialData.splitPaymentSettings?.splitPaymentMinAmount ?? undefined,
+            splitPaymentThresholdAmount: initialData.splitPaymentSettings?.splitPaymentThresholdAmount ?? undefined,
         },
     },
   });
@@ -177,12 +179,12 @@ export default function JourneyForm({
       cost: initialData.cost ?? undefined,
       splitPaymentSettings: {
         ...initialData.splitPaymentSettings,
-        splitPaymentValue: initialData.splitPaymentSettings?.splitPaymentValue ?? null,
-        splitPaymentExtrasValue: initialData.splitPaymentSettings?.splitPaymentExtrasValue ?? null,
-        splitPaymentTollsValue: initialData.splitPaymentSettings?.splitPaymentTollsValue ?? null,
-        splitPaymentTipsValue: initialData.splitPaymentSettings?.splitPaymentTipsValue ?? null,
-        splitPaymentMinAmount: initialData.splitPaymentSettings?.splitPaymentMinAmount ?? null,
-        splitPaymentThresholdAmount: initialData.splitPaymentSettings?.splitPaymentThresholdAmount ?? null,
+        splitPaymentValue: initialData.splitPaymentSettings?.splitPaymentValue ?? undefined,
+        splitPaymentExtrasValue: initialData.splitPaymentSettings?.splitPaymentExtrasValue ?? undefined,
+        splitPaymentTollsValue: initialData.splitPaymentSettings?.splitPaymentTollsValue ?? undefined,
+        splitPaymentTipsValue: initialData.splitPaymentSettings?.splitPaymentTipsValue ?? undefined,
+        splitPaymentMinAmount: initialData.splitPaymentSettings?.splitPaymentMinAmount ?? undefined,
+        splitPaymentThresholdAmount: initialData.splitPaymentSettings?.splitPaymentThresholdAmount ?? undefined,
       },
     });
   }, [initialData, form]);
@@ -338,6 +340,19 @@ export default function JourneyForm({
         update(currentStops.length, updatedLastStop);
     }
   };
+
+  const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>, field: any) => {
+      const value = e.target.value;
+      if (value === '') {
+          field.onChange(null);
+      } else {
+          const numValue = parseFloat(value);
+          if (!isNaN(numValue)) {
+              field.onChange(numValue);
+          }
+      }
+  };
+
 
   const firstStop = stopFields[0];
   const lastStop = stopFields[stopFields.length - 1];
@@ -687,7 +702,7 @@ export default function JourneyForm({
                                 <FormControl>
                                     <div className="relative flex items-center">
                                         <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                        <Input type="number" placeholder="e.g., 25.50" {...field} onChange={e => field.onChange(e.target.valueAsNumber || null)} value={field.value ?? ''} disabled={isJourneyPriceSet} className="pl-10 bg-background" />
+                                        <Input type="number" placeholder="e.g., 25.50" {...field} onChange={(e) => handleNumberChange(e, field)} value={field.value ?? ''} disabled={isJourneyPriceSet} className="pl-10 bg-background" />
                                     </div>
                                 </FormControl>
                                 <FormMessage />
@@ -703,7 +718,7 @@ export default function JourneyForm({
                                 <FormControl>
                                     <div className="relative flex items-center">
                                         <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                        <Input type="number" placeholder="e.g., 10.00" {...field} onChange={e => field.onChange(e.target.valueAsNumber || null)} value={field.value ?? ''} disabled={isJourneyPriceSet} className="pl-10 bg-background" />
+                                        <Input type="number" placeholder="e.g., 10.00" {...field} onChange={(e) => handleNumberChange(e, field)} value={field.value ?? ''} disabled={isJourneyPriceSet} className="pl-10 bg-background" />
                                     </div>
                                 </FormControl>
                                 <FormMessage />
@@ -758,7 +773,7 @@ export default function JourneyForm({
                                                                         ? <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /> 
                                                                         : <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /> 
                                                                     }
-                                                                     <Input type="number" placeholder={typeField.value === 'absolute' ? "e.g., 10.00" : "e.g., 50"} {...field} onChange={e => field.onChange(e.target.valueAsNumber || null)} value={field.value ?? ''} className="bg-background pl-10"/>
+                                                                     <Input type="number" placeholder={typeField.value === 'absolute' ? "e.g., 10.00" : "e.g., 50"} {...field} onChange={(e) => handleNumberChange(e, field)} value={field.value ?? ''} className="bg-background pl-10"/>
                                                                 </>
                                                             )}
                                                         />
@@ -791,7 +806,7 @@ export default function JourneyForm({
                                                 <FormControl>
                                                     <div className="relative flex items-center">
                                                         <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                                        <Input type="number" placeholder="e.g., 10.00" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.valueAsNumber || null)} className="pl-10 bg-background"/>
+                                                        <Input type="number" placeholder="e.g., 10.00" {...field} value={field.value ?? ''} onChange={(e) => handleNumberChange(e, field)} className="pl-10 bg-background"/>
                                                     </div>
                                                 </FormControl>
                                                 <FormMessage />
@@ -807,7 +822,7 @@ export default function JourneyForm({
                                                 <FormControl>
                                                     <div className="relative flex items-center">
                                                         <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                                        <Input type="number" placeholder="e.g., 50.00" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.valueAsNumber || null)} className="pl-10 bg-background"/>
+                                                        <Input type="number" placeholder="e.g., 50.00" {...field} value={field.value ?? ''} onChange={(e) => handleNumberChange(e, field)} className="pl-10 bg-background"/>
                                                     </div>
                                                 </FormControl>
                                                 <FormMessage />
@@ -833,7 +848,7 @@ export default function JourneyForm({
                                                                         ? <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /> 
                                                                         : <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /> 
                                                                     }
-                                                                    <Input type="number" placeholder={typeField.value === 'absolute' ? "e.g., 5.00" : "e.g., 50"} {...field} onChange={e => field.onChange(e.target.valueAsNumber || null)} value={field.value ?? ''} className="bg-background pl-10"/>
+                                                                    <Input type="number" placeholder={typeField.value === 'absolute' ? "e.g., 5.00" : "e.g., 50"} {...field} onChange={(e) => handleNumberChange(e, field)} value={field.value ?? ''} className="bg-background pl-10"/>
                                                                 </>
                                                             )}
                                                         />
@@ -874,7 +889,7 @@ export default function JourneyForm({
                                                                         ? <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /> 
                                                                         : <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /> 
                                                                     }
-                                                                    <Input type="number" placeholder={typeField.value === 'absolute' ? "e.g., 2.50" : "e.g., 100"} {...field} onChange={e => field.onChange(e.target.valueAsNumber || null)} value={field.value ?? ''} className="bg-background pl-10"/>
+                                                                    <Input type="number" placeholder={typeField.value === 'absolute' ? "e.g., 2.50" : "e.g., 100"} {...field} onChange={(e) => handleNumberChange(e, field)} value={field.value ?? ''} className="bg-background pl-10"/>
                                                                 </>
                                                             )}
                                                         />
@@ -915,7 +930,7 @@ export default function JourneyForm({
                                                                         ? <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /> 
                                                                         : <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /> 
                                                                     }
-                                                                    <Input type="number" placeholder={typeField.value === 'absolute' ? "e.g., 5.00" : "e.g., 15"} {...field} onChange={e => field.onChange(e.target.valueAsNumber || null)} value={field.value ?? ''} className="bg-background pl-10"/>
+                                                                    <Input type="number" placeholder={typeField.value === 'absolute' ? "e.g., 5.00" : "e.g., 15"} {...field} onChange={(e) => handleNumberChange(e, field)} value={field.value ?? ''} className="bg-background pl-10"/>
                                                                 </>
                                                             )}
                                                         />
