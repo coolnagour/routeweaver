@@ -15,20 +15,30 @@ export default function EditTemplatePage() {
   const { server } = useServer();
   const templateId = params.id ? decodeURIComponent(params.id as string) : undefined;
 
-  const [templates] = useIndexedDB<JourneyTemplate>('journey-templates', [], server?.uuid);
+  const [templates, , , , refreshTemplates] = useIndexedDB<JourneyTemplate>('journey-templates', [], server?.uuid);
   const [template, setTemplate] = useState<JourneyTemplate | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (templateId && templates !== null) {
+    // When the server context changes, we should re-fetch templates.
+    refreshTemplates();
+  }, [server?.uuid, refreshTemplates]);
+
+  useEffect(() => {
+    if (templateId && templates !== null) { // `templates` can be `null` initially from `useIndexedDB`
       const foundTemplate = templates.find(t => t.id === templateId);
       if (foundTemplate) {
         setTemplate(foundTemplate);
+        setLoading(false);
       } else {
-        console.error(`Template with id ${templateId} not found.`);
-        router.push('/templates');
+        // This condition might be met temporarily if templates for the wrong server are loaded.
+        // We wait for the correct templates to load before deciding to redirect.
+        const isStillLoading = templates === null;
+        if (!isStillLoading) {
+            console.error(`Template with id ${templateId} not found.`);
+            router.push('/templates');
+        }
       }
-      setLoading(false);
     }
   }, [templateId, templates, router]);
 

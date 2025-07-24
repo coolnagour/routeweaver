@@ -31,6 +31,7 @@ export default function EditJourneyPage() {
         setLoading(false);
       } else {
         // Only if journeys are loaded and the journey is not found, we redirect.
+        console.error(`Journey with id ${journeyId} not found.`);
         router.push('/journeys');
       }
     }
