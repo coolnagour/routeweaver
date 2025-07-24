@@ -163,8 +163,9 @@ function JourneyBuilderInner({
     const initialBookings = getInitialBookings(initialData);
     setBookings(initialBookings);
     setTemplateName((initialData as JourneyTemplate)?.name || '');
-    setSelectedSite(initialData?.site || initialSite || null);
-    setSelectedAccount( (initialData as Journey)?.account || initialAccount || null);
+    // When loading from a template, initialSite/initialAccount props take precedence
+    setSelectedSite(initialSite || initialData?.site || null);
+    setSelectedAccount(initialAccount || (initialData as Journey)?.account || null);
     setJourneyPrice(initialData?.price);
     setJourneyCost(initialData?.cost);
     setEnableMessaging((initialData as Journey)?.enable_messaging_service || false);
