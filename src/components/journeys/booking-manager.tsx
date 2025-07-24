@@ -49,6 +49,7 @@ export default function BookingManager({
   const { server } = useServer();
   const { toast } = useToast();
   const [liveStatus, setLiveStatus] = useState<{ bookingId: string; status: string | null; isLoading: boolean } | null>(null);
+  const [isNewBooking, setIsNewBooking] = useState(false);
   
   console.log('[BookingManager Render] Received bookings prop:', JSON.stringify(bookings, null, 2));
 
@@ -64,7 +65,9 @@ export default function BookingManager({
       ],
       holdOn: false,
     };
+    setBookings([...bookings, newBooking]);
     setEditingBookingData(newBooking);
+    setIsNewBooking(true);
   };
   
   const handleEditBooking = (bookingId: string) => {
@@ -72,27 +75,27 @@ export default function BookingManager({
     console.log('[BookingManager handleEditBooking] Found booking to edit:', JSON.stringify(bookingToEdit, null, 2));
     if (bookingToEdit) {
       setEditingBookingData(JSON.parse(JSON.stringify(bookingToEdit)));
+      setIsNewBooking(false);
     }
   };
 
   const handleSaveBooking = (bookingToSave: Booking) => {
     console.log('[BookingManager handleSaveBooking] Received booking to save from form:', JSON.stringify(bookingToSave, null, 2));
-    const sortedBooking = {
-      ...bookingToSave,
-      stops: [...bookingToSave.stops].sort((a, b) => a.order - b.order)
-    };
-
-    const newBookings = bookings.map(b => (b.id === sortedBooking.id ? sortedBooking : b));
-    if (!newBookings.some(b => b.id === sortedBooking.id)) {
-        newBookings.push(sortedBooking);
-    }
+    
+    const newBookings = bookings.map(b => (b.id === bookingToSave.id ? bookingToSave : b));
+    
     console.log('[BookingManager handleSaveBooking] newBookings array before setting state:', JSON.stringify(newBookings, null, 2));
     setBookings(newBookings);
     setEditingBookingData(null);
+    setIsNewBooking(false);
   };
   
-  const handleCancelEdit = () => {
+  const handleCancelEdit = (bookingId: string) => {
+    if (isNewBooking) {
+      setBookings(bookings.filter(b => b.id !== bookingId));
+    }
     setEditingBookingData(null);
+    setIsNewBooking(false);
   };
 
   const handleRemoveBooking = async (bookingId: string) => {
@@ -417,3 +420,5 @@ export default function BookingManager({
     </Card>
   );
 }
+
+    
