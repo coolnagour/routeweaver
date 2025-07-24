@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState } from 'react';
@@ -50,6 +49,9 @@ export default function BookingManager({
   const { server } = useServer();
   const { toast } = useToast();
   const [liveStatus, setLiveStatus] = useState<{ bookingId: string; status: string | null; isLoading: boolean } | null>(null);
+  
+  console.log('[BookingManager Render] Received bookings prop:', JSON.stringify(bookings, null, 2));
+
 
   const handleAddNewBooking = () => {
     const newBookingId = uuidv4();
@@ -67,12 +69,14 @@ export default function BookingManager({
   
   const handleEditBooking = (bookingId: string) => {
     const bookingToEdit = bookings.find(b => b.id === bookingId);
+    console.log('[BookingManager handleEditBooking] Found booking to edit:', JSON.stringify(bookingToEdit, null, 2));
     if (bookingToEdit) {
       setEditingBookingData(JSON.parse(JSON.stringify(bookingToEdit)));
     }
   };
 
   const handleSaveBooking = (bookingToSave: Booking) => {
+    console.log('[BookingManager handleSaveBooking] Received booking to save from form:', JSON.stringify(bookingToSave, null, 2));
     const sortedBooking = {
       ...bookingToSave,
       stops: [...bookingToSave.stops].sort((a, b) => a.order - b.order)
@@ -82,6 +86,7 @@ export default function BookingManager({
     if (!newBookings.some(b => b.id === sortedBooking.id)) {
         newBookings.push(sortedBooking);
     }
+    console.log('[BookingManager handleSaveBooking] newBookings array before setting state:', JSON.stringify(newBookings, null, 2));
     setBookings(newBookings);
     setEditingBookingData(null);
   };
@@ -412,3 +417,5 @@ export default function BookingManager({
     </Card>
   );
 }
+
+    
