@@ -111,8 +111,8 @@ export async function updateBooking(server: ServerConfig, { booking, siteId, acc
     
     if (typeof booking.price === 'number' || typeof booking.cost === 'number') {
         payload.payment = {
-            price: booking.price || 0,
-            cost: booking.cost || 0,
+            price: booking.price ?? 0,
+            cost: booking.cost ?? 0,
             fixed: 1,
         };
     }

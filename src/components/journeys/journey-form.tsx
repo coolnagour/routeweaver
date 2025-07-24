@@ -342,15 +342,15 @@ export default function JourneyForm({
   };
 
   const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>, field: any) => {
-      const value = e.target.value;
-      if (value === '') {
-          field.onChange(null);
-      } else {
-          const numValue = parseFloat(value);
-          if (!isNaN(numValue)) {
-              field.onChange(numValue);
-          }
-      }
+    const value = e.target.value;
+    if (value === '') {
+        field.onChange(undefined);
+    } else {
+        const numValue = parseFloat(value);
+        if (!isNaN(numValue)) {
+            field.onChange(numValue);
+        }
+    }
   };
 
 

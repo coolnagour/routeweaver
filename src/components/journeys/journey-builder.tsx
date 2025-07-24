@@ -282,6 +282,7 @@ function JourneyBuilderInner({
         price: b.price,
         cost: b.cost,
         instructions: b.instructions,
+        splitPaymentSettings: b.splitPaymentSettings,
       })),
       site: selectedSite,
       account: selectedAccount,
