@@ -163,9 +163,11 @@ function JourneyBuilderInner({
     const initialBookings = getInitialBookings(initialData);
     setBookings(initialBookings);
     setTemplateName((initialData as JourneyTemplate)?.name || '');
-    // When loading from a template, initialSite/initialAccount props take precedence
-    setSelectedSite(initialSite || initialData?.site || null);
-    setSelectedAccount(initialAccount || (initialData as Journey)?.account || null);
+    
+    // When editing a template, or loading a journey from a template, set site/account
+    setSelectedSite(initialSite || (initialData as Journey | JourneyTemplate)?.site || null);
+    setSelectedAccount(initialAccount || (initialData as Journey | JourneyTemplate)?.account || null);
+
     setJourneyPrice(initialData?.price);
     setJourneyCost(initialData?.cost);
     setEnableMessaging((initialData as Journey)?.enable_messaging_service || false);
