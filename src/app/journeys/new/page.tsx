@@ -101,7 +101,6 @@ export default function NewJourneyPage() {
       title: 'Template Saved!',
       description: `The template "${name}" has been saved.`,
     });
-    router.push(`/templates/${newTemplate.id}/edit`);
   };
 
 
