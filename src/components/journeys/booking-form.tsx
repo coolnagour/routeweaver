@@ -82,7 +82,7 @@ interface BookingFormProps {
   isFirstBooking: boolean;
 }
 
-const emptyLocation = { address: '', lat: 0, lng: 0 };
+const emptyLocation: Location = { address: '', lat: 0, lng: 0 };
 
 const SegmentedControl = ({ value, onValueChange, children }: { value: string, onValueChange: (value: string) => void, children: React.ReactNode }) => {
     return (
@@ -381,23 +381,14 @@ export default function BookingForm({
             
             // If there's content in the current row, insert new rows after it,
             // otherwise replace the current empty row with the pasted content.
-            const currentRow = form.getValues(`metadata.${index}`);
-            if (currentRow && currentRow.key.trim() === '' && currentRow.value.trim() === '') {
-                removeMetadata(index);
-                newMetadata.forEach((item, i) => {
-                    insertStop(index + i, item as any); // useFieldArray's insert is for the 'stops' array, this is wrong. I need to use the metadata one.
-                });
-                // Correct way:
-                const allMetadata = form.getValues('metadata');
-                const newRows = Object.entries(parsed).map(([key, value]) => ({ key, value: String(value) }));
-                const finalMetadata = [...allMetadata.slice(0, index), ...newRows, ...allMetadata.slice(index + 1)];
-                replaceMetadata(finalMetadata);
+            const allMetadata = form.getValues('metadata') || [];
+            const currentRow = allMetadata[index];
 
+            if (currentRow && currentRow.key.trim() === '' && currentRow.value.trim() === '') {
+                const finalMetadata = [...allMetadata.slice(0, index), ...newMetadata, ...allMetadata.slice(index + 1)];
+                replaceMetadata(finalMetadata);
             } else {
-                 // Insert after the current row
-                const allMetadata = form.getValues('metadata');
-                const newRows = Object.entries(parsed).map(([key, value]) => ({ key, value: String(value) }));
-                const finalMetadata = [...allMetadata.slice(0, index + 1), ...newRows, ...allMetadata.slice(index + 1)];
+                const finalMetadata = [...allMetadata.slice(0, index + 1), ...newMetadata, ...allMetadata.slice(index + 1)];
                 replaceMetadata(finalMetadata);
             }
 
@@ -545,7 +536,7 @@ export default function BookingForm({
                                 <FormLabel>Address</FormLabel>
                                 <FormControl>
                                     <AddressAutocomplete 
-                                        value={field.value.address}
+                                        value={field.value?.address || ''}
                                         onChange={field.onChange}
                                         placeholder="Pickup location"
                                         className={"bg-background"}

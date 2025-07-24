@@ -16,7 +16,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { MapPin, MinusCircle, User, Phone, MessageSquare, ChevronsUpDown, CalendarIcon, Clock, Sparkles, Loader2, Lock } from 'lucide-react';
-import type { Stop, SuggestionInput, StopType } from '@/types';
+import type { Stop, SuggestionInput, StopType, Location } from '@/types';
 import { cn } from '@/lib/utils';
 import { format, setHours, setMinutes } from 'date-fns';
 import AddressAutocomplete from './address-autocomplete';
@@ -37,6 +37,8 @@ interface ViaStopProps {
   generatingFields: Record<string, boolean>;
   isLocked?: boolean;
 }
+
+const emptyLocation: Location = { address: '', lat: 0, lng: 0 };
 
 export default function ViaStop({ 
     control, 
@@ -89,7 +91,7 @@ export default function ViaStop({
                             <FormLabel>Address</FormLabel>
                             <FormControl>
                                   <AddressAutocomplete 
-                                     value={field.value.address}
+                                     value={field.value?.address || ''}
                                      onChange={field.onChange}
                                      placeholder={isPickup ? 'Pickup location' : 'Drop-off location'}
                                      className={'bg-background'}
