@@ -160,8 +160,8 @@ export default function BookingForm({
       externalBookingId: initialData.externalBookingId ?? '',
       vehicleType: initialData.vehicleType ?? '',
       externalAreaCode: initialData.externalAreaCode ?? '',
-      price: initialData.price ?? undefined,
-      cost: initialData.cost ?? undefined,
+      price: initialData.price,
+      cost: initialData.cost,
       splitPaymentSettings: {
         ...initialData.splitPaymentSettings,
         splitPaymentValue: initialData.splitPaymentSettings?.splitPaymentValue ?? undefined,
