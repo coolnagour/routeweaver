@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -18,7 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { CalendarIcon, MapPin, PlusCircle, X, User, Phone, Clock, MessageSquare, ChevronsUpDown, Sparkles, Loader2, Info, Hash, Car, Map, DollarSign, Lock, ShieldQuestion, Wallet, Percent, Key, Trash2 } from 'lucide-react';
+import { CalendarIcon, MapPin, PlusCircle, X, User, Phone, Clock, MessageSquare, ChevronsUpDown, Sparkles, Loader2, Info, Hash, Car, Map, DollarSign, Lock, ShieldQuestion, Wallet, Percent, Key, Trash2, ClipboardPaste } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, setHours, setMinutes } from 'date-fns';
 import type { Booking, Stop, SuggestionInput, StopType, Location } from '@/types';
@@ -138,6 +139,7 @@ export default function BookingForm({
   
   const sortedInitialStops = [...initialData.stops].sort((a, b) => a.order - b.order);
   const [isScheduled, setIsScheduled] = useState(!!sortedInitialStops.find(s => s.stopType === 'pickup')?.dateTime);
+  const [jsonMetadata, setJsonMetadata] = useState('');
   
   const form = useForm<BookingFormData>({
     resolver: zodResolver(FormBookingSchema),
@@ -149,7 +151,7 @@ export default function BookingForm({
     name: "stops"
   });
 
-  const { fields: metadataFields, append: appendMetadata, remove: removeMetadata } = useFieldArray({
+  const { fields: metadataFields, append: appendMetadata, remove: removeMetadata, replace: replaceMetadata } = useFieldArray({
     control: form.control,
     name: "metadata"
   });
@@ -349,6 +351,31 @@ export default function BookingForm({
       if (!isNaN(numValue) && isFinite(numValue)) {
         field.onChange(numValue);
       }
+    }
+  };
+  
+  const handleParseJsonMetadata = () => {
+    if (!jsonMetadata.trim()) {
+        toast({ title: 'JSON is empty', description: 'Please paste a valid JSON object into the text area.', variant: 'destructive' });
+        return;
+    }
+    try {
+        const parsed = JSON.parse(jsonMetadata);
+        if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+            throw new Error('Input is not a JSON object.');
+        }
+
+        const newMetadata = Object.entries(parsed).map(([key, value]) => ({
+            key,
+            value: String(value)
+        }));
+
+        replaceMetadata(newMetadata);
+        toast({ title: 'Metadata Applied', description: 'JSON was successfully parsed and applied.' });
+        setJsonMetadata('');
+    } catch (error) {
+        console.error("Failed to parse metadata JSON:", error);
+        toast({ title: 'Invalid JSON', description: 'Could not parse the provided JSON. Please check the format.', variant: 'destructive' });
     }
   };
 
@@ -960,42 +987,61 @@ export default function BookingForm({
                         <Separator />
                         <div>
                             <h4 className="text-sm font-medium mb-2">Application Metadata</h4>
-                            <div className="space-y-2">
-                                {metadataFields.map((field, index) => (
-                                    <div key={field.id} className="flex items-center gap-2">
-                                        <FormField
-                                            control={form.control}
-                                            name={`metadata.${index}.key`}
-                                            render={({ field }) => (
-                                                <FormItem className="flex-1">
-                                                     <div className="relative flex items-center">
-                                                        <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                                        <Input {...field} placeholder="Key" className="pl-10 bg-background"/>
-                                                     </div>
-                                                </FormItem>
-                                            )}
+                            <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="json-metadata">Paste JSON Metadata</Label>
+                                    <div className="flex gap-2">
+                                        <Textarea 
+                                            id="json-metadata"
+                                            placeholder='e.g., { "order_id": "123", "source": "web" }'
+                                            value={jsonMetadata}
+                                            onChange={(e) => setJsonMetadata(e.target.value)}
+                                            className="bg-background font-mono text-xs"
+                                            rows={3}
                                         />
-                                        <FormField
-                                            control={form.control}
-                                            name={`metadata.${index}.value`}
-                                            render={({ field }) => (
-                                                <FormItem className="flex-1">
-                                                    <Input {...field} placeholder="Value" className="bg-background" />
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <Button type="button" variant="ghost" size="icon" onClick={() => removeMetadata(index)}>
-                                            <Trash2 className="h-4 w-4 text-destructive" />
+                                        <Button type="button" variant="outline" size="icon" onClick={handleParseJsonMetadata} title="Apply JSON Metadata">
+                                            <ClipboardPaste className="h-4 w-4" />
                                         </Button>
                                     </div>
-                                ))}
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => appendMetadata({ key: '', value: '' })}>
-                                    <PlusCircle className="mr-2 h-4 w-4" /> Add Metadata
-                                </Button>
+                                </div>
+
+                                <div className="space-y-2">
+                                    {metadataFields.map((field, index) => (
+                                        <div key={field.id} className="flex items-center gap-2">
+                                            <FormField
+                                                control={form.control}
+                                                name={`metadata.${index}.key`}
+                                                render={({ field }) => (
+                                                    <FormItem className="flex-1">
+                                                        <div className="relative flex items-center">
+                                                            <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                                            <Input {...field} placeholder="Key" className="pl-10 bg-background"/>
+                                                        </div>
+                                                    </FormItem>
+                                                )}
+                                            />
+                                            <FormField
+                                                control={form.control}
+                                                name={`metadata.${index}.value`}
+                                                render={({ field }) => (
+                                                    <FormItem className="flex-1">
+                                                        <Input {...field} placeholder="Value" className="bg-background" />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                            <Button type="button" variant="ghost" size="icon" onClick={() => removeMetadata(index)}>
+                                                <Trash2 className="h-4 w-4 text-destructive" />
+                                            </Button>
+                                        </div>
+                                    ))}
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => appendMetadata({ key: '', value: '' })}>
+                                        <PlusCircle className="mr-2 h-4 w-4" /> Add Metadata Row
+                                    </Button>
+                                </div>
                             </div>
                         </div>
 
