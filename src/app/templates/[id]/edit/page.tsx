@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import useIndexedDB from '@/hooks/use-indexed-db';
-import JourneyBuilder from '@/components/journeys/journey-builder';
+import JourneyForm from '@/components/journeys/journey-form';
 import type { JourneyTemplate } from '@/types';
 import { useServer } from '@/context/server-context';
 import { Loader2 } from 'lucide-react';
@@ -51,7 +51,7 @@ export default function EditTemplatePage() {
   }
 
   return (
-    <JourneyBuilder
+    <JourneyForm
       key={template.id}
       initialData={template}
       isEditingTemplate={true}

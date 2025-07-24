@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import JourneyBuilder from '@/components/journeys/journey-builder';
+import JourneyForm from '@/components/journeys/journey-form';
 import type { Journey } from '@/types';
 import { Loader2 } from 'lucide-react';
 import { useJourneys } from '@/hooks/use-journeys';
@@ -46,7 +46,7 @@ export default function EditJourneyPage() {
   }
 
   return (
-    <JourneyBuilder
+    <JourneyForm
       key={journey.id}
       initialData={journey}
       isEditingJourney={true}

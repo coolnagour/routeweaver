@@ -1,7 +1,7 @@
 
 'use client';
 
-import JourneyBuilder from '@/components/journeys/journey-builder';
+import JourneyForm from '@/components/journeys/journey-form';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import type { JourneyTemplate } from '@/types';
@@ -28,7 +28,7 @@ export default function NewJourneyPage() {
     router.refresh(); 
   }
 
-  return <JourneyBuilder 
+  return <JourneyForm 
     key={loadedTemplate ? loadedTemplate.id : 'new'} 
     initialData={loadedTemplate} 
     onNewJourneyClick={handleNewJourney}

@@ -29,7 +29,7 @@ import { MapSelectionProvider, useMapSelection } from '@/context/map-selection-c
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { ScrollArea } from '../ui/scroll-area';
 
-interface JourneyBuilderProps {
+interface JourneyFormProps {
   initialData?: Partial<JourneyTemplate> | Partial<Journey> | null;
   onNewJourneyClick?: () => void;
   isEditingTemplate?: boolean;
@@ -60,7 +60,7 @@ const generateDebugBookingPayloads = (bookings: Booking[], server: any, site?: S
     });
 };
 
-function JourneyBuilderInner({
+function JourneyFormInner({
   initialData, 
   onNewJourneyClick, 
   isEditingTemplate = false,
@@ -69,7 +69,7 @@ function JourneyBuilderInner({
   initialSite,
   initialAccount,
   onUpdateJourney
-}: JourneyBuilderProps) {
+}: JourneyFormProps) {
   const { toast } = useToast();
   const router = useRouter();
   const { server } = useServer();
@@ -178,7 +178,7 @@ function JourneyBuilderInner({
     setJourneyPrice(initialData?.price);
     setJourneyCost(initialData?.cost);
     setEnableMessaging((initialData as Journey)?.enable_messaging_service || false);
-  }, [initialData, initialAccount, resolvedInitialSite, sites]);
+  }, [initialData, initialAccount, resolvedInitialSite]);
 
   const handleFetchSites = useCallback(async () => {
     if (server) { 
@@ -745,10 +745,10 @@ function JourneyBuilderInner({
 }
 
 
-export default function JourneyBuilder(props: JourneyBuilderProps) {
+export default function JourneyForm(props: JourneyFormProps) {
   return (
     <MapSelectionProvider>
-      <JourneyBuilderInner {...props} />
+      <JourneyFormInner {...props} />
     </MapSelectionProvider>
   )
 }
