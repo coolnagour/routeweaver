@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -343,13 +342,14 @@ export default function BookingForm({
 
   const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>, field: any) => {
     const value = e.target.value;
-    if (value === '') {
-        field.onChange(undefined);
+    if (value === '' || value === null) {
+      field.onChange(undefined);
     } else {
-        const numValue = parseFloat(value);
-        if (!isNaN(numValue)) {
-            field.onChange(numValue);
-        }
+      const numValue = parseFloat(value);
+      // Check if it's a valid number (including 0)
+      if (!isNaN(numValue) && isFinite(numValue)) {
+        field.onChange(numValue);
+      }
     }
   };
 
@@ -971,3 +971,5 @@ export default function BookingForm({
       </Card>
   );
 }
+
+    
