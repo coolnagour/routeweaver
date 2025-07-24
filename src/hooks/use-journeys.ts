@@ -41,6 +41,7 @@ export function useJourneys() {
     }
     
     const journeyWithScope = { ...journey, serverScope };
+    console.log('[useJourneys] addOrUpdateJourney - Saving to DB:', JSON.stringify(journeyWithScope, null, 2));
     
     await setInDb('recent-journeys', journeyWithScope);
     
@@ -68,5 +69,3 @@ export function useJourneys() {
 
   return { journeys, loading, addOrUpdateJourney, deleteJourney, refreshJourneys };
 }
-
-    

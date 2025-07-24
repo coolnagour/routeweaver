@@ -76,6 +76,7 @@ export default function BookingManager({
   };
   
   const handleSaveBooking = (bookingToSave: Booking) => {
+    console.log('[BookingManager] handleSaveBooking:', JSON.stringify(bookingToSave, null, 2));
     // Ensure stops are sorted by order before saving
     const sortedBooking = {
       ...bookingToSave,

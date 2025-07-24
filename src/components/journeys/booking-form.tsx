@@ -280,6 +280,7 @@ export default function BookingForm({
 
 
   function onSubmit(values: BookingFormData) {
+    console.log('[BookingForm] onSubmit values:', JSON.stringify(values, null, 2));
     const bookingToSave: Booking = { ...values, stops: [] };
     
     const stopsToSave = values.stops.map(stop => {
@@ -971,5 +972,3 @@ export default function BookingForm({
       </Card>
   );
 }
-
-    

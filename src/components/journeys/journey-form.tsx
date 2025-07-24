@@ -228,6 +228,7 @@ function JourneyFormInner({
             cost: journeyCost,
             enable_messaging_service: enableMessaging,
         };
+        console.log('[JourneyForm] handleSaveJourneyLocally (Update):', JSON.stringify(journeyToUpdate, null, 2));
         await addOrUpdateJourney(journeyToUpdate);
         toast({
             title: 'Journey Updated!',
@@ -248,6 +249,7 @@ function JourneyFormInner({
             cost: journeyCost,
             enable_messaging_service: enableMessaging,
         };
+        console.log('[JourneyForm] handleSaveJourneyLocally (New):', JSON.stringify(newJourney, null, 2));
         await addOrUpdateJourney(newJourney);
         toast({
             title: 'Journey Saved!',
@@ -752,6 +754,3 @@ export default function JourneyForm(props: JourneyFormProps) {
     </MapSelectionProvider>
   )
 }
-    
-
-    
