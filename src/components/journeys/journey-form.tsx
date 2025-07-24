@@ -101,7 +101,6 @@ function JourneyFormInner({
   };
   
   const [bookings, setBookings] = useState<Booking[]>(() => getInitialBookings(initialData));
-  const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [journeyPreview, setJourneyPreview] = useState<JourneyPreviewState>({ orderedStops: [], journeyPayload: null, bookings: [], bookingPayloads: [], isLoading: false });
@@ -219,8 +218,6 @@ function JourneyFormInner({
       return;
     }
     
-    console.log('[JourneyForm LOG] handleSaveJourneyLocally - Journey data before saving:', JSON.stringify({bookings, selectedSite, selectedAccount, journeyPrice, journeyCost, enableMessaging}, null, 2));
-
     if (isEditingJourney && journeyId) {
         const journeyToUpdate: Journey = {
             ...(initialData as Journey),
@@ -233,7 +230,6 @@ function JourneyFormInner({
             cost: journeyCost,
             enable_messaging_service: enableMessaging,
         };
-        console.log('[JourneyForm LOG] About to save updated journey to DB:', JSON.stringify(journeyToUpdate, null, 2));
         await addOrUpdateJourney(journeyToUpdate);
         toast({
             title: 'Journey Updated!',
@@ -254,7 +250,6 @@ function JourneyFormInner({
             cost: journeyCost,
             enable_messaging_service: enableMessaging,
         };
-        console.log('[JourneyForm LOG] About to save new journey to DB:', JSON.stringify(newJourney, null, 2));
         await addOrUpdateJourney(newJourney);
         toast({
             title: 'Journey Saved!',
@@ -294,15 +289,12 @@ function JourneyFormInner({
     if (typeof journeyPrice !== 'undefined') templateData.price = journeyPrice; else delete templateData.price;
     if (typeof journeyCost !== 'undefined') templateData.cost = journeyCost; else delete templateData.cost;
     
-    console.log('[JourneyForm LOG] handleSaveTemplate - Template data being saved:', JSON.stringify(templateData, null, 2));
-
     if (isEditingTemplate && initialData?.id) {
         const updatedTemplate: JourneyTemplate = {
             ...templateData,
             id: initialData.id,
             serverScope: (initialData as JourneyTemplate).serverScope || server.uuid,
         };
-        console.log('[JourneyForm LOG] handleSaveTemplate (Update):', JSON.stringify(updatedTemplate, null, 2));
         addTemplate(updatedTemplate);
         toast({
             title: "Template Updated!",
@@ -315,7 +307,6 @@ function JourneyFormInner({
             serverScope: server.uuid,
             ...templateData,
         };
-        console.log('[JourneyForm LOG] handleSaveTemplate (New):', JSON.stringify(newTemplate, null, 2));
         addTemplate(newTemplate);
         toast({
             title: "Template Saved!",
@@ -427,59 +418,6 @@ function JourneyFormInner({
 
   const handleLocationSelectedFromMap = (location: Location) => {
     setSelectedLocation(location);
-  };
-  
-  const handleAddNewBooking = () => {
-    const newBookingId = uuidv4();
-    const newPickupStopId = uuidv4();
-    const newBooking: Booking = {
-      id: newBookingId,
-      stops: [
-        { id: newPickupStopId, order: 0, location: emptyLocation, stopType: 'pickup', name: '', phone: '', dateTime: undefined, instructions: '' },
-        { id: uuidv4(), order: 1, location: emptyLocation, stopType: 'dropoff', pickupStopId: newPickupStopId, instructions: '' }
-      ],
-      holdOn: false,
-    };
-    
-    setEditingBooking(newBooking);
-  };
-
-  const handleEditBooking = (bookingId: string) => {
-    console.log('[JourneyForm LOG] handleEditBooking - Current bookings state:', JSON.stringify(bookings, null, 2));
-    const bookingToEdit = bookings.find(b => b.id === bookingId);
-    console.log('[JourneyForm LOG] handleEditBooking - Found booking to edit:', JSON.stringify(bookingToEdit, null, 2));
-    if (bookingToEdit) {
-      setEditingBooking(JSON.parse(JSON.stringify(bookingToEdit)));
-    }
-  };
-
-
-  const handleSaveBooking = (bookingToSave: Booking) => {
-    console.log('[JourneyForm LOG] handleSaveBooking - Received booking to save:', JSON.stringify(bookingToSave, null, 2));
-    
-    const sortedBooking = {
-      ...bookingToSave,
-      stops: [...bookingToSave.stops].sort((a, b) => a.order - b.order)
-    };
-
-    const newBookings = bookings.map(b => (b.id === sortedBooking.id ? sortedBooking : b));
-    
-    if (!newBookings.some(b => b.id === sortedBooking.id)) {
-        newBookings.push(sortedBooking);
-    }
-
-    console.log(`[JourneyForm LOG] handleSaveBooking - updated bookings list (before set state):`, JSON.stringify(newBookings, null, 2));
-    setBookings(newBookings);
-    
-    setEditingBooking(null);
-  };
-  
-  const handleCancelEdit = () => {
-    setEditingBooking(null);
-  };
-
-  const handleRemoveBooking = (bookingId: string) => {
-    setBookings(prev => prev.filter(b => b.id !== bookingId));
   };
   
   const title = getTitle();
@@ -603,12 +541,7 @@ function JourneyFormInner({
 
             <BookingManager
               bookings={bookings}
-              editingBookingData={editingBooking}
-              onAddNewBooking={handleAddNewBooking}
-              onEditBooking={handleEditBooking}
-              onSaveBooking={handleSaveBooking}
-              onCancelEdit={handleCancelEdit}
-              onRemoveBooking={handleRemoveBooking}
+              setBookings={setBookings}
               isJourneyPriceSet={hasJourneyLevelPrice}
             />
             
