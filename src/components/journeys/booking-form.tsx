@@ -13,6 +13,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  useFormField,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -72,7 +73,7 @@ const FormBookingSchema = BookingSchema.extend({
 }).refine(data => {
     // The first stop (which is always the primary pickup) must have an address.
     const firstStop = data.stops[0];
-    if (firstStop && (!firstStop.location || !firstStop.location.address)) {
+    if (firstStop && (!firstStop.location || !firstStop.location.address || firstStop.location.address.trim() === '')) {
         return false;
     }
     return true;
@@ -550,22 +551,22 @@ export default function BookingForm({
                             )}
                         />
                     )}
-                    <Controller
+                    <FormField
                         control={form.control}
-                        name={`stops.0.location`}
-                        render={({ field, fieldState }) => (
+                        name={`stops.0.location.address`}
+                        render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Address</FormLabel>
                                 <FormControl>
                                     <AddressAutocomplete 
-                                        value={field.value?.address || ''}
-                                        onChange={field.onChange}
+                                        value={field.value || ''}
+                                        onChange={(location) => form.setValue(`stops.0.location`, location, { shouldValidate: true })}
                                         placeholder="Pickup location"
                                         className={"bg-background"}
                                         disabled={isEditingExisting}
                                     />
                                 </FormControl>
-                                 <FormMessage>{fieldState.error?.message}</FormMessage>
+                                <FormMessage />
                             </FormItem>
                         )}
                     />
