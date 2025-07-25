@@ -27,20 +27,36 @@ const mapContainerStyle = {
 
 // Custom map styles
 const mapStyles = {
-    light: [],
+    light: [
+        {
+            featureType: "poi",
+            elementType: "labels.icon",
+            stylers: [{ "visibility": "off" }]
+        },
+        {
+            featureType: "poi",
+            elementType: "labels.text",
+            stylers: [{ "visibility": "off" }]
+        }
+    ],
     dark: [
         { elementType: 'geometry', stylers: [{ color: '#242f3e' }] },
         { elementType: 'labels.text.stroke', stylers: [{ color: '#242f3e' }] },
         { elementType: 'labels.text.fill', stylers: [{ color: '#746855' }] },
         {
-          featureType: 'administrative.locality',
-          elementType: 'labels.text.fill',
-          stylers: [{ color: '#d59563' }],
+            featureType: 'administrative.locality',
+            elementType: 'labels.text.fill',
+            stylers: [{ color: '#d59563' }],
         },
         {
-          featureType: 'poi',
-          elementType: 'labels.text.fill',
-          stylers: [{ color: '#d59563' }],
+            featureType: "poi",
+            elementType: "labels.icon",
+            stylers: [{ "visibility": "off" }]
+        },
+        {
+            featureType: "poi",
+            elementType: "labels.text",
+            stylers: [{ "visibility": "off" }]
         },
         {
           featureType: 'poi.park',
