@@ -194,6 +194,14 @@ export async function generateJourneyPayload(input: JourneyPayloadInput): Promis
 
     // Add "Hold On" booking's dropoff at the end if it exists
      if (holdOnBooking) {
+        // If there were other stops, the distance for the last one needs to be 1000
+        if (journeyBookingsPayload.length > 0) {
+            const lastLeg = journeyBookingsPayload[journeyBookingsPayload.length - 1];
+            if (lastLeg) {
+                lastLeg.distance = 1000;
+            }
+        }
+         
         const holdOnDropoff = holdOnBooking.stops.find(s => s.stopType === 'dropoff');
         if (holdOnDropoff) {
             const firstPickupOfBooking = holdOnBooking.stops.find(s => s.stopType === 'pickup');
