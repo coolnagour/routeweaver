@@ -84,8 +84,6 @@ export default function EditJourneyPage() {
       title: 'Journey Published!',
       description: result.message,
     });
-    
-    router.push('/journeys');
   }
 
   const handleOpenSaveTemplateDialog = (journeyData: Journey | JourneyTemplate) => {
