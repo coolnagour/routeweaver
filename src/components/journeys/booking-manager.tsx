@@ -206,6 +206,7 @@ function BookingManager({
           onCancel={handleCancelEdit}
           isJourneyPriceSet={isJourneyPriceSet}
           isFirstBooking={bookings.length > 0 && bookings[0].id === editingBooking.id}
+          allBookings={bookings}
         />
     )
   }

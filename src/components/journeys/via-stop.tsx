@@ -16,7 +16,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { MapPin, MinusCircle, User, Phone, MessageSquare, ChevronsUpDown, CalendarIcon, Clock, Sparkles, Loader2, Lock } from 'lucide-react';
-import type { Stop, SuggestionInput, StopType, Location } from '@/types';
+import type { Booking, Stop, SuggestionInput, StopType, Location } from '@/types';
 import { cn } from '@/lib/utils';
 import { format, setHours, setMinutes } from 'date-fns';
 import AddressAutocomplete from './address-autocomplete';
@@ -36,6 +36,7 @@ interface ViaStopProps {
   ) => void;
   generatingFields: Record<string, boolean>;
   isLocked?: boolean;
+  allBookingsInJourney: Booking[];
 }
 
 const emptyLocation: Location = { address: '', lat: 0, lng: 0 };
@@ -49,6 +50,7 @@ export default function ViaStop({
     onGenerateField,
     generatingFields,
     isLocked = false,
+    allBookingsInJourney,
 }: ViaStopProps) {
   const { setValue } = useFormContext();
   const { server } = useServer();

@@ -80,6 +80,7 @@ interface BookingFormProps {
   onCancel: (bookingId: string) => void;
   isJourneyPriceSet: boolean;
   isFirstBooking: boolean;
+  allBookings: Booking[];
 }
 
 const emptyLocation: Location = { address: '', lat: 0, lng: 0 };
@@ -132,6 +133,7 @@ export default function BookingForm({
     onCancel, 
     isJourneyPriceSet,
     isFirstBooking,
+    allBookings
 }: BookingFormProps) {
   const { toast } = useToast();
   const { server } = useServer();
@@ -262,10 +264,20 @@ export default function BookingForm({
     
     let existingValues: string[] = [];
     if (fieldType === 'name' || fieldType === 'phone') {
-        const fieldKey = fieldType === 'name' ? 'name' : 'phone';
-        existingValues = form.getValues('stops')
-            .filter((_, index) => index !== fieldIndex && !!_[fieldKey])
-            .map(stop => stop[fieldKey]!);
+        const valueKey = fieldType === 'name' ? 'name' : 'phone';
+        
+        // Collect from all bookings in the journey form, not just the current one being edited
+        existingValues = allBookings.flatMap(booking =>
+            booking.stops.map(stop => stop[valueKey]!)
+        ).filter(Boolean);
+
+        // Also include values from the current form state, excluding the field being updated
+        const currentFormValues = form.getValues('stops')
+            .filter((_, index) => index !== fieldIndex)
+            .map(stop => stop[valueKey]!)
+            .filter(Boolean);
+        
+        existingValues = [...new Set([...existingValues, ...currentFormValues])];
     }
     
     try {
@@ -621,6 +633,7 @@ export default function BookingForm({
                         onGenerateField={handleGenerateField}
                         generatingFields={generatingFields}
                         isLocked={isEditingExisting}
+                        allBookingsInJourney={allBookings}
                     />
                 ))}
 
@@ -643,6 +656,7 @@ export default function BookingForm({
                         onGenerateField={handleGenerateField}
                         generatingFields={generatingFields}
                         isLocked={isEditingExisting}
+                        allBookingsInJourney={allBookings}
                     />
                 )}
                 
