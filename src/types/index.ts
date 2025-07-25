@@ -24,7 +24,7 @@ export interface Location {
 }
 
 const LocationSchema = z.object({
-  address: z.string(),
+  address: z.string().optional(),
   lat: z.number(),
   lng: z.number(),
 });

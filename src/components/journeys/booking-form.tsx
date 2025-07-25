@@ -69,6 +69,16 @@ const FormBookingSchema = BookingSchema.extend({
 }, {
     message: "Subsequent pickup times must not be before the first pickup.",
     path: ["stops"],
+}).refine(data => {
+    // The first stop (which is always the primary pickup) must have an address.
+    const firstStop = data.stops[0];
+    if (firstStop && (!firstStop.location || !firstStop.location.address)) {
+        return false;
+    }
+    return true;
+}, {
+    message: 'Pickup address is required.',
+    path: ['stops', 0, 'location', 'address'],
 });
 
 
