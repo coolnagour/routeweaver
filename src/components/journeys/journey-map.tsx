@@ -29,14 +29,21 @@ const mapContainerStyle = {
 const mapStyles = {
     light: [
         {
-            featureType: "poi",
-            elementType: "labels.icon",
-            stylers: [{ "visibility": "off" }]
+            "featureType": "poi",
+            "stylers": [{ "visibility": "off" }]
         },
         {
-            featureType: "poi",
-            elementType: "labels.text",
-            stylers: [{ "visibility": "off" }]
+            "featureType": "transit",
+            "stylers": [{ "visibility": "off" }]
+        },
+        {
+            "featureType": "poi.business",
+            "stylers": [{ "visibility": "off" }]
+        },
+        {
+            "featureType": "road",
+            "elementType": "labels.icon",
+            "stylers": [{ "visibility": "off" }]
         }
     ],
     dark: [
@@ -49,14 +56,21 @@ const mapStyles = {
             stylers: [{ color: '#d59563' }],
         },
         {
-            featureType: "poi",
-            elementType: "labels.icon",
-            stylers: [{ "visibility": "off" }]
+            "featureType": "poi",
+            "stylers": [{ "visibility": "off" }]
         },
         {
-            featureType: "poi",
-            elementType: "labels.text",
-            stylers: [{ "visibility": "off" }]
+            "featureType": "transit",
+            "stylers": [{ "visibility": "off" }]
+        },
+        {
+            "featureType": "poi.business",
+            "stylers": [{ "visibility": "off" }]
+        },
+        {
+            "featureType": "road",
+            "elementType": "labels.icon",
+            "stylers": [{ "visibility": "off" }]
         },
         {
           featureType: 'poi.park',
@@ -331,3 +345,5 @@ export default function JourneyMap({ stops, onLocationSelect, isSelectionMode = 
     </div>
   );
 }
+
+    
