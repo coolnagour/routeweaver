@@ -24,7 +24,7 @@ import { CalendarIcon, MapPin, PlusCircle, X, User, Phone, Clock, MessageSquare,
 import { cn } from '@/lib/utils';
 import { format, setHours, setMinutes } from 'date-fns';
 import type { Booking, Stop, SuggestionInput, StopType, Location } from '@/types';
-import { BookingSchema } from '@/types';
+import { BookingSchema, StopSchema } from '@/types';
 import ViaStop from './via-stop';
 import AddressAutocomplete from './address-autocomplete';
 import { generateSuggestion } from '@/ai/flows/suggestion-flow';
@@ -37,11 +37,13 @@ import { Textarea } from '../ui/textarea';
 import { useServer } from '@/context/server-context';
 import { Separator } from '../ui/separator';
 
+const FormStopSchema = StopSchema.extend({
+    dateTime: z.date().optional(),
+});
+
 // Create a form-specific schema by extending the base BookingSchema to handle Date objects
 const FormBookingSchema = BookingSchema.extend({
-  stops: z.array(BookingSchema.shape.stops.element.extend({
-    dateTime: z.date().optional(),
-  })).min(1, 'At least one stop is required.'), // Min 1 for Hold On, min 2 for regular
+  stops: z.array(FormStopSchema).min(1, 'At least one stop is required.'), // Min 1 for Hold On, min 2 for regular
   metadata: z.array(z.object({
       key: z.string(),
       value: z.string(),
