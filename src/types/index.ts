@@ -24,7 +24,7 @@ export interface Location {
 }
 
 const LocationSchema = z.object({
-  address: z.string().min(1, "Address is required for pickup stops."),
+  address: z.string(),
   lat: z.number(),
   lng: z.number(),
 });
@@ -169,7 +169,7 @@ const e164Regex = /^\+[1-9]\d{1,14}$/;
 const GenkitStopSchema = z.object({
   id: z.string(),
   order: z.number(),
-  location: LocationSchema.optional(),
+  location: LocationSchema.extend({ address: z.string().min(1) }).optional(),
   stopType: z.enum(['pickup', 'dropoff']),
   bookingSegmentId: z.number().optional(),
   dateTime: z.union([z.date(), z.string()]).optional().transform(val => val instanceof Date ? val.toISOString() : val),
@@ -184,6 +184,9 @@ const GenkitStopSchema = z.object({
         return !!data.location && !!data.location.address;
     }
     return true;
+}, {
+    message: "A location with a valid address must be provided for pickup stops.",
+    path: ['location', 'address'],
 });
 
 
