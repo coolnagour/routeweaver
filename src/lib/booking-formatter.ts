@@ -44,6 +44,11 @@ export const formatBookingForApi = ({ booking, server, siteId, accountId }: Book
     
     const defaultCountry = server.countryCodes?.[0]?.toUpperCase() as any;
     
+    // Determine the destination address. If it's a regular booking and the last stop address is missing, default to "As Directed".
+    const destinationAddress = booking.holdOn || !lastStop.location?.address
+      ? "As Directed"
+      : lastStop.location.address;
+
     const payload: any = {
         date: firstPickup.dateTime?.toISOString() || new Date().toISOString(),
         source: "DISPATCH",
@@ -54,11 +59,10 @@ export const formatBookingForApi = ({ booking, server, siteId, accountId }: Book
             formatted: firstPickup.location.address,
             driver_instructions: firstPickup.instructions || "",
         },
-        // For hold on, destination is "As Directed". For regular, it's the last stop.
         destination: {
             lat: lastStop.location.lat.toString(),
             lng: lastStop.location.lng.toString(),
-            formatted: booking.holdOn ? "As Directed" : lastStop.location.address,
+            formatted: destinationAddress,
             driver_instructions: lastStop.instructions || "",
         },
         account_id: accountId,
