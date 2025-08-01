@@ -5,7 +5,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import type { Booking, Stop } from '@/types';
+import type { Booking, Stop, Location } from '@/types';
 import BookingForm from './booking-form';
 import { Edit, MapPin, Package, Trash2, UserPlus, Users, Phone, Clock, MessageSquare, Info, Loader2, MoreHorizontal } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -30,7 +30,7 @@ const getPassengersFromStops = (stops: Stop[]) => {
     return stops.filter(s => s.stopType === 'pickup');
 }
 
-const emptyLocation = { address: '', lat: 0, lng: 0 };
+const emptyLocation: Location = { address: '', lat: 0, lng: 0 };
 
 interface BookingManagerProps {
   bookings: Booking[];
@@ -316,7 +316,7 @@ function BookingManager({
                                       <div className="flex items-start gap-2">
                                           <MapPin className="h-4 w-4 text-primary mt-1"/>
                                           <div className="flex-1">
-                                              <p><span className="capitalize font-medium">{stop.stopType}:</span> {stop.location.address}</p>
+                                              <p><span className="capitalize font-medium">{stop.stopType}:</span> {stop.location?.address}</p>
                                               {isPickup && stop.name && (
                                                   <div className="flex items-center gap-4 text-xs pl-1 flex-wrap">
                                                       <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {stop.name}</span>

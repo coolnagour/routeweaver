@@ -94,7 +94,7 @@ export default function ViaStop({
                             <FormControl>
                                   <AddressAutocomplete 
                                      value={field.value?.address || ''}
-                                     onChange={field.onChange}
+                                     onChange={(location) => setValue(`stops.${index}.location`, location, { shouldValidate: true })}
                                      placeholder={isPickup ? 'Pickup location' : 'Drop-off location'}
                                      className={'bg-background'}
                                      disabled={isLocked}

@@ -24,7 +24,7 @@ export interface Location {
 }
 
 const LocationSchema = z.object({
-  address: z.string(), // Making address required
+  address: z.string().min(1, "Address is required for pickup stops."),
   lat: z.number(),
   lng: z.number(),
 });
@@ -32,7 +32,7 @@ const LocationSchema = z.object({
 export const StopSchema = z.object({
   id: z.string(),
   order: z.number(),
-  location: LocationSchema,
+  location: LocationSchema.optional(),
   stopType: z.enum(['pickup', 'dropoff']),
   bookingSegmentId: z.number().optional(),
   dateTime: z.union([z.date(), z.string().datetime().optional()]).optional().transform(val => val ? new Date(val) : undefined),
@@ -43,7 +43,7 @@ export const StopSchema = z.object({
 }).refine(data => {
     // Address is only truly required for pickup stops.
     if (data.stopType === 'pickup') {
-        return data.location.address && data.location.address.trim() !== '';
+        return !!data.location && data.location.address && data.location.address.trim() !== '';
     }
     return true;
 }, {
@@ -169,7 +169,7 @@ const e164Regex = /^\+[1-9]\d{1,14}$/;
 const GenkitStopSchema = z.object({
   id: z.string(),
   order: z.number(),
-  location: LocationSchema,
+  location: LocationSchema.optional(),
   stopType: z.enum(['pickup', 'dropoff']),
   bookingSegmentId: z.number().optional(),
   dateTime: z.union([z.date(), z.string()]).optional().transform(val => val instanceof Date ? val.toISOString() : val),
@@ -179,7 +179,13 @@ const GenkitStopSchema = z.object({
   }),
   pickupStopId: z.string().optional(),
   instructions: z.string().optional(),
+}).refine(data => {
+    if (data.stopType === 'pickup') {
+        return !!data.location && !!data.location.address;
+    }
+    return true;
 });
+
 
 const GenkitBookingSchema = z.object({
   id: z.string(),

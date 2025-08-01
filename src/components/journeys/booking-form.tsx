@@ -37,7 +37,7 @@ import { Textarea } from '../ui/textarea';
 import { useServer } from '@/context/server-context';
 import { Separator } from '../ui/separator';
 
-const LocationSchema = z.object({
+const FormLocationSchema = z.object({
   address: z.string().min(1, "Address is required for pickup stops."),
   lat: z.number(),
   lng: z.number(),
@@ -46,7 +46,7 @@ const LocationSchema = z.object({
 const FormStopSchema = z.object({
   id: z.string(),
   order: z.number(),
-  location: LocationSchema,
+  location: FormLocationSchema.optional(),
   stopType: z.enum(['pickup', 'dropoff']),
   bookingSegmentId: z.number().optional(),
   dateTime: z.date().optional(),
@@ -54,6 +54,15 @@ const FormStopSchema = z.object({
   phone: z.string().optional(),
   pickupStopId: z.string().optional(),
   instructions: z.string().optional(),
+}).refine(data => {
+    // Address is only truly required for pickup stops.
+    if (data.stopType === 'pickup') {
+        return !!data.location && data.location.address && data.location.address.trim() !== '';
+    }
+    return true;
+}, {
+    message: "Address is required for pickup stops.",
+    path: ['location.address'],
 });
 
 
@@ -192,6 +201,7 @@ export default function BookingForm({
       ...initialData,
       stops: sortedStops.map(s => ({
           ...s,
+          location: s.location || emptyLocation,
           dateTime: s.dateTime ? new Date(s.dateTime) : undefined,
           name: s.name ?? '',
           phone: s.phone ?? '',
@@ -445,7 +455,7 @@ export default function BookingForm({
   const viaStops = stopFields.slice(1, -1);
   const firstPickupIndex = stopFields.findIndex(s => s.stopType === 'pickup');
   
-  const isTrulyNew = !initialData.bookingServerId && !initialData.stops.some(s => s.location.address);
+  const isTrulyNew = !initialData.bookingServerId && !initialData.stops.some(s => s.location?.address);
 
   return (
       <Card>
@@ -584,7 +594,7 @@ export default function BookingForm({
                                         disabled={isEditingExisting}
                                     />
                                 </FormControl>
-                                <FormMessage />
+                                <FormMessage>{fieldState.error?.address?.message}</FormMessage>
                             </FormItem>
                         )}
                     />
