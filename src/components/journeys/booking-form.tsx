@@ -24,7 +24,7 @@ import { CalendarIcon, MapPin, PlusCircle, X, User, Phone, Clock, MessageSquare,
 import { cn } from '@/lib/utils';
 import { format, setHours, setMinutes } from 'date-fns';
 import type { Booking, Stop, SuggestionInput, StopType, Location } from '@/types';
-import { BookingSchema, StopSchema } from '@/types';
+import { BookingSchema } from '@/types';
 import ViaStop from './via-stop';
 import AddressAutocomplete from './address-autocomplete';
 import { generateSuggestion } from '@/ai/flows/suggestion-flow';
@@ -37,9 +37,25 @@ import { Textarea } from '../ui/textarea';
 import { useServer } from '@/context/server-context';
 import { Separator } from '../ui/separator';
 
-const FormStopSchema = StopSchema.extend({
-    dateTime: z.date().optional(),
+const LocationSchema = z.object({
+  address: z.string().min(1, "Address is required for pickup stops."),
+  lat: z.number(),
+  lng: z.number(),
 });
+
+const FormStopSchema = z.object({
+  id: z.string(),
+  order: z.number(),
+  location: LocationSchema,
+  stopType: z.enum(['pickup', 'dropoff']),
+  bookingSegmentId: z.number().optional(),
+  dateTime: z.date().optional(),
+  name: z.string().optional(),
+  phone: z.string().optional(),
+  pickupStopId: z.string().optional(),
+  instructions: z.string().optional(),
+});
+
 
 // Create a form-specific schema by extending the base BookingSchema to handle Date objects
 const FormBookingSchema = BookingSchema.extend({
@@ -568,7 +584,7 @@ export default function BookingForm({
                                         disabled={isEditingExisting}
                                     />
                                 </FormControl>
-                                <FormMessage>{fieldState.error?.address?.message}</FormMessage>
+                                <FormMessage />
                             </FormItem>
                         )}
                     />
