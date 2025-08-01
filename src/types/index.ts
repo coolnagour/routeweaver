@@ -169,7 +169,7 @@ const e164Regex = /^\+[1-9]\d{1,14}$/;
 const GenkitStopSchema = z.object({
   id: z.string(),
   order: z.number(),
-  location: LocationSchema.extend({ address: z.string().min(1) }).optional(),
+  location: LocationSchema.optional(),
   stopType: z.enum(['pickup', 'dropoff']),
   bookingSegmentId: z.number().optional(),
   dateTime: z.union([z.date(), z.string()]).optional().transform(val => val instanceof Date ? val.toISOString() : val),
@@ -181,7 +181,7 @@ const GenkitStopSchema = z.object({
   instructions: z.string().optional(),
 }).refine(data => {
     if (data.stopType === 'pickup') {
-        return !!data.location && !!data.location.address;
+        return !!data.location && !!data.location.address && data.location.address.trim() !== '';
     }
     return true;
 }, {
@@ -238,3 +238,4 @@ export const SuggestionOutputSchema = z.object({
   suggestion: z.string(),
 });
 export type SuggestionOutput = z.infer<typeof SuggestionOutputSchema>;
+
