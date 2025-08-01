@@ -38,7 +38,7 @@ import { useServer } from '@/context/server-context';
 import { Separator } from '../ui/separator';
 
 const FormLocationSchema = z.object({
-  address: z.string().min(1, "Address is required for pickup stops."),
+  address: z.string(),
   lat: z.number(),
   lng: z.number(),
 });
@@ -100,7 +100,7 @@ const FormBookingSchema = BookingSchema.extend({
 }).refine(data => {
     // The first stop (which is always the primary pickup) must have an address.
     const firstStop = data.stops[0];
-    if (firstStop && (!firstStop.location || !firstStop.location.address || firstStop.location.address.trim() === '')) {
+    if (firstStop && firstStop.stopType === 'pickup' && (!firstStop.location || !firstStop.location.address || firstStop.location.address.trim() === '')) {
         return false;
     }
     return true;
