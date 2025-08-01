@@ -551,22 +551,22 @@ export default function BookingForm({
                             )}
                         />
                     )}
-                    <FormField
+                    <Controller
                         control={form.control}
-                        name={`stops.0.location.address`}
-                        render={({ field }) => (
+                        name={`stops.0.location`}
+                        render={({ field, fieldState }) => (
                             <FormItem>
                                 <FormLabel>Address</FormLabel>
                                 <FormControl>
                                     <AddressAutocomplete 
-                                        value={field.value || ''}
+                                        value={field.value?.address || ''}
                                         onChange={(location) => form.setValue(`stops.0.location`, location, { shouldValidate: true })}
                                         placeholder="Pickup location"
                                         className={"bg-background"}
                                         disabled={isEditingExisting}
                                     />
                                 </FormControl>
-                                <FormMessage />
+                                <FormMessage>{fieldState.error?.address?.message}</FormMessage>
                             </FormItem>
                         )}
                     />

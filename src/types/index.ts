@@ -24,7 +24,7 @@ export interface Location {
 }
 
 const LocationSchema = z.object({
-  address: z.string().optional(),
+  address: z.string(), // Making address required
   lat: z.number(),
   lng: z.number(),
 });
@@ -40,6 +40,15 @@ export const StopSchema = z.object({
   phone: z.string().optional(),
   pickupStopId: z.string().optional(),
   instructions: z.string().optional(),
+}).refine(data => {
+    // Address is only truly required for pickup stops.
+    if (data.stopType === 'pickup') {
+        return data.location.address && data.location.address.trim() !== '';
+    }
+    return true;
+}, {
+    message: "Address is required for pickup stops.",
+    path: ['location.address'],
 });
 export type Stop = z.infer<typeof StopSchema>;
 

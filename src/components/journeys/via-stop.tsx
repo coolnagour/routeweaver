@@ -100,7 +100,7 @@ export default function ViaStop({
                                      disabled={isLocked}
                                   />
                             </FormControl>
-                            <FormMessage>{fieldState.error?.message}</FormMessage>
+                            <FormMessage>{fieldState.error?.address?.message}</FormMessage>
                         </FormItem>
                      )}
                  />
