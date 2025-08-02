@@ -57,7 +57,7 @@ export default function SendMessageDialog({ isOpen, onOpenChange, onSend, target
         <DialogHeader>
           <DialogTitle>Send Message to {targetType}</DialogTitle>
           <DialogDescription>
-            Type your message below. This will be sent to the driver and/or passenger associated with this {targetType}.
+            Type your message below. This will be sent to the driver associated with this {targetType}.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
