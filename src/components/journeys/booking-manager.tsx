@@ -304,6 +304,7 @@ function BookingManager({
                   <Card key={booking.id} className="p-3">
                       <div className="flex justify-between items-start">
                       <div className="space-y-2 flex-1">
+                          {booking.bookingServerId && <p className="font-semibold">Booking ID: {booking.bookingServerId}</p>}
                           {bookingDateTime ? <p className="font-semibold text-primary">{format(new Date(bookingDateTime), 'PPP p')}</p> : <p className="font-semibold text-primary">ASAP</p>}
                           <p className="text-sm text-muted-foreground flex items-center gap-2"><Users className="h-4 w-4" />{pickups.length} passenger(s)</p>
                           
