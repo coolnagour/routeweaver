@@ -12,7 +12,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { format } from 'date-fns';
 import { useServer } from '@/context/server-context';
 import { useToast } from '@/hooks/use-toast';
-import { deleteBooking, sendDriverAppEvent, getBookingById } from '@/services/icabbi';
+import { deleteBooking, sendDriverAppEvent, getBookingById, sendMessage } from '@/services/icabbi';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,6 +25,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { v4 as uuidv4 } from 'uuid';
+import SendMessageDialog from './send-message-dialog';
 
 const getPassengersFromStops = (stops: Stop[]) => {
     return stops.filter(s => s.stopType === 'pickup');
@@ -53,6 +54,7 @@ function BookingManager({
   const { toast } = useToast();
   const [liveStatus, setLiveStatus] = useState<{ bookingId: string; status: string | null; isLoading: boolean } | null>(null);
   const [isNewBooking, setIsNewBooking] = useState(false);
+  const [messageTarget, setMessageTarget] = useState<{ id: number; type: 'booking' } | null>(null);
   
   const handleAddNewBooking = () => {
     const newBookingId = uuidv4();
@@ -176,6 +178,16 @@ function BookingManager({
     }
   }
 
+  const handleSendMessage = async (message: string) => {
+    if (!messageTarget || !server) return;
+    try {
+      await sendMessage(server, messageTarget.id, messageTarget.type, message);
+      toast({ title: 'Message Sent', description: `Your message has been sent to the ${messageTarget.type}.` });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Failed to Send Message', description: error instanceof Error ? error.message : 'An unknown error occurred.' });
+    }
+  };
+
   const getTotalPassengers = (bookings: Booking[]) => {
       return bookings.reduce((total, booking) => {
           if (booking.holdOn) return total;
@@ -212,6 +224,7 @@ function BookingManager({
   }
 
   return (
+    <>
     <Card>
       <CardHeader>
         <div className="flex justify-between items-center">
@@ -343,7 +356,7 @@ function BookingManager({
                           })}
                       </div>
                       <div className="flex items-center">
-                          {booking.bookingServerId && hasHoldOnBooking && (
+                          {booking.bookingServerId && (
                               <DropdownMenu onOpenChange={(open) => handleMenuOpen(open, booking)}>
                                   <DropdownMenuTrigger asChild>
                                       <Button variant="ghost" size="icon">
@@ -351,24 +364,32 @@ function BookingManager({
                                       </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
-                                      <DropdownMenuLabel>Driver Events {liveStatus?.isLoading && <Loader2 className="inline-block h-3 w-3 ml-2 animate-spin" />}</DropdownMenuLabel>
-                                      <DropdownMenuSeparator />
-                                      <DropdownMenuItem onClick={() => handleSendEvent(booking, 'status_arrived', 'Arrive')} disabled={!isArriveEnabled}>
-                                          Arrive
+                                      <DropdownMenuItem onClick={() => setMessageTarget({ id: booking.bookingServerId!, type: 'booking' })}>
+                                        Send Message
                                       </DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => handleSendEvent(booking, 'status_pob', 'Made Contact')} disabled={!isMadeContactEnabled}>
-                                          Made Contact
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => handleSendEvent(booking, 'show_payment_screen', 'Payment')} disabled={!isPaymentDropOffEnabled}>
-                                          Payment after Made Contact
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => handleSendEvent(booking, 'booking_drop_off', 'Drop Off')} disabled={!isPaymentDropOffEnabled}>
-                                          Drop Off
-                                      </DropdownMenuItem>
-                                      <DropdownMenuSeparator />
-                                       <DropdownMenuItem onClick={() => handleSendEvent(booking, 'status_no_show', 'No Show')} className="text-destructive" disabled={!isNoShowEnabled}>
-                                          No Show
-                                       </DropdownMenuItem>
+                                      {hasHoldOnBooking && (
+                                        <>
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuLabel>Driver Events {liveStatus?.isLoading && <Loader2 className="inline-block h-3 w-3 ml-2 animate-spin" />}</DropdownMenuLabel>
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuItem onClick={() => handleSendEvent(booking, 'status_arrived', 'Arrive')} disabled={!isArriveEnabled}>
+                                                Arrive
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => handleSendEvent(booking, 'status_pob', 'Made Contact')} disabled={!isMadeContactEnabled}>
+                                                Made Contact
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => handleSendEvent(booking, 'show_payment_screen', 'Payment')} disabled={!isPaymentDropOffEnabled}>
+                                                Payment after Made Contact
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => handleSendEvent(booking, 'booking_drop_off', 'Drop Off')} disabled={!isPaymentDropOffEnabled}>
+                                                Drop Off
+                                            </DropdownMenuItem>
+                                            <DropdownMenuSeparator />
+                                             <DropdownMenuItem onClick={() => handleSendEvent(booking, 'status_no_show', 'No Show')} className="text-destructive" disabled={!isNoShowEnabled}>
+                                                No Show
+                                             </DropdownMenuItem>
+                                        </>
+                                      )}
                                   </DropdownMenuContent>
                               </DropdownMenu>
                           )}
@@ -412,6 +433,15 @@ function BookingManager({
         )}
       </CardContent>
     </Card>
+     <SendMessageDialog
+        isOpen={!!messageTarget}
+        onOpenChange={(open) => {
+          if (!open) setMessageTarget(null);
+        }}
+        onSend={handleSendMessage}
+        targetType={messageTarget?.type || 'journey'}
+      />
+    </>
   );
 }
 

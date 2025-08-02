@@ -221,6 +221,23 @@ export async function sendDriverAppEvent(server: ServerConfig, type: string, boo
     return response;
 }
 
+export async function sendMessage(server: ServerConfig, id: number, type: 'journey' | 'booking', body: string) {
+    const payload = {
+        conversationable_id: id,
+        conversationable_type: type,
+        body: body,
+    };
+
+    const response = await callIcabbiApi({
+        server,
+        method: 'POST',
+        endpoint: 'messages/send',
+        body: payload,
+    });
+
+    return response;
+}
+
 export async function getSites(server: ServerConfig): Promise<Site[]> {
     const response = await callIcabbiApi({
         server,

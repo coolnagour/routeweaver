@@ -8,9 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { generateJourneyPayload } from '@/ai/flows/journey-payload-flow';
-import { getSites } from '@/services/icabbi';
+import { getSites, sendMessage } from '@/services/icabbi';
 import type { Booking, Journey, JourneyTemplate, Account, Stop, Location, Site } from '@/types';
-import { Save, Building, Loader2, Send, ChevronsUpDown, Code, DollarSign, Info, MessageSquare, GripVertical, FileText } from 'lucide-react';
+import { Save, Building, Loader2, Send, ChevronsUpDown, Code, DollarSign, Info, MessageSquare, GripVertical, FileText, MessageCircle } from 'lucide-react';
 import BookingManager from './booking-manager';
 import { useServer } from '@/context/server-context';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
@@ -25,6 +25,7 @@ import JourneyMap from './journey-map';
 import { MapSelectionProvider, useMapSelection } from '@/context/map-selection-context';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { ScrollArea } from '../ui/scroll-area';
+import SendMessageDialog from './send-message-dialog';
 
 interface JourneyFormProps {
   initialData?: Partial<Journey | JourneyTemplate> | null;
@@ -74,6 +75,7 @@ function JourneyFormInner({
   const [isFetchingSites, setIsFetchingSites] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [journeyPreview, setJourneyPreview] = useState<JourneyPreviewState>({ orderedStops: [], journeyPayload: null, bookings: [], bookingPayloads: [], isLoading: false });
+  const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
   const { setSelectedLocation, isMapInSelectionMode } = useMapSelection();
 
   useEffect(() => {
@@ -251,6 +253,19 @@ function JourneyFormInner({
     setSelectedLocation(location);
   };
   
+  const handleSendMessage = async (message: string) => {
+    if (!journeyData.journeyServerId || !server) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Journey ID or server not available.' });
+      return;
+    }
+    try {
+      await sendMessage(server, journeyData.journeyServerId, 'journey', message);
+      toast({ title: 'Message Sent', description: 'Your message has been sent to the journey.' });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Failed to Send Message', description: error instanceof Error ? error.message : 'An unknown error occurred.' });
+    }
+  };
+
   const title = getTitle();
   const publishButtonText = (journeyData as Journey)?.status === 'Scheduled' ? 'Update Published Journey' : 'Publish Journey';
   const hasBookingLevelPrice = (journeyData.bookings || []).some(b => typeof b.price === 'number' || typeof b.cost === 'number');
@@ -467,13 +482,21 @@ function JourneyFormInner({
                             )}
                         </div>
                     </div>
-                    {!isTemplate && onSaveTemplate && (
+
+                    {!isTemplate && (
                         <div className="flex flex-col gap-2 flex-grow min-w-[250px] w-full sm:w-auto">
-                           <Label className="text-xs">Template Actions</Label>
+                           <Label className="text-xs">Other Actions</Label>
                            <div className="flex gap-2">
-                            <Button variant="secondary" onClick={() => onSaveTemplate(journeyData)} disabled={(journeyData.bookings || []).length === 0} className="w-full">
-                                    <FileText className="mr-2 h-4 w-4" /> Save as Template
-                            </Button>
+                            {onSaveTemplate && (
+                                <Button variant="secondary" onClick={() => onSaveTemplate(journeyData)} disabled={(journeyData.bookings || []).length === 0} className="flex-1">
+                                        <FileText className="mr-2 h-4 w-4" /> Save as Template
+                                </Button>
+                            )}
+                            {journeyData.journeyServerId && (
+                                <Button variant="secondary" onClick={() => setIsMessageDialogOpen(true)} className="flex-1">
+                                    <MessageCircle className="mr-2 h-4 w-4" /> Send Message
+                                </Button>
+                            )}
                            </div>
                         </div>
                     )}
@@ -543,6 +566,7 @@ function JourneyFormInner({
   );
 
   return (
+    <>
     <div className="py-4 lg:py-8 h-[calc(100vh-var(--header-height,0px))]">
         <div className="lg:hidden h-full">
              <PanelGroup direction="vertical">
@@ -575,6 +599,13 @@ function JourneyFormInner({
             </PanelGroup>
         </div>
     </div>
+    <SendMessageDialog
+        isOpen={isMessageDialogOpen}
+        onOpenChange={setIsMessageDialogOpen}
+        onSend={handleSendMessage}
+        targetType="journey"
+    />
+    </>
   );
 }
 
