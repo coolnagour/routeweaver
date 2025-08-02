@@ -285,7 +285,14 @@ function JourneyFormInner({
         <div className="space-y-6 pr-4">
             <Card>
             <CardHeader>
-                <CardTitle className="font-headline text-2xl">{title}</CardTitle>
+                <div className="flex justify-between items-center gap-2">
+                    <CardTitle className="font-headline text-2xl">{title}</CardTitle>
+                    {journeyData.journeyServerId && !isTemplate && (
+                        <Button variant="outline" size="sm" onClick={() => setIsMessageDialogOpen(true)}>
+                            <MessageCircle className="mr-2 h-4 w-4" /> Send Message
+                        </Button>
+                    )}
+                </div>
                 {isTemplate ? (
                      <CardDescription>
                         <Input 
@@ -490,11 +497,6 @@ function JourneyFormInner({
                             {onSaveTemplate && (
                                 <Button variant="secondary" onClick={() => onSaveTemplate(journeyData)} disabled={(journeyData.bookings || []).length === 0} className="flex-1">
                                         <FileText className="mr-2 h-4 w-4" /> Save as Template
-                                </Button>
-                            )}
-                            {journeyData.journeyServerId && (
-                                <Button variant="secondary" onClick={() => setIsMessageDialogOpen(true)} className="flex-1">
-                                    <MessageCircle className="mr-2 h-4 w-4" /> Send Message
                                 </Button>
                             )}
                            </div>
