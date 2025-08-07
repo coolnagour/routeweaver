@@ -32,9 +32,9 @@ A service account is a special type of Google account intended to represent a no
 
 You need to provide credentials to your application code. This is done differently for local development versus the deployed App Hosting environment.
 
-### For Local Development (using `genkit:dev` or `npm run dev`)
+### For Local Development (Recommended: `gcloud` ADC)
 
-The Genkit Google Cloud plugin (and by extension the Google Cloud SDKs) can automatically find your credentials if you are logged in via the Google Cloud CLI.
+The Genkit Google Cloud plugin (and by extension the Google Cloud SDKs) can automatically find your credentials if you are logged in via the Google Cloud CLI. This is the most secure method for local development as it doesn't involve downloading and managing key files.
 
 1.  **Install the gcloud CLI**: If you haven't already, [install the Google Cloud CLI](https://cloud.google.com/sdk/docs/install).
 
@@ -45,6 +45,29 @@ The Genkit Google Cloud plugin (and by extension the Google Cloud SDKs) can auto
     ```
 
     This command stores your credentials in a well-known location on your local machine, where Genkit and Google Cloud client libraries can automatically find them. No further configuration is needed for your local environment.
+
+### Alternative Local Development: Using a Service Account Key File
+
+You can also use a JSON key file to authenticate locally. This can be simpler to set up but requires you to manage a sensitive file.
+
+**Important:** Do not commit the JSON key file to your version control system (e.g., Git). Add its filename to your `.gitignore` file.
+
+1.  **Create and Download a Key**:
+    *   Go back to the [Service Accounts page](https://console.cloud.google.com/iam-admin/serviceaccounts) and click on the service account you created.
+    *   Go to the **Keys** tab.
+    *   Click **Add Key** > **Create new key**.
+    *   Select **JSON** as the key type and click **Create**. A JSON file will be downloaded to your computer.
+
+2.  **Use the Key File**:
+    *   Move the downloaded JSON file into your project's root directory. For example, name it `service-account-key.json`.
+    *   Set the `GOOGLE_APPLICATION_CREDENTIALS` environment variable in your `.env` file to point to this key:
+
+        ```dotenv
+        # In your .env file
+        GOOGLE_APPLICATION_CREDENTIALS="service-account-key.json"
+        ```
+
+    When you run your application locally, the client libraries will automatically detect this environment variable and use the key file to authenticate.
 
 ### For Deployed App Hosting Environment
 
