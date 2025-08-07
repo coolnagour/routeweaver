@@ -74,9 +74,9 @@ const getAnalyticsForBookingFlow = ai.defineFlow(
       params: { bookingId: bookingId },
     };
 
-    console.log(`[Analytics Flow] Querying BigQuery for BOOKING_ID = ${bookingId}`);
+    console.log(`[Analytics Flow] Querying BigQuery for BOOKING_ID = ${bookingId} on date ${formattedDate}`);
     
-    let analyticsEvents: AnalyticsEvent[];
+    let analyticsEvents: AnalyticsEvent[] = [];
     try {
         const [rows] = await bigquery.query(options);
         analyticsEvents = rows.map(row => ({
@@ -90,9 +90,14 @@ const getAnalyticsForBookingFlow = ai.defineFlow(
           }
         }));
     } catch (err) {
-        console.error("BigQuery query failed:", err);
         const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
-        throw new Error(`Failed to query BigQuery. Please ensure your project/dataset is correct and you have permissions. Error: ${errorMessage}`);
+        // If the table is not found, it's not a fatal error, just means no events for that day.
+        if (errorMessage.includes('Not found: Table')) {
+             console.warn(`[Analytics Flow] BigQuery table for date ${formattedDate} not found. Returning empty events list.`);
+        } else {
+            console.error("BigQuery query failed:", err);
+            throw new Error(`Failed to query BigQuery. Please ensure your project/dataset is correct and you have permissions. Error: ${errorMessage}`);
+        }
     }
 
     // Step 3: Return the combined data.
