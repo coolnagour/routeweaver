@@ -67,6 +67,8 @@ You can also use a JSON key file to authenticate locally. This can be simpler to
         GOOGLE_APPLICATION_CREDENTIALS="service-account-key.json"
         ```
 
+    **Note:** The value for `GOOGLE_APPLICATION_CREDENTIALS` must be the **path** to the file. Pasting the entire JSON content into the `.env` file is not supported by the Google Cloud client libraries and will not work.
+
     When you run your application locally, the client libraries will automatically detect this environment variable and use the key file to authenticate.
 
 ### For Deployed App Hosting Environment
