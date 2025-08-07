@@ -50,8 +50,9 @@ const getAnalyticsForBookingFlow = ai.defineFlow(
     const bookingDate = new Date(bookingDetails.date);
     const formattedDate = format(bookingDate, 'yyyyMMdd');
 
-    // Use the perma_id from the response for the BigQuery search
+    // Use the perma_id and id from the response for the BigQuery search
     const permaId = bookingDetails.perma_id || bookingId;
+    const apiBookingId = bookingDetails.id;
 
     // Step 2: Query BigQuery for analytics events.
     const bigquery = new BigQuery();
@@ -69,13 +70,18 @@ const getAnalyticsForBookingFlow = ai.defineFlow(
         \`icabbitest-d22b9.analytics_171872045.{{TABLE_NAME}}\`
       WHERE
         (SELECT value.string_value FROM UNNEST(user_properties) WHERE key = 'BOOKING_ID') = @bookingId
+        OR (SELECT value.string_value FROM UNNEST(user_properties) WHERE key = 'BOOKING_ID') = @permaId
+        OR (SELECT value.string_value FROM UNNEST(user_properties) WHERE key = 'REQUEST_ID') = @permaId
     `;
 
     const now = new Date();
     const daysDifference = differenceInCalendarDays(now, bookingDate);
     
     const queryOptions: Query = {
-      params: { bookingId: permaId.toString() },
+      params: { 
+          bookingId: apiBookingId.toString(),
+          permaId: permaId.toString(),
+       },
     };
  
     if (daysDifference <= 1) {
