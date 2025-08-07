@@ -68,11 +68,12 @@ const getAnalyticsForBookingFlow = ai.defineFlow(
     `;
 
     const queries: string[] = [];
+    
+    // For today's date, it's possible events are in the intraday table or have just been moved to the daily table.
+    // For past dates, events are only in the daily table.
     if (isToday(bookingDate)) {
-        // For today, query both intraday and the daily table, as data might be in either.
         queries.push(baseQuery.replace('{{TABLE_NAME}}', `events_intraday_${formattedDate}`));
     }
-    // Always query the historical table.
     queries.push(baseQuery.replace('{{TABLE_NAME}}', `events_${formattedDate}`));
     
     const finalQuery = queries.join('\nUNION ALL\n');
@@ -88,6 +89,7 @@ const getAnalyticsForBookingFlow = ai.defineFlow(
     let analyticsEvents: AnalyticsEvent[] = [];
     try {
         const [rows] = await bigquery.query(options);
+        // Use a Map to deduplicate events in case the same event exists in both intraday and historical tables.
         const uniqueEvents = new Map<string, AnalyticsEvent>();
         
         rows.forEach(row => {
@@ -107,14 +109,15 @@ const getAnalyticsForBookingFlow = ai.defineFlow(
                 uniqueEvents.set(eventKey, event);
             }
         });
-
+        
+        // Sort events by timestamp before returning
         analyticsEvents = Array.from(uniqueEvents.values()).sort((a,b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
     } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
         // If the table is not found, it's not a fatal error, just means no events for that day.
         if (errorMessage.includes('Not found: Table')) {
-             console.warn(`[Analytics Flow] BigQuery table for date ${formattedDate} not found. Returning empty events list.`);
+             console.warn(`[Analytics Flow] A BigQuery table for date ${formattedDate} was not found. This is expected if no events occurred. Returning results from other tables if any.`);
         } else {
             console.error("BigQuery query failed:", err);
             throw new Error(`Failed to query BigQuery. Please ensure your project/dataset is correct and you have permissions. Error: ${errorMessage}`);
