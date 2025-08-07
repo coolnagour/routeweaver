@@ -71,11 +71,11 @@ const getAnalyticsForBookingFlow = ai.defineFlow(
     const now = new Date();
     const daysDifference = differenceInCalendarDays(now, bookingDate);
     
-    // For the last 2 days (today and yesterday), it's possible events are in the intraday table.
-    // It's safer to check both intraday and historical tables.
+    // For the last 2 days (including today), it's possible events are in the intraday table.
     if (daysDifference <= 1) { 
         queries.push(baseQuery.replace('{{TABLE_NAME}}', `events_intraday_${formattedDate}`));
     }
+    // Always check the historical table.
     queries.push(baseQuery.replace('{{TABLE_NAME}}', `events_${formattedDate}`));
     
     const finalQuery = queries.join('\nUNION ALL\n');
