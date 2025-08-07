@@ -7,7 +7,7 @@ import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { ServerConfigSchema } from '@/types';
 import { getBookingById } from '@/services/icabbi';
-import { format } from 'date-fns';
+import { format, isToday } from 'date-fns';
 import { BigQuery } from '@google-cloud/bigquery';
 
 const AnalyticsInputSchema = z.object({
@@ -53,7 +53,7 @@ const getAnalyticsForBookingFlow = ai.defineFlow(
     // Step 2: Query BigQuery for analytics events.
     const bigquery = new BigQuery();
 
-    const query = `
+    const baseQuery = `
       SELECT
         event_name,
         event_timestamp,
@@ -62,15 +62,23 @@ const getAnalyticsForBookingFlow = ai.defineFlow(
         (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'page_location') as page_location,
         (SELECT value.int_value FROM UNNEST(event_params) WHERE key = 'ga_session_id') as session_id
       FROM
-        \`icabbitest-d22b9.analytics_171872045.events_${formattedDate}\`
+        \`icabbitest-d22b9.analytics_171872045.{{TABLE_NAME}}\`
       WHERE
         (SELECT value.string_value FROM UNNEST(user_properties) WHERE key = 'BOOKING_ID') = @bookingId
-      ORDER BY
-        event_timestamp;
     `;
+
+    const queries: string[] = [];
+    if (isToday(bookingDate)) {
+        // For today, query both intraday and the daily table, as data might be in either.
+        queries.push(baseQuery.replace('{{TABLE_NAME}}', `events_intraday_${formattedDate}`));
+    }
+    // Always query the historical table.
+    queries.push(baseQuery.replace('{{TABLE_NAME}}', `events_${formattedDate}`));
     
+    const finalQuery = queries.join('\nUNION ALL\n');
+
     const options = {
-      query: query,
+      query: finalQuery,
       params: { bookingId: bookingId },
     };
 
@@ -79,16 +87,28 @@ const getAnalyticsForBookingFlow = ai.defineFlow(
     let analyticsEvents: AnalyticsEvent[] = [];
     try {
         const [rows] = await bigquery.query(options);
-        analyticsEvents = rows.map(row => ({
-          name: row.event_name,
-          timestamp: new Date(row.event_timestamp / 1000).toISOString(), // Convert microseconds to ISO string
-          params: {
-            screen_name: row.screen_name,
-            page_title: row.page_title,
-            page_location: row.page_location,
-            session_id: row.session_id,
-          }
-        }));
+        const uniqueEvents = new Map<string, AnalyticsEvent>();
+        
+        rows.forEach(row => {
+            const event: AnalyticsEvent = {
+              name: row.event_name,
+              timestamp: new Date(row.event_timestamp / 1000).toISOString(), // Convert microseconds to ISO string
+              params: {
+                screen_name: row.screen_name,
+                page_title: row.page_title,
+                page_location: row.page_location,
+                session_id: row.session_id,
+              }
+            };
+            // Use a composite key to uniquely identify an event to handle potential duplicates from UNION ALL
+            const eventKey = `${event.name}-${event.timestamp}`;
+            if (!uniqueEvents.has(eventKey)) {
+                uniqueEvents.set(eventKey, event);
+            }
+        });
+
+        analyticsEvents = Array.from(uniqueEvents.values()).sort((a,b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
     } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
         // If the table is not found, it's not a fatal error, just means no events for that day.
