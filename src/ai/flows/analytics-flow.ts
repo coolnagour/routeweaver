@@ -65,7 +65,8 @@ const getAnalyticsForBookingFlow = ai.defineFlow(
         (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'firebase_screen_class') as screen_name,
         (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'page_title') as page_title,
         (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'page_location') as page_location,
-        (SELECT value.int_value FROM UNNEST(event_params) WHERE key = 'ga_session_id') as session_id
+        (SELECT value.int_value FROM UNNEST(event_params) WHERE key = 'ga_session_id') as session_id,
+        user_properties
       FROM
         \`icabbitest-d22b9.analytics_171872045.{{TABLE_NAME}}\`
       WHERE
@@ -142,6 +143,7 @@ const getAnalyticsForBookingFlow = ai.defineFlow(
         page_title: row.page_title,
         page_location: row.page_location,
         session_id: row.session_id,
+        user_properties: row.user_properties,
       }
     })).sort((a,b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
