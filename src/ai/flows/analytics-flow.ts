@@ -50,9 +50,18 @@ const getAnalyticsForBookingFlow = ai.defineFlow(
     const bookingDate = new Date(bookingDetails.date);
     const formattedDate = format(bookingDate, 'yyyyMMdd');
 
-    // Use the trip_id and id from the response for the BigQuery search
-    const tripId = bookingDetails.trip_id || bookingId;
-    const apiBookingId = bookingDetails.id;
+    // Check for required fields for the new query
+    if (!bookingDetails.driver?.ref || !bookingDetails.booked_date || !bookingDetails.close_date) {
+        return {
+            bookingDetails,
+            analyticsEvents: [],
+        }
+    }
+
+    const driverRef = bookingDetails.driver.ref;
+    // Convert ISO date strings to microseconds for BigQuery timestamp comparison
+    const startDateMicros = new Date(bookingDetails.booked_date).getTime() * 1000;
+    const endDateMicros = new Date(bookingDetails.close_date).getTime() * 1000;
 
     // Step 2: Query BigQuery for analytics events.
     const bigquery = new BigQuery();
@@ -70,9 +79,11 @@ const getAnalyticsForBookingFlow = ai.defineFlow(
       FROM
         \`icabbitest-d22b9.analytics_171872045.{{TABLE_NAME}}\`
       WHERE
-        (SELECT value.string_value FROM UNNEST(user_properties) WHERE key = 'BOOKING_ID') = @bookingId
-        OR (SELECT value.string_value FROM UNNEST(user_properties) WHERE key = 'BOOKING_ID') = @tripId
-        OR (SELECT value.string_value FROM UNNEST(user_properties) WHERE key = 'REQUEST_ID') = @tripId
+        -- (SELECT value.string_value FROM UNNEST(user_properties) WHERE key = 'BOOKING_ID') = @bookingId
+        -- OR (SELECT value.string_value FROM UNNEST(user_properties) WHERE key = 'BOOKING_ID') = @tripId
+        -- OR (SELECT value.string_value FROM UNNEST(user_properties) WHERE key = 'REQUEST_ID') = @tripId
+        (SELECT value.string_value FROM UNNEST(user_properties) WHERE key = 'DRIVER_ID') = @driverRef
+        AND event_timestamp BETWEEN @startDateMicros AND @endDateMicros
     `;
 
     const now = new Date();
@@ -80,8 +91,9 @@ const getAnalyticsForBookingFlow = ai.defineFlow(
     
     const queryOptions: Query = {
       params: { 
-          bookingId: apiBookingId.toString(),
-          tripId: tripId.toString(),
+          driverRef: driverRef,
+          startDateMicros: startDateMicros,
+          endDateMicros: endDateMicros,
        },
     };
  
