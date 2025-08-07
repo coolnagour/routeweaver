@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { ServerConfigSchema } from '@/types';
 import { getBookingById } from '@/services/icabbi';
 import { format, differenceInCalendarDays } from 'date-fns';
-import { BigQuery, type Query } from '@google-cloud/bigquery';
+import { BigQuery, type Query, type RowMetadata } from '@google-cloud/bigquery';
 
 const AnalyticsInputSchema = z.object({
   bookingId: z.string(),
@@ -52,7 +52,7 @@ const getAnalyticsForBookingFlow = ai.defineFlow(
 
     // Step 2: Query BigQuery for analytics events.
     const bigquery = new BigQuery();
-    const allRows: any[] = [];
+    let allRows: RowMetadata[] = [];
     
     const baseQuery = `
       SELECT
@@ -75,30 +75,44 @@ const getAnalyticsForBookingFlow = ai.defineFlow(
       params: { bookingId: bookingId },
     };
 
-    // Query intraday table if booking is within the last 2 days
     if (daysDifference <= 1) {
+      // For today or yesterday, prioritize the intraday table.
       const intradayQuery = baseQuery.replace('{{TABLE_NAME}}', `events_intraday_${formattedDate}`);
-      console.log(`[Analytics Flow] Querying intraday table: ${intradayQuery}`);
+      console.log(`[Analytics Flow] Attempting to query recent table: ${intradayQuery}`);
       try {
         const [intradayRows] = await bigquery.query({ ...queryOptions, query: intradayQuery });
-        allRows.push(...intradayRows);
+        allRows = intradayRows;
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
         if (errorMessage.includes('Not found: Table')) {
-             console.warn(`[Analytics Flow] Intraday table for date ${formattedDate} was not found. This is expected if no events occurred.`);
+          console.warn(`[Analytics Flow] Intraday table for date ${formattedDate} not found. Falling back to historical table.`);
+          // Fallback to historical table if intraday is not found
+          const historicalQuery = baseQuery.replace('{{TABLE_NAME}}', `events_${formattedDate}`);
+          console.log(`[Analytics Flow] Querying historical table as fallback: ${historicalQuery}`);
+          try {
+              const [historicalRows] = await bigquery.query({ ...queryOptions, query: historicalQuery });
+              allRows = historicalRows;
+          } catch (fallbackErr) {
+              const fallbackErrorMessage = fallbackErr instanceof Error ? fallbackErr.message : 'An unknown error occurred.';
+               if (fallbackErrorMessage.includes('Not found: Table')) {
+                    console.warn(`[Analytics Flow] Fallback historical table for date ${formattedDate} was also not found. This is expected if no events occurred.`);
+               } else {
+                   console.error("BigQuery historical fallback query failed:", fallbackErr);
+                   throw new Error(`Failed to query BigQuery historical table. Error: ${fallbackErrorMessage}`);
+               }
+          }
         } else {
             console.error("BigQuery intraday query failed:", err);
             throw new Error(`Failed to query BigQuery intraday table. Error: ${errorMessage}`);
         }
       }
-    }
-
-    // Always query historical table
-    const historicalQuery = baseQuery.replace('{{TABLE_NAME}}', `events_${formattedDate}`);
-    console.log(`[Analytics Flow] Querying historical table: ${historicalQuery}`);
-     try {
+    } else {
+      // For older dates, query only the historical table.
+      const historicalQuery = baseQuery.replace('{{TABLE_NAME}}', `events_${formattedDate}`);
+      console.log(`[Analytics Flow] Querying historical table: ${historicalQuery}`);
+      try {
         const [historicalRows] = await bigquery.query({ ...queryOptions, query: historicalQuery });
-        allRows.push(...historicalRows);
+        allRows = historicalRows;
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
         if (errorMessage.includes('Not found: Table')) {
@@ -108,30 +122,19 @@ const getAnalyticsForBookingFlow = ai.defineFlow(
             throw new Error(`Failed to query BigQuery historical table. Error: ${errorMessage}`);
         }
       }
+    }
 
-    // Use a Map to deduplicate events in case the same event exists in both intraday and historical tables.
-    const uniqueEvents = new Map<string, AnalyticsEvent>();
-    
-    allRows.forEach(row => {
-        const event: AnalyticsEvent = {
-          name: row.event_name,
-          timestamp: new Date(row.event_timestamp / 1000).toISOString(), // Convert microseconds to ISO string
-          params: {
-            screen_name: row.screen_name,
-            page_title: row.page_title,
-            page_location: row.page_location,
-            session_id: row.session_id,
-          }
-        };
-        // Use a composite key to uniquely identify an event to handle potential duplicates
-        const eventKey = `${event.name}-${event.timestamp}`;
-        if (!uniqueEvents.has(eventKey)) {
-            uniqueEvents.set(eventKey, event);
-        }
-    });
-    
-    // Sort events by timestamp before returning
-    const analyticsEvents = Array.from(uniqueEvents.values()).sort((a,b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    // Process the rows from the successful query.
+    const analyticsEvents = allRows.map(row => ({
+      name: row.event_name,
+      timestamp: new Date(row.event_timestamp / 1000).toISOString(), // Convert microseconds to ISO string
+      params: {
+        screen_name: row.screen_name,
+        page_title: row.page_title,
+        page_location: row.page_location,
+        session_id: row.session_id,
+      }
+    })).sort((a,b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
     // Step 3: Return the combined data.
     return {
