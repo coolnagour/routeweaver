@@ -50,6 +50,9 @@ const getAnalyticsForBookingFlow = ai.defineFlow(
     const bookingDate = new Date(bookingDetails.date);
     const formattedDate = format(bookingDate, 'yyyyMMdd');
 
+    // Use the perma_id from the response for the BigQuery search
+    const permaId = bookingDetails.perma_id || bookingId;
+
     // Step 2: Query BigQuery for analytics events.
     const bigquery = new BigQuery();
     let allRows: RowMetadata[] = [];
@@ -72,9 +75,9 @@ const getAnalyticsForBookingFlow = ai.defineFlow(
     const daysDifference = differenceInCalendarDays(now, bookingDate);
     
     const queryOptions: Query = {
-      params: { bookingId: bookingId },
+      params: { bookingId: permaId.toString() },
     };
-
+ 
     if (daysDifference <= 1) {
       // For today or yesterday, prioritize the intraday table.
       const intradayQuery = baseQuery.replace('{{TABLE_NAME}}', `events_intraday_${formattedDate}`);
@@ -124,7 +127,7 @@ const getAnalyticsForBookingFlow = ai.defineFlow(
       }
     }
 
-    // Process the rows from the successful query.
+    // Process the rows from the successful query and sort by timestamp.
     const analyticsEvents = allRows.map(row => ({
       name: row.event_name,
       timestamp: new Date(row.event_timestamp / 1000).toISOString(), // Convert microseconds to ISO string

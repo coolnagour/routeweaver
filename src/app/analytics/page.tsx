@@ -94,7 +94,7 @@ export default function AnalyticsPage() {
             <Card>
                 <CardHeader>
                     <CardTitle>Booking Details</CardTitle>
-                    <CardDescription>Details for Booking ID: {results.bookingDetails.id}</CardDescription>
+                    <CardDescription>Details for Perma ID: {results.bookingDetails.perma_id}</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <pre className="text-xs bg-muted p-4 rounded-lg overflow-auto">
