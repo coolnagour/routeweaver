@@ -53,9 +53,6 @@ const getAnalyticsForBookingFlow = ai.defineFlow(
     // Step 2: Query BigQuery for analytics events.
     const bigquery = new BigQuery();
 
-    // !!! IMPORTANT !!!
-    // Replace `your_analytics_project.your_dataset` with your actual 
-    // BigQuery project ID and Firebase Analytics dataset name (e.g., analytics_123456789).
     const query = `
       SELECT
         event_name,
@@ -65,7 +62,7 @@ const getAnalyticsForBookingFlow = ai.defineFlow(
         (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'page_location') as page_location,
         (SELECT value.int_value FROM UNNEST(event_params) WHERE key = 'ga_session_id') as session_id
       FROM
-        \`your_analytics_project.your_dataset.events_${formattedDate}\`
+        \`icabbitest-d22b9.analytics_171872045.events_${formattedDate}\`
       WHERE
         (SELECT value.string_value FROM UNNEST(user_properties) WHERE key = 'BOOKING_ID') = @bookingId
       ORDER BY
