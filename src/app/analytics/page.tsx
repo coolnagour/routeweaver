@@ -6,10 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Search, BarChart3, AlertTriangle, FileJson } from 'lucide-react';
+import { Loader2, Search, BarChart3, FileJson } from 'lucide-react';
 import { useServer } from '@/context/server-context';
 import { getAnalyticsForBooking, type AnalyticsOutput } from '@/ai/flows/analytics-flow';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function AnalyticsPage() {
   const { toast } = useToast();
@@ -78,16 +77,6 @@ export default function AnalyticsPage() {
           </div>
         </CardContent>
       </Card>
-      
-      <Alert>
-        <AlertTriangle className="h-4 w-4" />
-        <AlertTitle>Developer Note</AlertTitle>
-        <AlertDescription>
-          This tool fetches booking details from iCabbi but uses **placeholder data** for analytics events. To view real data, you must implement the BigQuery client logic in{' '}
-          <code className="font-mono text-sm bg-muted px-1 py-0.5 rounded">src/ai/flows/analytics-flow.ts</code>. See the{' '}
-          <code className="font-mono text-sm bg-muted px-1 py-0.5 rounded">BIGQUERY_SETUP.md</code> file for authentication instructions.
-        </AlertDescription>
-      </Alert>
 
       {error && (
         <Card className="border-destructive">
