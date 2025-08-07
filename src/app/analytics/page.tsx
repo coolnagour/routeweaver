@@ -9,8 +9,11 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Search, BarChart3, FileJson } from 'lucide-react';
 import { useServer } from '@/context/server-context';
 import { getAnalyticsForBooking, type AnalyticsOutput } from '@/ai/flows/analytics-flow';
+import JourneyMap from '@/components/journeys/journey-map';
+import type { Stop } from '@/types';
+import { MapSelectionProvider } from '@/context/map-selection-context';
 
-export default function AnalyticsPage() {
+function AnalyticsPageInner() {
   const { toast } = useToast();
   const { server } = useServer();
   const [bookingId, setBookingId] = useState('');
@@ -48,6 +51,35 @@ export default function AnalyticsPage() {
       setIsLoading(false);
     }
   };
+  
+  const getMapStopsFromBooking = (bookingDetails: any): Stop[] => {
+    if (!bookingDetails?.address || !bookingDetails?.destination) return [];
+    
+    const pickupStop: Stop = {
+      id: bookingDetails.address.id?.toString() || 'pickup-1',
+      order: 0,
+      stopType: 'pickup',
+      location: {
+        address: bookingDetails.address.formatted,
+        lat: bookingDetails.address.lat,
+        lng: bookingDetails.address.lng,
+      },
+    };
+    
+    const destinationStop: Stop = {
+      id: bookingDetails.destination.id?.toString() || 'dest-1',
+      order: 1,
+      stopType: 'dropoff',
+      location: {
+        address: bookingDetails.destination.formatted,
+        lat: bookingDetails.destination.lat,
+        lng: bookingDetails.destination.lng,
+      },
+    };
+
+    return [pickupStop, destinationStop];
+  }
+
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6">
@@ -93,13 +125,11 @@ export default function AnalyticsPage() {
         <div className="grid md:grid-cols-2 gap-6">
             <Card>
                 <CardHeader>
-                    <CardTitle>Booking Details</CardTitle>
-                    <CardDescription>Details for Trip ID: {results.bookingDetails.trip_id}</CardDescription>
+                    <CardTitle>Booking ID: {results.bookingDetails.id}</CardTitle>
+                    <CardDescription>Trip ID: {results.bookingDetails.trip_id}</CardDescription>
                 </CardHeader>
-                <CardContent>
-                    <pre className="text-xs bg-muted p-4 rounded-lg overflow-auto">
-                        {JSON.stringify(results.bookingDetails, null, 2)}
-                    </pre>
+                <CardContent className="h-[400px]">
+                   <JourneyMap stops={getMapStopsFromBooking(results.bookingDetails)} countryCode={server?.countryCodes[0]} />
                 </CardContent>
             </Card>
             <Card>
@@ -131,4 +161,12 @@ export default function AnalyticsPage() {
 
     </div>
   );
+}
+
+export default function AnalyticsPage() {
+    return (
+        <MapSelectionProvider>
+            <AnalyticsPageInner />
+        </MapSelectionProvider>
+    )
 }
