@@ -7,7 +7,7 @@ import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { ServerConfigSchema } from '@/types';
 import { getBookingById } from '@/services/icabbi';
-import { format, isToday } from 'date-fns';
+import { format, differenceInCalendarDays } from 'date-fns';
 import { BigQuery } from '@google-cloud/bigquery';
 
 const AnalyticsInputSchema = z.object({
@@ -68,10 +68,12 @@ const getAnalyticsForBookingFlow = ai.defineFlow(
     `;
 
     const queries: string[] = [];
+    const now = new Date();
+    const daysDifference = differenceInCalendarDays(now, bookingDate);
     
-    // For today's date, it's possible events are in the intraday table or have just been moved to the daily table.
-    // For past dates, events are only in the daily table.
-    if (isToday(bookingDate)) {
+    // For the last 2 days (today and yesterday), it's possible events are in the intraday table.
+    // It's safer to check both intraday and historical tables.
+    if (daysDifference <= 1) { 
         queries.push(baseQuery.replace('{{TABLE_NAME}}', `events_intraday_${formattedDate}`));
     }
     queries.push(baseQuery.replace('{{TABLE_NAME}}', `events_${formattedDate}`));
