@@ -83,6 +83,7 @@ const getAnalyticsForBookingFlow = ai.defineFlow(
     };
 
     console.log(`[Analytics Flow] Querying BigQuery for BOOKING_ID = ${bookingId} on date ${formattedDate}`);
+    console.log(`[Analytics Flow] Query: ${finalQuery}`);
     
     let analyticsEvents: AnalyticsEvent[] = [];
     try {
