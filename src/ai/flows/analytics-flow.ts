@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { ServerConfigSchema } from '@/types';
 import { getBookingById } from '@/services/icabbi';
 import { format, differenceInCalendarDays } from 'date-fns';
-import { BigQuery } from '@google-cloud/bigquery';
+import { BigQuery, type Query } from '@google-cloud/bigquery';
 
 const AnalyticsInputSchema = z.object({
   bookingId: z.string(),
@@ -52,7 +52,8 @@ const getAnalyticsForBookingFlow = ai.defineFlow(
 
     // Step 2: Query BigQuery for analytics events.
     const bigquery = new BigQuery();
-
+    const allRows: any[] = [];
+    
     const baseQuery = `
       SELECT
         event_name,
@@ -67,64 +68,70 @@ const getAnalyticsForBookingFlow = ai.defineFlow(
         (SELECT value.string_value FROM UNNEST(user_properties) WHERE key = 'BOOKING_ID') = @bookingId
     `;
 
-    const queries: string[] = [];
     const now = new Date();
     const daysDifference = differenceInCalendarDays(now, bookingDate);
     
-    // For the last 2 days (including today), it's possible events are in the intraday table.
-    if (daysDifference <= 1) { 
-        queries.push(baseQuery.replace('{{TABLE_NAME}}', `events_intraday_${formattedDate}`));
-    }
-    // Always check the historical table.
-    queries.push(baseQuery.replace('{{TABLE_NAME}}', `events_${formattedDate}`));
-    
-    const finalQuery = queries.join('\nUNION ALL\n');
-
-    const options = {
-      query: finalQuery,
+    const queryOptions: Query = {
       params: { bookingId: bookingId },
     };
 
-    console.log(`[Analytics Flow] Querying BigQuery for BOOKING_ID = ${bookingId} on date ${formattedDate}`);
-    console.log(`[Analytics Flow] Query: ${finalQuery}`);
-    
-    let analyticsEvents: AnalyticsEvent[] = [];
-    try {
-        const [rows] = await bigquery.query(options);
-        // Use a Map to deduplicate events in case the same event exists in both intraday and historical tables.
-        const uniqueEvents = new Map<string, AnalyticsEvent>();
-        
-        rows.forEach(row => {
-            const event: AnalyticsEvent = {
-              name: row.event_name,
-              timestamp: new Date(row.event_timestamp / 1000).toISOString(), // Convert microseconds to ISO string
-              params: {
-                screen_name: row.screen_name,
-                page_title: row.page_title,
-                page_location: row.page_location,
-                session_id: row.session_id,
-              }
-            };
-            // Use a composite key to uniquely identify an event to handle potential duplicates from UNION ALL
-            const eventKey = `${event.name}-${event.timestamp}`;
-            if (!uniqueEvents.has(eventKey)) {
-                uniqueEvents.set(eventKey, event);
-            }
-        });
-        
-        // Sort events by timestamp before returning
-        analyticsEvents = Array.from(uniqueEvents.values()).sort((a,b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-
-    } catch (err) {
+    // Query intraday table if booking is within the last 2 days
+    if (daysDifference <= 1) {
+      const intradayQuery = baseQuery.replace('{{TABLE_NAME}}', `events_intraday_${formattedDate}`);
+      console.log(`[Analytics Flow] Querying intraday table: ${intradayQuery}`);
+      try {
+        const [intradayRows] = await bigquery.query({ ...queryOptions, query: intradayQuery });
+        allRows.push(...intradayRows);
+      } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
-        // If the table is not found, it's not a fatal error, just means no events for that day.
         if (errorMessage.includes('Not found: Table')) {
-             console.warn(`[Analytics Flow] A BigQuery table for date ${formattedDate} was not found. This is expected if no events occurred. Returning results from other tables if any.`);
+             console.warn(`[Analytics Flow] Intraday table for date ${formattedDate} was not found. This is expected if no events occurred.`);
         } else {
-            console.error("BigQuery query failed:", err);
-            throw new Error(`Failed to query BigQuery. Please ensure your project/dataset is correct and you have permissions. Error: ${errorMessage}`);
+            console.error("BigQuery intraday query failed:", err);
+            throw new Error(`Failed to query BigQuery intraday table. Error: ${errorMessage}`);
         }
+      }
     }
+
+    // Always query historical table
+    const historicalQuery = baseQuery.replace('{{TABLE_NAME}}', `events_${formattedDate}`);
+    console.log(`[Analytics Flow] Querying historical table: ${historicalQuery}`);
+     try {
+        const [historicalRows] = await bigquery.query({ ...queryOptions, query: historicalQuery });
+        allRows.push(...historicalRows);
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
+        if (errorMessage.includes('Not found: Table')) {
+             console.warn(`[Analytics Flow] Historical table for date ${formattedDate} was not found. This is expected if no events occurred.`);
+        } else {
+            console.error("BigQuery historical query failed:", err);
+            throw new Error(`Failed to query BigQuery historical table. Error: ${errorMessage}`);
+        }
+      }
+
+    // Use a Map to deduplicate events in case the same event exists in both intraday and historical tables.
+    const uniqueEvents = new Map<string, AnalyticsEvent>();
+    
+    allRows.forEach(row => {
+        const event: AnalyticsEvent = {
+          name: row.event_name,
+          timestamp: new Date(row.event_timestamp / 1000).toISOString(), // Convert microseconds to ISO string
+          params: {
+            screen_name: row.screen_name,
+            page_title: row.page_title,
+            page_location: row.page_location,
+            session_id: row.session_id,
+          }
+        };
+        // Use a composite key to uniquely identify an event to handle potential duplicates
+        const eventKey = `${event.name}-${event.timestamp}`;
+        if (!uniqueEvents.has(eventKey)) {
+            uniqueEvents.set(eventKey, event);
+        }
+    });
+    
+    // Sort events by timestamp before returning
+    const analyticsEvents = Array.from(uniqueEvents.values()).sort((a,b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
     // Step 3: Return the combined data.
     return {
