@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Route, History, FileText, User, LogOut, Bot, Server, Settings } from 'lucide-react';
+import { Route, History, FileText, User, LogOut, Bot, Server, Settings, BarChart3 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/use-auth';
@@ -27,6 +27,7 @@ const navItems = [
   { href: '/journeys/new', label: 'New Journey', icon: Route },
   { href: '/journeys', label: 'My Journeys', icon: History, exact: true },
   { href: '/templates', label: 'Templates', icon: FileText },
+  { href: '/analytics', label: 'Analytics', icon: BarChart3 },
   { href: '/settings/servers', label: 'Server Settings', icon: Settings },
 ];
 
