@@ -12,6 +12,8 @@ import { getAnalyticsForBooking, type AnalyticsOutput } from '@/ai/flows/analyti
 import JourneyMap from '@/components/journeys/journey-map';
 import type { Stop } from '@/types';
 import { MapSelectionProvider } from '@/context/map-selection-context';
+import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 function AnalyticsPageInner() {
   const { toast } = useToast();
@@ -82,7 +84,7 @@ function AnalyticsPageInner() {
 
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-6">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 h-[calc(100vh-var(--header-height,0px))] flex flex-col">
       <Card>
         <CardHeader>
           <CardTitle className="font-headline text-2xl flex items-center gap-2">
@@ -122,41 +124,54 @@ function AnalyticsPageInner() {
       )}
 
       {results && (
-        <div className="grid md:grid-cols-2 gap-6">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Booking ID: {results.bookingDetails.id}</CardTitle>
-                    <CardDescription>Trip ID: {results.bookingDetails.trip_id}</CardDescription>
-                </CardHeader>
-                <CardContent className="h-[400px]">
-                   <JourneyMap stops={getMapStopsFromBooking(results.bookingDetails)} countryCode={server?.countryCodes[0]} />
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader>
-                    <CardTitle>Analytics Events</CardTitle>
-                    <CardDescription>Events from BigQuery associated with this booking.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {results.analyticsEvents.length > 0 ? (
-                    results.analyticsEvents.map((event, index) => (
-                      <div key={index} className="p-3 border rounded-lg bg-muted/50">
-                          <p className="font-semibold text-primary">{event.name}</p>
-                          <p className="text-xs text-muted-foreground">{new Date(event.timestamp).toLocaleString()}</p>
-                          <details className="mt-2 text-xs">
-                              <summary className="cursor-pointer flex items-center gap-1"><FileJson className="h-3 w-3" /> View Params</summary>
-                              <pre className="mt-1 bg-background p-2 rounded overflow-auto">
-                                  {JSON.stringify(event.params, null, 2)}
-                              </pre>
-                          </details>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-muted-foreground text-center py-8">No analytics events found.</p>
-                  )}
-                </CardContent>
-            </Card>
-        </div>
+        <PanelGroup direction="horizontal" className="flex-1">
+            <Panel defaultSize={50} minSize={30}>
+                <Card className="h-full flex flex-col">
+                    <CardHeader>
+                        <CardTitle>Booking ID: {results.bookingDetails.id}</CardTitle>
+                        <CardDescription>Trip ID: {results.bookingDetails.trip_id}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex-1">
+                       <JourneyMap stops={getMapStopsFromBooking(results.bookingDetails)} countryCode={server?.countryCodes[0]} />
+                    </CardContent>
+                </Card>
+            </Panel>
+            <PanelResizeHandle className="w-2 flex items-center justify-center bg-transparent">
+                <div className="w-1 h-8 bg-border rounded-full" />
+            </PanelResizeHandle>
+            <Panel defaultSize={50} minSize={30}>
+                <Card className="h-full flex flex-col">
+                    <CardHeader>
+                        <CardTitle>Analytics Events</CardTitle>
+                        <CardDescription>Events from BigQuery associated with this booking.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex-1 overflow-hidden">
+                      <ScrollArea className="h-full">
+                        <div className="space-y-4 pr-4">
+                            {results.analyticsEvents.length > 0 ? (
+                                results.analyticsEvents.map((event, index) => (
+                                <div key={index} className="p-3 border rounded-lg bg-muted/50">
+                                    <p className="font-semibold text-primary">{event.name}</p>
+                                    <p className="text-xs text-muted-foreground">{new Date(event.timestamp).toLocaleString()}</p>
+                                    <details className="mt-2 text-xs">
+                                        <summary className="cursor-pointer flex items-center gap-1"><FileJson className="h-3 w-3" /> View Params</summary>
+                                        <pre className="mt-1 bg-background p-2 rounded overflow-auto max-h-64">
+                                            {JSON.stringify(event.params, null, 2)}
+                                        </pre>
+                                    </details>
+                                </div>
+                                ))
+                            ) : (
+                                <div className="flex items-center justify-center h-full text-sm text-muted-foreground text-center py-8">
+                                    <p>No analytics events found.</p>
+                                </div>
+                            )}
+                        </div>
+                      </ScrollArea>
+                    </CardContent>
+                </Card>
+            </Panel>
+        </PanelGroup>
       )}
 
     </div>
