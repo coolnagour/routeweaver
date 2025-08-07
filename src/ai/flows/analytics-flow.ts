@@ -147,17 +147,28 @@ const getAnalyticsForBookingFlow = ai.defineFlow(
     }
 
     // Process the rows from the successful query and sort by timestamp.
-    const analyticsEvents = allRows.map(row => ({
-      name: row.event_name,
-      timestamp: new Date(row.event_timestamp / 1000).toISOString(), // Convert microseconds to ISO string
-      params: {
-        screen_name: row.screen_name,
-        page_title: row.page_title,
-        page_location: row.page_location,
-        session_id: row.session_id,
-        user_properties: row.user_properties,
+    const analyticsEvents = allRows.map(row => {
+      const userProperties: Record<string, string | null> = {};
+      if (Array.isArray(row.user_properties)) {
+        row.user_properties.forEach((prop: any) => {
+          if (prop.key && prop.value) {
+            userProperties[prop.key] = prop.value.string_value;
+          }
+        });
       }
-    })).sort((a,b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      
+      return {
+        name: row.event_name,
+        timestamp: new Date(row.event_timestamp / 1000).toISOString(), // Convert microseconds to ISO string
+        params: {
+          screen_name: row.screen_name,
+          page_title: row.page_title,
+          page_location: row.page_location,
+          session_id: row.session_id,
+          user_properties: userProperties,
+        }
+      };
+    }).sort((a,b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
     // Step 3: Return the combined data.
     return {
