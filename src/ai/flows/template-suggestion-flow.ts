@@ -1,4 +1,5 @@
 
+
 'use server';
 /**
  * @fileOverview An AI flow to generate journey template suggestions.
@@ -33,6 +34,7 @@ const StopSchema = z.object({
 
 const BookingSchema = z.object({
   stops: z.array(StopSchema),
+  modified: z.boolean().optional(),
   holdOn: z.boolean().optional().describe("Set to true if this booking is a special 'Hold On' booking that wraps the entire journey. This is rare and should only be used if explicitly requested, for example, by a phrase like 'a booking to hold the journey' or 'a wrapper booking'. Most bookings should not have this set."),
 });
 
@@ -107,4 +109,5 @@ User's Journey Description: ${input.prompt}
     return llmResponse.output;
   }
 );
+
 

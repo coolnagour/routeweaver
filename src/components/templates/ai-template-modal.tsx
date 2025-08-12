@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState } from 'react';
@@ -122,6 +123,7 @@ export default function AiTemplateModal({ isOpen, onOpenChange, onTemplateCreate
             bookings: suggestion.bookings.map(b => ({
                 id: uuidv4(),
                 holdOn: b.holdOn,
+                modified: false,
                 stops: b.stops.map(s => ({
                     ...s,
                     id: s.id || uuidv4(),

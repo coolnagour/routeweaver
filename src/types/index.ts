@@ -86,6 +86,7 @@ export const BookingSchema = z.object({
   holdOn: z.boolean().optional(),
   splitPaymentSettings: SplitPaymentSettingsSchema.optional(),
   metadata: z.array(MetadataSchema).optional(),
+  modified: z.boolean().optional(),
 });
 export type Booking = z.infer<typeof BookingSchema>;
 
@@ -204,6 +205,7 @@ const GenkitBookingSchema = z.object({
   holdOn: z.boolean().optional(),
   splitPaymentSettings: SplitPaymentSettingsSchema.optional(),
   metadata: z.array(MetadataSchema).optional(),
+  modified: z.boolean().optional(),
 });
 
 export const JourneyInputSchema = z.object({
@@ -238,4 +240,5 @@ export const SuggestionOutputSchema = z.object({
   suggestion: z.string(),
 });
 export type SuggestionOutput = z.infer<typeof SuggestionOutputSchema>;
+
 

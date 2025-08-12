@@ -100,7 +100,7 @@ const FormBookingSchema = BookingSchema.extend({
 }).refine(data => {
     // The first stop (which is always the primary pickup) must have an address.
     const firstStop = data.stops[0];
-    if (firstStop && firstStop.stopType === 'pickup' && (!firstStop.location || !firstStop.location.address || firstStop.location.address.trim() === '')) {
+    if (firstStop && firstStop.stopType === 'pickup' && (!firstStop.location || !firstStop.location.address || !firstStop.location.address.trim() === '')) {
         return false;
     }
     return true;
@@ -224,6 +224,7 @@ export default function BookingForm({
         splitPaymentThresholdAmount: initialData.splitPaymentSettings?.splitPaymentThresholdAmount ?? undefined,
       },
       metadata: initialData.metadata || [],
+      modified: initialData.modified || false,
     };
     form.reset(formData);
   }, [initialData, form]);
@@ -337,8 +338,13 @@ export default function BookingForm({
 
 
   function onSubmit(values: BookingFormData) {
+    const { formState: { isDirty } } = form;
     const cleanedMetadata = values.metadata?.filter(m => m.key.trim() !== '') || [];
-    const finalValues = { ...values, metadata: cleanedMetadata };
+    const finalValues = { 
+        ...values, 
+        metadata: cleanedMetadata,
+        modified: isDirty || !values.bookingServerId, // Mark as modified if the form is dirty or if it's a new booking
+    };
     
     console.log('[BookingForm] onSubmit values:', JSON.stringify(finalValues, null, 2));
 

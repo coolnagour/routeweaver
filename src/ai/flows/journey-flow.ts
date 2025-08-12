@@ -1,4 +1,5 @@
 
+
 'use server';
 /**
  * @fileOverview Manages journey-related operations using the iCabbi API.
@@ -61,10 +62,18 @@ const saveJourneyFlow = ai.defineFlow(
         let isUpdate = false;
         
         if (booking.bookingServerId) {
-          // This booking already exists on the server, so we update it.
-          console.log(`[Journey Flow] Updating existing booking with server ID: ${booking.bookingServerId}`);
-          result = await updateBooking(server, { booking, siteId, accountId });
-          isUpdate = true;
+          // This booking already exists on the server.
+          // We only update it if it has been marked as modified on the client.
+          if (booking.modified) {
+            console.log(`[Journey Flow] Updating existing booking with server ID: ${booking.bookingServerId}`);
+            result = await updateBooking(server, { booking, siteId, accountId });
+            isUpdate = true;
+          } else {
+            console.log(`[Journey Flow] Skipping update for unchanged booking with server ID: ${booking.bookingServerId}`);
+            // If not updating, we still need to fetch the existing booking data to get segment IDs for the journey payload
+            const existingBookingData = await createBooking(server, { booking, siteId, accountId, fetchOnly: true });
+            result = existingBookingData;
+          }
         } else {
           // This is a new booking, create it on the server.
           console.log(`[Journey Flow] Creating new booking for passenger: ${booking.stops.find(s=>s.stopType === 'pickup')?.name}`);
@@ -148,7 +157,7 @@ const saveJourneyFlow = ai.defineFlow(
 
         // Clean parentBooking and stringify dates before returning
         const finalBookings = processedBookings.map(b => {
-          const { stops, ...rest } = b;
+          const { stops, modified, ...rest } = b; // Remove modified flag before sending to client
           return {
             ...rest,
             stops: stops.map(s => {
