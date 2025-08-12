@@ -117,8 +117,8 @@ export async function updateBooking(server: ServerConfig, { booking, siteId, acc
         };
     }
 
-    // Add split payment settings if they exist
-    if (booking.splitPaymentSettings) {
+    // Add split payment settings only if they are enabled.
+    if (booking.splitPaymentSettings?.splitPaymentEnabled) {
         const { splitPaymentEnabled, splitPaymentType, splitPaymentValue, splitPaymentMinAmount, splitPaymentThresholdAmount, splitPaymentExtrasType, splitPaymentExtrasValue, splitPaymentTollsType, splitPaymentTollsValue, splitPaymentTipsType, splitPaymentTipsValue } = booking.splitPaymentSettings;
         payload.split_payment_settings = {
             split_payment_enabled: splitPaymentEnabled ? 1 : 0,
