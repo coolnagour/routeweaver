@@ -164,6 +164,25 @@ export async function createJourney(server: ServerConfig, journeyPayload: any) {
     return response.body;
 }
 
+export async function getJourneyById(server: ServerConfig, journeyId: number) {
+    const response = await callIcabbiApi({
+        server,
+        method: 'POST',
+        endpoint: 'journey/get',
+        body: { journey_id: journeyId },
+    });
+    
+    // The journey status is nested within the response.
+    if (response && response.body && response.body.journeys && response.body.journeys.length > 0) {
+        const journeyData = response.body.journeys[0]?.[0];
+        if (journeyData && journeyData.status) {
+            return { status: journeyData.status };
+        }
+    }
+
+    return null;
+}
+
 export async function sendDriverAppEvent(server: ServerConfig, type: string, bookingId: number) {
     const payload = {
         type,

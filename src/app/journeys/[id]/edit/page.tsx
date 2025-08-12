@@ -10,6 +10,7 @@ import { useJourneys } from '@/hooks/use-journeys';
 import { useTemplates } from '@/hooks/use-templates';
 import { useToast } from '@/hooks/use-toast';
 import { saveJourney } from '@/ai/flows/journey-flow';
+import { getJourneyById } from '@/services/icabbi';
 import { useServer } from '@/context/server-context';
 import { v4 as uuidv4 } from 'uuid';
 import SaveTemplateDialog from '@/components/journeys/save-template-dialog';
@@ -60,6 +61,19 @@ export default function EditJourneyPage() {
       return;
     }
     
+    // Check if the journey already has a server ID and is completed.
+    if (journeyToPublish.journeyServerId) {
+        const journeyStatus = await getJourneyById(server, journeyToPublish.journeyServerId);
+        if (journeyStatus?.status === 'COMPLETED') {
+            toast({
+                variant: 'destructive',
+                title: 'Publishing Prevented',
+                description: 'This journey is already marked as COMPLETED on the server and cannot be updated.',
+            });
+            return;
+        }
+    }
+
     const result = await saveJourney({ 
       bookings: journeyToPublish.bookings || [], 
       server, 

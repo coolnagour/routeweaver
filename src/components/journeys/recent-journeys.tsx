@@ -31,7 +31,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Checkbox } from '../ui/checkbox';
 import { Label } from '../ui/label';
 import ImportJourneysDialog from './import-journeys-dialog';
-import { getBookingById } from '@/services/icabbi';
+import { getBookingById, getJourneyById } from '@/services/icabbi';
 
 const JourneysArraySchema = z.array(JourneySchema);
 
@@ -148,6 +148,19 @@ export default function RecentJourneys() {
             description: 'Please open the journey in the editor to select a Site and Account before publishing.'
         });
         return;
+    }
+    
+    // Check if the journey already has a server ID and is completed.
+    if (journey.journeyServerId) {
+        const journeyStatus = await getJourneyById(server, journey.journeyServerId);
+        if (journeyStatus?.status === 'COMPLETED') {
+            toast({
+                variant: 'destructive',
+                title: 'Publishing Prevented',
+                description: 'This journey is already marked as COMPLETED on the server and cannot be updated.',
+            });
+            return;
+        }
     }
 
     setPublishingId(journey.id);
@@ -634,5 +647,3 @@ export default function RecentJourneys() {
     </div>
   );
 }
-
-    
