@@ -10,7 +10,7 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { JourneyInputSchema, JourneyOutputSchema, ServerConfigSchema } from '@/types';
-import { createBooking, createJourney, updateBooking } from '@/services/icabbi';
+import { createBooking, getBookingById, updateBooking } from '@/services/icabbi';
 import type { Booking, JourneyOutput, Stop } from '@/types';
 import { generateJourneyPayload } from './journey-payload-flow';
 
@@ -69,10 +69,9 @@ const saveJourneyFlow = ai.defineFlow(
             result = await updateBooking(server, { booking, siteId, accountId });
             isUpdate = true;
           } else {
-            console.log(`[Journey Flow] Skipping update for unchanged booking with server ID: ${booking.bookingServerId}`);
-            // If not updating, we still need to fetch the existing booking data to get segment IDs for the journey payload
-            const existingBookingData = await createBooking(server, { booking, siteId, accountId, fetchOnly: true });
-            result = existingBookingData;
+            console.log(`[Journey Flow] Skipping update for unchanged booking with server ID: ${booking.bookingServerId}. Fetching existing data.`);
+            // If not modified, fetch the existing booking data from the server to get segment IDs.
+            result = await getBookingById(server, booking.bookingServerId);
           }
         } else {
           // This is a new booking, create it on the server.
@@ -81,10 +80,10 @@ const saveJourneyFlow = ai.defineFlow(
         }
           
         // Use perma_id from the response for the bookingServerId.
-        const serverBookingId = result?.perma_id ? parseInt(result.perma_id, 10) : booking.bookingServerId;
+        const serverBookingId = result?.perma_id ? parseInt(result.perma_id, 10) : (result?.id ? parseInt(result.id, 10) : booking.bookingServerId);
           
         if (!serverBookingId) {
-          throw new Error(`Invalid response from ${isUpdate ? 'updateBooking' : 'createBooking'}. Booking ID (perma_id) not returned. Response: ${JSON.stringify(result)}`);
+          throw new Error(`Invalid response from ${isUpdate ? 'updateBooking' : 'createBooking'}. Booking ID (perma_id or id) not returned. Response: ${JSON.stringify(result)}`);
         }
 
         const bookingWithServerIds: Booking = { 
