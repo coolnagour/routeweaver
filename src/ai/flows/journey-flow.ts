@@ -10,7 +10,7 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { JourneyInputSchema, JourneyOutputSchema, ServerConfigSchema } from '@/types';
-import { createBooking, getBookingById, updateBooking } from '@/services/icabbi';
+import { createBooking, getBookingById, updateBooking, createJourney } from '@/services/icabbi';
 import type { Booking, JourneyOutput, Stop } from '@/types';
 import { generateJourneyPayload } from './journey-payload-flow';
 
