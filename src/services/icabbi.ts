@@ -34,7 +34,6 @@ export async function callIcabbiApi({ server, method, endpoint, body, headers: c
     const headers = new Headers({
         'Content-Type': 'application/json',
         'Authorization': 'Basic ' + Buffer.from(`${server.appKey}:${server.secretKey}`).toString('base64'),
-        'phone': '+460000000000', // Default placeholder
         ...customHeaders, // Custom headers will override defaults
     });
     
