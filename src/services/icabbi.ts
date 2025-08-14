@@ -5,15 +5,18 @@
 import type { ServerConfig } from "@/types";
 import type { Booking, Account, Site } from "@/types";
 import { formatBookingForApi } from "@/lib/booking-formatter";
+import parsePhoneNumberFromString, { getCountryCallingCode } from 'libphonenumber-js';
+
 
 interface IcabbiApiCallOptions {
     server: ServerConfig;
     method: 'GET' | 'POST' | 'DELETE';
     endpoint: string;
     body?: any;
+    headers?: Record<string, string>;
 }
 
-export async function callIcabbiApi({ server, method, endpoint, body }: IcabbiApiCallOptions) {
+export async function callIcabbiApi({ server, method, endpoint, body, headers: customHeaders }: IcabbiApiCallOptions) {
     let url;
     // Check if the host already includes a protocol
     if (server.host.startsWith('http://') || server.host.startsWith('https://')) {
@@ -31,7 +34,8 @@ export async function callIcabbiApi({ server, method, endpoint, body }: IcabbiAp
     const headers = new Headers({
         'Content-Type': 'application/json',
         'Authorization': 'Basic ' + Buffer.from(`${server.appKey}:${server.secretKey}`).toString('base64'),
-        'phone': '+460000000000'
+        'phone': '+460000000000', // Default placeholder
+        ...customHeaders, // Custom headers will override defaults
     });
     
     const options: RequestInit = {
@@ -103,6 +107,9 @@ export async function createBooking(server: ServerConfig, { booking, siteId, acc
         method: 'POST',
         endpoint: endpoint,
         body: payload,
+        headers: {
+            phone: payload.phone,
+        }
     });
     
     return response.body.booking;
@@ -112,61 +119,17 @@ export async function updateBooking(server: ServerConfig, { booking, siteId, acc
     if (!booking.bookingServerId) {
         throw new Error("Booking must have a bookingServerId to be updated.");
     }
-
-    // For updates, we send payment, split payment, and metadata fields.
-    const fullPayload = formatBookingForApi({ booking, server, siteId, accountId });
-    const payload: any = { phone: fullPayload.phone };
-
-    if (typeof booking.price === 'number' || typeof booking.cost === 'number') {
-        payload.payment = {
-            price: booking.price ?? 0,
-            cost: booking.cost ?? 0,
-            fixed: 1,
-        };
-    }
-
-    // Add split payment settings only if they are enabled.
-    if (booking.splitPaymentSettings?.splitPaymentEnabled) {
-        const { splitPaymentEnabled, splitPaymentType, splitPaymentValue, splitPaymentMinAmount, splitPaymentThresholdAmount, splitPaymentExtrasType, splitPaymentExtrasValue, splitPaymentTollsType, splitPaymentTollsValue, splitPaymentTipsType, splitPaymentTipsValue } = booking.splitPaymentSettings;
-        payload.split_payment_settings = {
-            split_payment_enabled: splitPaymentEnabled ? 1 : 0,
-            split_payment_type: splitPaymentType,
-            split_payment_value: splitPaymentValue?.toString(),
-            split_payment_min_amount: splitPaymentMinAmount?.toString(),
-            split_payment_threshold_amount: splitPaymentThresholdAmount?.toString(),
-            split_payment_extras_type: splitPaymentExtrasType,
-            split_payment_extras_value: splitPaymentExtrasValue?.toString(),
-            split_payment_tolls_type: splitPaymentTollsType,
-            split_payment_tolls_value: splitPaymentTollsValue?.toString(),
-            split_payment_tips_type: splitPaymentTipsType,
-            split_payment_tips_value: splitPaymentTipsValue?.toString(),
-        };
-    }
     
-    // Add metadata if it exists
-    if (booking.metadata && booking.metadata.length > 0) {
-        payload.app_metadata = booking.metadata.reduce((acc, item) => {
-            if (item.key) { // Ensure key is not empty
-                acc[item.key] = item.value;
-            }
-            return acc;
-        }, {} as Record<string, string>);
-    }
+    const payload = formatBookingForApi({ booking, server, siteId, accountId });
 
-
-    // If there is nothing to update, just return the booking as is.
-    if (Object.keys(payload).length === 0) {
-        console.log(`[updateBooking] No payment or metadata changes detected for booking ${booking.bookingServerId}. Skipping API call.`);
-        // Mimic the structure of a successful API call for consistency in the flow.
-        const existingBooking = await getBookingById(server, booking.bookingServerId);
-        return { ...existingBooking, perma_id: booking.bookingServerId };
-    }
-    
     const response = await callIcabbiApi({
         server,
         method: 'POST',
         endpoint: `bookings/update/${booking.bookingServerId}`,
         body: payload,
+        headers: {
+            phone: payload.phone,
+        }
     });
     
     // The update response may not contain the full booking object, so we merge it
@@ -178,10 +141,17 @@ export async function updateBooking(server: ServerConfig, { booking, siteId, acc
 }
 
 export async function getBookingById(server: ServerConfig, permaId: number) {
+    const defaultCountry = server.countryCodes?.[0]?.toUpperCase() as any;
+    const countryCode = getCountryCallingCode(defaultCountry);
+    const placeholderPhone = `+${countryCode}0000000000`.slice(0, 15);
+
     const response = await callIcabbiApi({
         server,
         method: 'GET',
         endpoint: `bookings/index/${permaId}`,
+        headers: {
+            phone: placeholderPhone
+        }
     });
 
     if (response && response.body && response.body.booking) {
