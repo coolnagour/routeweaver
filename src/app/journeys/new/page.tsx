@@ -84,11 +84,23 @@ export default function NewJourneyPage() {
       return;
     }
     
+    // Clean the journey data by removing server-specific IDs
+    const cleanedBookings = (journeyToSaveAsTemplate.bookings || []).map(booking => {
+        const { bookingServerId, ...restBooking } = booking;
+        return {
+            ...restBooking,
+            stops: restBooking.stops.map(stop => {
+                const { bookingSegmentId, ...restStop } = stop;
+                return restStop;
+            })
+        };
+    });
+
     const newTemplate: JourneyTemplate = {
       id: uuidv4(),
       serverScope: server.uuid,
       name: name,
-      bookings: journeyToSaveAsTemplate.bookings || [],
+      bookings: cleanedBookings,
       site: journeyToSaveAsTemplate.site,
       account: journeyToSaveAsTemplate.account,
       price: journeyToSaveAsTemplate.price,
