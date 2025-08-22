@@ -8,9 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { generateJourneyPayload } from '@/ai/flows/journey-payload-flow';
-import { getSites, sendMessage } from '@/services/icabbi';
+import { getSites, sendMessage, getDriverByRef, dispatchBooking, getBookingById } from '@/services/icabbi';
 import type { Booking, Journey, JourneyTemplate, Account, Stop, Location, Site } from '@/types';
-import { Save, Building, Loader2, Send, ChevronsUpDown, Code, DollarSign, Info, MessageSquare, GripVertical, FileText, MessageCircle } from 'lucide-react';
+import { Save, Building, Loader2, Send, ChevronsUpDown, Code, DollarSign, Info, MessageSquare, GripVertical, FileText, MessageCircle, UserCheck } from 'lucide-react';
 import BookingManager from './booking-manager';
 import { useServer } from '@/context/server-context';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
@@ -26,6 +26,7 @@ import { MapSelectionProvider, useMapSelection } from '@/context/map-selection-c
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { ScrollArea } from '../ui/scroll-area';
 import SendMessageDialog from './send-message-dialog';
+import { Alert, AlertDescription } from '../ui/alert';
 
 interface JourneyFormProps {
   initialData?: Partial<Journey | JourneyTemplate> | null;
@@ -76,6 +77,8 @@ function JourneyFormInner({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [journeyPreview, setJourneyPreview] = useState<JourneyPreviewState>({ orderedStops: [], journeyPayload: null, bookings: [], bookingPayloads: [], isLoading: false });
   const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
+  const [driverRef, setDriverRef] = useState('');
+  const [isAssigning, setIsAssigning] = useState(false);
   const { setSelectedLocation, isMapInSelectionMode } = useMapSelection();
 
   useEffect(() => {
@@ -266,6 +269,52 @@ function JourneyFormInner({
     }
   };
 
+  const handleAssignDriver = async () => {
+    if (!server || !driverRef || !journeyData.journeyServerId || !journeyData.bookings || journeyData.bookings.length === 0) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Missing server, driver ref, or journey data.' });
+      return;
+    }
+    
+    const firstBookingPermaId = journeyData.bookings[0].bookingServerId;
+    if (!firstBookingPermaId) {
+        toast({ variant: 'destructive', title: 'Error', description: 'The first booking in the journey does not have a server ID.' });
+        return;
+    }
+
+    setIsAssigning(true);
+    try {
+      // Step 1: Get driver ID from ref
+      const driver = await getDriverByRef(server, driverRef);
+      if (!driver?.id) {
+        throw new Error("Driver not found or invalid response from server.");
+      }
+      
+      // Step 2: Get the booking from server to find the trip_id
+      const bookingDetails = await getBookingById(server, firstBookingPermaId);
+      if (!bookingDetails?.trip_id) {
+          throw new Error("Could not retrieve the trip_id for the first booking.");
+      }
+
+      // Step 3: Dispatch the booking (assign journey to driver)
+      await dispatchBooking(server, bookingDetails.trip_id.toString(), driver.id);
+
+      toast({
+        title: 'Journey Assigned!',
+        description: `Successfully assigned journey to driver ${driverRef}.`,
+      });
+      setDriverRef('');
+    } catch (error) {
+      console.error('Failed to assign driver:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Failed to Assign Driver',
+        description: error instanceof Error ? error.message : 'An unknown error occurred.',
+      });
+    } finally {
+      setIsAssigning(false);
+    }
+  };
+
   const title = getTitle();
   const publishButtonText = (journeyData as Journey)?.status === 'Scheduled' ? 'Update Published Journey' : 'Publish Journey';
   const hasBookingLevelPrice = (journeyData.bookings || []).some(b => typeof b.price === 'number' || typeof b.cost === 'number');
@@ -412,6 +461,34 @@ function JourneyFormInner({
               setEditingBooking={setEditingBooking}
               isJourneyPriceSet={hasJourneyLevelPrice}
             />
+
+            {journeyData.journeyServerId && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="font-headline text-xl flex items-center gap-2"><UserCheck /> Assign Driver</CardTitle>
+                        <CardDescription>Assign this journey to a specific driver by their reference number.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Alert>
+                           <Info className="h-4 w-4" />
+                           <AlertDescription>
+                             The `trip_id` of the first booking in the journey will be used for assignment.
+                           </AlertDescription>
+                        </Alert>
+                        <div className="flex gap-2 mt-4">
+                            <Input
+                                placeholder="Enter Driver Ref..."
+                                value={driverRef}
+                                onChange={(e) => setDriverRef(e.target.value)}
+                            />
+                            <Button onClick={handleAssignDriver} disabled={isAssigning || !driverRef}>
+                                {isAssigning && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Assign
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
             
             <Card>
                 <CardHeader>

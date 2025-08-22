@@ -362,3 +362,34 @@ export async function searchAccountsByName(server: ServerConfig, query?: string,
 
   return [];
 }
+
+export async function getDriverByRef(server: ServerConfig, ref: string) {
+    const response = await callIcabbiApi({
+        server,
+        method: 'GET',
+        endpoint: `drivers/id?ref=${ref}`,
+    });
+
+    if (response && response.body) {
+        return response.body;
+    }
+    return null;
+}
+
+export async function dispatchBooking(server: ServerConfig, tripId: string, driverId: string) {
+    const payload = {
+        trip_id: tripId,
+        driver_id: driverId,
+        allow_decline: true,
+        enable_active_queue: true,
+    };
+    
+    const response = await callIcabbiApi({
+        server,
+        method: 'POST',
+        endpoint: 'bookings/dispatchbooking',
+        body: payload,
+    });
+    
+    return response;
+}
