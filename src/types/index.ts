@@ -127,6 +127,8 @@ export const JourneySchema = z.object({
   price: z.number().optional(),
   cost: z.number().optional(),
   enable_messaging_service: z.boolean().optional(),
+  driverId: z.string().optional(),
+  driverRef: z.string().optional(),
 });
 export type Journey = z.infer<typeof JourneySchema>;
 
@@ -240,5 +242,6 @@ export const SuggestionOutputSchema = z.object({
   suggestion: z.string(),
 });
 export type SuggestionOutput = z.infer<typeof SuggestionOutputSchema>;
+
 
 

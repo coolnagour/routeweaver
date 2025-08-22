@@ -297,6 +297,18 @@ function JourneyFormInner({
 
       // Step 3: Dispatch the booking (assign journey to driver)
       await dispatchBooking(server, bookingDetails.trip_id.toString(), driver.id);
+      
+      const updatedJourney = {
+          ...journeyData,
+          driverId: driver.id,
+          driverRef: driverRef
+      }
+      setJourneyData(updatedJourney);
+
+      // Step 4: Persist the updated journey with driver info
+      if (onSave) {
+          await onSave(updatedJourney as Journey | JourneyTemplate);
+      }
 
       toast({
         title: 'Journey Assigned!',
@@ -466,20 +478,33 @@ function JourneyFormInner({
                 <Card>
                     <CardHeader>
                         <CardTitle className="font-headline text-xl flex items-center gap-2"><UserCheck /> Assign Driver</CardTitle>
-                        <CardDescription>Assign this journey to a specific driver by their reference number.</CardDescription>
+                        {journeyData.driverId ? (
+                             <CardDescription>This journey is assigned to a driver.</CardDescription>
+                        ) : (
+                             <CardDescription>Assign this journey to a specific driver by their reference number.</CardDescription>
+                        )}
                     </CardHeader>
                     <CardContent>
-                        <div className="flex gap-2 mt-4">
-                            <Input
-                                placeholder="Enter Driver Ref..."
-                                value={driverRef}
-                                onChange={(e) => setDriverRef(e.target.value)}
-                            />
-                            <Button onClick={handleAssignDriver} disabled={isAssigning || !driverRef}>
-                                {isAssigning && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Assign
-                            </Button>
-                        </div>
+                        {journeyData.driverId ? (
+                            <Alert>
+                                <AlertDescription className="flex items-center gap-2">
+                                    <UserCheck className="h-4 w-4 text-primary" />
+                                    <span>Assigned to Driver: <strong>{journeyData.driverRef}</strong> (ID: {journeyData.driverId})</span>
+                                </AlertDescription>
+                            </Alert>
+                        ) : (
+                            <div className="flex gap-2 mt-4">
+                                <Input
+                                    placeholder="Enter Driver Ref..."
+                                    value={driverRef}
+                                    onChange={(e) => setDriverRef(e.target.value)}
+                                />
+                                <Button onClick={handleAssignDriver} disabled={isAssigning || !driverRef}>
+                                    {isAssigning && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    Assign
+                                </Button>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
             )}
