@@ -469,12 +469,6 @@ function JourneyFormInner({
                         <CardDescription>Assign this journey to a specific driver by their reference number.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <Alert>
-                           <Info className="h-4 w-4" />
-                           <AlertDescription>
-                             The `trip_id` of the first booking in the journey will be used for assignment.
-                           </AlertDescription>
-                        </Alert>
                         <div className="flex gap-2 mt-4">
                             <Input
                                 placeholder="Enter Driver Ref..."
