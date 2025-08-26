@@ -328,6 +328,11 @@ export default function JourneyMap({ stops, onLocationSelect, isSelectionMode = 
                 key={`${stop.id}-${index}`}
                 position={{ lat: stop.location.lat, lng: stop.location.lng }}
                 icon={getMarkerIcon(stop, index)}
+                onClick={() => {
+                    if (isSelectionMode && onLocationSelect && stop.location) {
+                        onLocationSelect(stop.location);
+                    }
+                }}
             />
         ))}
         {polylinePath.length > 1 && (
