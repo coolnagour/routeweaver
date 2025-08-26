@@ -143,7 +143,7 @@ export async function generateJourneyPayload(input: JourneyPayloadInput): Promis
                 is_destination: "false",
                 planned_date: plannedDate,
                 distance: 1000,
-                journey_hold_on: "true",
+                journey_hold_on: true,
             });
         }
     }
@@ -216,7 +216,7 @@ export async function generateJourneyPayload(input: JourneyPayloadInput): Promis
                 is_destination: "true",
                 planned_date: plannedDate,
                 distance: 0,
-                journey_hold_on: "true",
+                journey_hold_on: true,
             });
         }
     }
