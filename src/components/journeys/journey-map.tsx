@@ -263,31 +263,40 @@ export default function JourneyMap({ stops, onLocationSelect, isSelectionMode = 
     </div>
   );
 
-  const validStops = stops.filter(stop => stop.location && stop.location.lat && stop.location.lng);
+  const validStops = stops.filter(stop => stop.location && typeof stop.location.lat === 'number' && typeof stop.location.lng === 'number');
   
-  // Group stops by location
-  const stopGroups = validStops.reduce((acc, stop, index) => {
+  // Create a list of unique location groups in the order they appear in the journey
+  const uniqueLocationGroupsInOrder: StopGroup[] = [];
+  const visitedLocations = new Set<string>();
+
+  validStops.forEach((stop, index) => {
       const key = `${stop.location!.lat},${stop.location!.lng}`;
-      if (!acc[key]) {
-          acc[key] = { location: stop.location!, stops: [] };
+      if (!visitedLocations.has(key)) {
+          visitedLocations.add(key);
+          const allStopsAtThisLocation = validStops
+              .map((s, i) => ({ ...s, originalIndex: i }))
+              .filter(s => s.location.lat === stop.location!.lat && s.location.lng === stop.location!.lng);
+          
+          uniqueLocationGroupsInOrder.push({
+              location: stop.location!,
+              stops: allStopsAtThisLocation,
+          });
       }
-      acc[key].stops.push({ ...stop, originalIndex: index });
-      return acc;
-  }, {} as Record<string, StopGroup>);
+  });
+
 
   const polylinePath = validStops.map(stop => ({
     lat: stop.location.lat,
     lng: stop.location.lng,
   }));
   
-  const getMarkerIcon = (stopGroup: StopGroup) => {
+  const getMarkerIcon = (stopGroup: StopGroup, groupIndex: number) => {
     const { stops } = stopGroup;
     const firstStop = stops[0];
     const color = getBookingColor(firstStop.parentBookingId || '');
     
-    // If only one stop at this location, show its sequence number in the journey
-    // Otherwise, show the count of stops at this location
-    const label = stops.length > 1 ? stops.length.toString() : (firstStop.originalIndex + 1).toString();
+    // Label is the sequential index of the unique location group
+    const label = (groupIndex + 1).toString();
 
     const svg = `
     <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
@@ -349,11 +358,11 @@ export default function JourneyMap({ stops, onLocationSelect, isSelectionMode = 
             onLoad={handleMapLoad}
             onClick={handleInternalMapClick}
         >
-        {Object.values(stopGroups).map((group, index) => (
+        {uniqueLocationGroupsInOrder.map((group, index) => (
             <Marker
                 key={`${group.location.lat}-${group.location.lng}-${index}`}
                 position={{ lat: group.location.lat, lng: group.location.lng }}
-                icon={getMarkerIcon(group)}
+                icon={getMarkerIcon(group, index)}
                 onClick={() => {
                     if (isSelectionMode && onLocationSelect && group.location) {
                         onLocationSelect(group.location);
