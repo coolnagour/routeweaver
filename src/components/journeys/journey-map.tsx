@@ -174,6 +174,11 @@ const getBookingColor = (bookingId: string) => {
   return bookingColors[index];
 };
 
+type StopGroup = {
+    location: Location;
+    stops: (Stop & { parentBookingId?: string; originalIndex: number })[];
+};
+
 
 export default function JourneyMap({ stops, onLocationSelect, isSelectionMode = false, countryCode }: JourneyMapProps) {
   const { isLoaded, loadError } = useLoadScript({
@@ -259,16 +264,30 @@ export default function JourneyMap({ stops, onLocationSelect, isSelectionMode = 
   );
 
   const validStops = stops.filter(stop => stop.location && stop.location.lat && stop.location.lng);
+  
+  // Group stops by location
+  const stopGroups = validStops.reduce((acc, stop, index) => {
+      const key = `${stop.location!.lat},${stop.location!.lng}`;
+      if (!acc[key]) {
+          acc[key] = { location: stop.location!, stops: [] };
+      }
+      acc[key].stops.push({ ...stop, originalIndex: index });
+      return acc;
+  }, {} as Record<string, StopGroup>);
 
   const polylinePath = validStops.map(stop => ({
     lat: stop.location.lat,
     lng: stop.location.lng,
   }));
   
-  const getMarkerIcon = (stop: Stop & { parentBookingId?: string }, index: number) => {
-    const color = getBookingColor(stop.parentBookingId || '');
-    const type = stop.stopType === 'pickup' ? 'P' : 'D';
-    const label = `${index + 1}`;
+  const getMarkerIcon = (stopGroup: StopGroup) => {
+    const { stops } = stopGroup;
+    const firstStop = stops[0];
+    const color = getBookingColor(firstStop.parentBookingId || '');
+    
+    // If only one stop at this location, show its sequence number in the journey
+    // Otherwise, show the count of stops at this location
+    const label = stops.length > 1 ? stops.length.toString() : (firstStop.originalIndex + 1).toString();
 
     const svg = `
     <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
@@ -276,10 +295,17 @@ export default function JourneyMap({ stops, onLocationSelect, isSelectionMode = 
       <text x="20" y="22" font-family="Arial, sans-serif" font-size="12" fill="white" text-anchor="middle" dominant-baseline="middle" font-weight="bold">
         ${label}
       </text>
-      <circle cx="32" cy="8" r="7" fill="${color}" stroke="white" stroke-width="1.5"/>
-      <text x="32" y="9" font-family="Arial, sans-serif" font-size="9" fill="white" text-anchor="middle" dominant-baseline="middle" font-weight="bold">
-        ${type}
-      </text>
+      ${stops.length > 1 ? `
+        <circle cx="32" cy="8" r="7" fill="#4A5568" stroke="white" stroke-width="1.5"/>
+        <text x="32" y="9" font-family="Arial, sans-serif" font-size="9" fill="white" text-anchor="middle" dominant-baseline="middle" font-weight="bold">
+          ${stops.length}
+        </text>
+      ` : `
+        <circle cx="32" cy="8" r="7" fill="${color}" stroke="white" stroke-width="1.5"/>
+        <text x="32" y="9" font-family="Arial, sans-serif" font-size="9" fill="white" text-anchor="middle" dominant-baseline="middle" font-weight="bold">
+          ${firstStop.stopType === 'pickup' ? 'P' : 'D'}
+        </text>
+      `}
     </svg>`;
     
     return {
@@ -323,14 +349,14 @@ export default function JourneyMap({ stops, onLocationSelect, isSelectionMode = 
             onLoad={handleMapLoad}
             onClick={handleInternalMapClick}
         >
-        {validStops.map((stop, index) => (
+        {Object.values(stopGroups).map((group, index) => (
             <Marker
-                key={`${stop.id}-${index}`}
-                position={{ lat: stop.location.lat, lng: stop.location.lng }}
-                icon={getMarkerIcon(stop, index)}
+                key={`${group.location.lat}-${group.location.lng}-${index}`}
+                position={{ lat: group.location.lat, lng: group.location.lng }}
+                icon={getMarkerIcon(group)}
                 onClick={() => {
-                    if (isSelectionMode && onLocationSelect && stop.location) {
-                        onLocationSelect(stop.location);
+                    if (isSelectionMode && onLocationSelect && group.location) {
+                        onLocationSelect(group.location);
                     }
                 }}
             />
@@ -350,5 +376,3 @@ export default function JourneyMap({ stops, onLocationSelect, isSelectionMode = 
     </div>
   );
 }
-
-    
