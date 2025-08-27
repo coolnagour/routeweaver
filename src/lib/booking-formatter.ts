@@ -137,6 +137,14 @@ export const formatBookingForApi = ({ booking, server, siteId, accountId }: Book
             return acc;
         }, {} as Record<string, string>);
     }
+    
+    // Add custom account fields if they exist
+    if (booking.fields && booking.fields.length > 0) {
+        payload.fields = booking.fields.map(field => ({
+            id: field.id,
+            value: field.value,
+        }));
+    }
 
 
     return payload;

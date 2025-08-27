@@ -72,6 +72,11 @@ const MetadataSchema = z.object({
     value: z.string(),
 });
 
+const AccountFieldDataSchema = z.object({
+    id: z.string(),
+    value: z.string(),
+});
+
 export const BookingSchema = z.object({
   id: z.string(),
   bookingServerId: z.number().optional(),
@@ -86,19 +91,35 @@ export const BookingSchema = z.object({
   holdOn: z.boolean().optional(),
   splitPaymentSettings: SplitPaymentSettingsSchema.optional(),
   metadata: z.array(MetadataSchema).optional(),
+  fields: z.array(AccountFieldDataSchema).optional(),
   modified: z.boolean().optional(),
 });
 export type Booking = z.infer<typeof BookingSchema>;
+
+
+export const AccountFieldSchema = z.object({
+    id: z.string(),
+    title: z.string(),
+    type: z.enum(['text', 'number', 'price', 'pin']),
+    required: z.enum(['0', '1']),
+    active: z.enum(['0', '1']),
+    description: z.string().optional().nullable(),
+    regex: z.string().optional().nullable(),
+    values: z.array(z.string()).optional().nullable(),
+});
+export type AccountField = z.infer<typeof AccountFieldSchema>;
 
 export interface Account {
   id: number;
   name: string;
   ref: string;
+  account_fields?: AccountField[];
 }
 export const AccountSchema = z.object({
   id: z.number(),
   name: z.string(),
   ref: z.string(),
+  account_fields: z.array(AccountFieldSchema).optional(),
 });
 
 
@@ -207,6 +228,7 @@ const GenkitBookingSchema = z.object({
   holdOn: z.boolean().optional(),
   splitPaymentSettings: SplitPaymentSettingsSchema.optional(),
   metadata: z.array(MetadataSchema).optional(),
+  fields: z.array(AccountFieldDataSchema).optional(),
   modified: z.boolean().optional(),
 });
 
@@ -242,6 +264,3 @@ export const SuggestionOutputSchema = z.object({
   suggestion: z.string(),
 });
 export type SuggestionOutput = z.infer<typeof SuggestionOutputSchema>;
-
-
-

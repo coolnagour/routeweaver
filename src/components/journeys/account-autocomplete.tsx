@@ -159,6 +159,3 @@ export default function AccountAutocomplete({ onAccountSelect, initialAccount }:
     </Popover>
   );
 }
-    
-
-    

@@ -5,7 +5,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import type { Booking, Stop, Location } from '@/types';
+import type { Booking, Stop, Location, AccountField } from '@/types';
 import BookingForm from './booking-form';
 import { Edit, MapPin, Package, Trash2, UserPlus, Users, Phone, Clock, MessageSquare, Info, Loader2, MoreHorizontal } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -39,6 +39,7 @@ interface BookingManagerProps {
   editingBooking: Booking | null;
   setEditingBooking: (booking: Booking | null) => void;
   isJourneyPriceSet: boolean;
+  accountFields: AccountField[];
 }
 
 function BookingManager({ 
@@ -47,6 +48,7 @@ function BookingManager({
     editingBooking,
     setEditingBooking,
     isJourneyPriceSet,
+    accountFields,
 }: BookingManagerProps) {
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [isSendingEvent, setIsSendingEvent] = useState<string | null>(null);
@@ -219,6 +221,7 @@ function BookingManager({
           isJourneyPriceSet={isJourneyPriceSet}
           isFirstBooking={bookings.length > 0 && bookings[0].id === editingBooking.id}
           allBookings={bookings}
+          accountFields={accountFields}
         />
     )
   }

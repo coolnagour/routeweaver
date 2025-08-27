@@ -3,7 +3,7 @@
 'use server';
 
 import type { ServerConfig } from "@/types";
-import type { Booking, Account, Site } from "@/types";
+import type { Booking, Account, Site, AccountField } from "@/types";
 import { formatBookingForApi } from "@/lib/booking-formatter";
 import parsePhoneNumberFromString, { getCountryCallingCode } from 'libphonenumber-js';
 
@@ -357,6 +357,16 @@ export async function searchAccountsByName(server: ServerConfig, query?: string,
       id: acc.id,
       name: acc.name,
       ref: acc.ref,
+      account_fields: acc.account_fields ? acc.account_fields.map((field: any): AccountField => ({
+          id: field.id,
+          title: field.title,
+          type: field.type,
+          required: field.required,
+          active: field.active,
+          description: field.description,
+          regex: field.regex,
+          values: field.values,
+      })) : [],
     }));
   }
 

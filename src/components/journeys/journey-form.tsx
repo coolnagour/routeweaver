@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { generateJourneyPayload } from '@/ai/flows/journey-payload-flow';
 import { getSites, sendMessage, getDriverByRef, dispatchBooking, getBookingById } from '@/services/icabbi';
-import type { Booking, Journey, JourneyTemplate, Account, Stop, Location, Site } from '@/types';
+import type { Booking, Journey, JourneyTemplate, Account, Stop, Location, Site, AccountField } from '@/types';
 import { Save, Building, Loader2, Send, ChevronsUpDown, Code, DollarSign, Info, MessageSquare, GripVertical, FileText, MessageCircle, UserCheck } from 'lucide-react';
 import BookingManager from './booking-manager';
 import { useServer } from '@/context/server-context';
@@ -71,6 +71,7 @@ function JourneyFormInner({
   const { server } = useServer();
   const [journeyData, setJourneyData] = useState<Partial<Journey | JourneyTemplate>>({});
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
+  const [activeAccountFields, setActiveAccountFields] = useState<AccountField[]>([]);
 
   const [sites, setSites] = useState<Site[]>([]);
   const [isFetchingSites, setIsFetchingSites] = useState(false);
@@ -102,6 +103,10 @@ function JourneyFormInner({
     const initialSite = data.site;
     if (initialSite && !sites.some(s => s.id === initialSite.id)) {
         setSites(prevSites => [initialSite, ...prevSites.filter(s => s.id !== initialSite.id)]);
+    }
+
+    if (data.account?.account_fields) {
+        setActiveAccountFields(data.account.account_fields.filter(f => f.active === '1'));
     }
   }, [initialData]);
 
@@ -155,6 +160,10 @@ function JourneyFormInner({
 
 
   const handleDataChange = (field: keyof (Journey | JourneyTemplate), value: any) => {
+    if (field === 'account') {
+        const account = value as Account | null;
+        setActiveAccountFields(account?.account_fields?.filter(f => f.active === '1') || []);
+    }
     setJourneyData(prev => ({...prev, [field]: value}));
   }
   
@@ -472,6 +481,7 @@ function JourneyFormInner({
               editingBooking={editingBooking}
               setEditingBooking={setEditingBooking}
               isJourneyPriceSet={hasJourneyLevelPrice}
+              accountFields={activeAccountFields}
             />
 
             {journeyData.journeyServerId && (

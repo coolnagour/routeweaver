@@ -20,10 +20,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { CalendarIcon, MapPin, PlusCircle, X, User, Phone, Clock, MessageSquare, ChevronsUpDown, Sparkles, Loader2, Info, Hash, Car, Map, DollarSign, Lock, ShieldQuestion, Wallet, Percent, Key, Trash2 } from 'lucide-react';
+import { CalendarIcon, MapPin, PlusCircle, X, User, Phone, Clock, MessageSquare, ChevronsUpDown, Sparkles, Loader2, Info, Hash, Car, Map, DollarSign, Lock, ShieldQuestion, Wallet, Percent, Key, Trash2, FileJson } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, setHours, setMinutes } from 'date-fns';
-import type { Booking, Stop, SuggestionInput, StopType, Location } from '@/types';
+import type { Booking, Stop, SuggestionInput, StopType, Location, AccountField } from '@/types';
 import { BookingSchema } from '@/types';
 import ViaStop from './via-stop';
 import AddressAutocomplete from './address-autocomplete';
@@ -65,6 +65,10 @@ const FormStopSchema = z.object({
     path: ['location.address'],
 });
 
+const AccountFieldDataSchema = z.object({
+    id: z.string(),
+    value: z.string(),
+});
 
 // Create a form-specific schema by extending the base BookingSchema to handle Date objects
 const FormBookingSchema = BookingSchema.extend({
@@ -73,6 +77,7 @@ const FormBookingSchema = BookingSchema.extend({
       key: z.string(),
       value: z.string(),
   })).optional(),
+  fields: z.array(AccountFieldDataSchema).optional(),
 }).refine(data => {
     if (data.holdOn) return data.stops.length === 2 && data.stops[0].stopType === 'pickup' && data.stops[1].stopType === 'dropoff';
     return data.stops.length >= 2;
@@ -119,6 +124,7 @@ interface BookingFormProps {
   isJourneyPriceSet: boolean;
   isFirstBooking: boolean;
   allBookings: Booking[];
+  accountFields: AccountField[];
 }
 
 const emptyLocation: Location = { address: '', lat: 0, lng: 0 };
@@ -171,7 +177,8 @@ export default function BookingForm({
     onCancel, 
     isJourneyPriceSet,
     isFirstBooking,
-    allBookings
+    allBookings,
+    accountFields,
 }: BookingFormProps) {
   const { toast } = useToast();
   const { server } = useServer();
@@ -193,6 +200,11 @@ export default function BookingForm({
   const { fields: metadataFields, append: appendMetadata, remove: removeMetadata, replace: replaceMetadata } = useFieldArray({
     control: form.control,
     name: "metadata"
+  });
+  
+  const { fields: customFields, replace: replaceCustomFields } = useFieldArray({
+    control: form.control,
+    name: "fields",
   });
   
   useEffect(() => {
@@ -224,10 +236,36 @@ export default function BookingForm({
         splitPaymentThresholdAmount: initialData.splitPaymentSettings?.splitPaymentThresholdAmount ?? undefined,
       },
       metadata: initialData.metadata || [],
+      fields: initialData.fields || [],
       modified: initialData.modified || false,
     };
     form.reset(formData);
   }, [initialData, form]);
+  
+  useEffect(() => {
+    const defaultFields = accountFields.map(field => {
+        const existingField = initialData.fields?.find(f => f.id === field.id);
+        return { id: field.id, value: existingField?.value || '' };
+    });
+    replaceCustomFields(defaultFields);
+
+    // Add validation rules dynamically
+    accountFields.forEach((field, index) => {
+        if (field.required === '1') {
+            form.register(`fields.${index}.value`, { required: `${field.title} is required.` });
+        } else {
+            form.register(`fields.${index}.value`);
+        }
+    });
+
+    return () => {
+        // Unregister fields when component unmounts or fields change
+        accountFields.forEach((_, index) => {
+            form.unregister(`fields.${index}.value`);
+        });
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accountFields, form.register, form.unregister, replaceCustomFields]);
 
   const currentStops = useWatch({ control: form.control, name: 'stops' });
   const isHoldOn = useWatch({ control: form.control, name: 'holdOn' });
@@ -338,7 +376,8 @@ export default function BookingForm({
 
 
   function onSubmit(values: BookingFormData) {
-    const { formState: { isDirty } } = form;
+    const { formState: { isDirty, errors } } = form;
+
     const cleanedMetadata = values.metadata?.filter(m => m.key.trim() !== '') || [];
     const finalValues = { 
         ...values, 
@@ -347,6 +386,7 @@ export default function BookingForm({
     };
     
     console.log('[BookingForm] onSubmit values:', JSON.stringify(finalValues, null, 2));
+    console.log('[BookingForm] form errors:', errors);
 
     const bookingToSave: Booking = { ...finalValues, stops: [] };
     
@@ -453,6 +493,17 @@ export default function BookingForm({
         }
     } catch (e) {
         // Not a valid JSON object, so let the default paste behavior happen.
+    }
+  };
+  
+  const getAccountFieldIcon = (type: AccountField['type']) => {
+    switch (type) {
+        case 'price': return <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />;
+        case 'number': return <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />;
+        case 'pin': return <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />;
+        case 'text':
+        default:
+            return <FileJson className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />;
     }
   };
   
@@ -713,6 +764,38 @@ export default function BookingForm({
                         </Button>
                     </CollapsibleTrigger>
                     <CollapsibleContent className="space-y-4 pt-4">
+                        {accountFields.length > 0 && (
+                            <div className="p-4 border rounded-lg space-y-4 bg-muted/20">
+                                <h3 className="font-semibold text-lg text-primary">Account Fields</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {accountFields.map((accountField, index) => (
+                                    <FormField
+                                        key={accountField.id}
+                                        control={form.control}
+                                        name={`fields.${index}.value`}
+                                        rules={{ required: accountField.required === '1' ? `${accountField.title} is required.` : false }}
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>{accountField.title} {accountField.required === '1' && '*'}</FormLabel>
+                                                <FormControl>
+                                                    <div className="relative flex items-center">
+                                                        {getAccountFieldIcon(accountField.type)}
+                                                        <Input 
+                                                            placeholder={accountField.description || accountField.title} 
+                                                            {...field}
+                                                            type={accountField.type === 'price' || accountField.type === 'number' ? 'number' : 'text'}
+                                                            className="pl-10 bg-background"
+                                                        />
+                                                    </div>
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                ))}
+                                </div>
+                            </div>
+                        )}
                         <FormField
                             control={form.control}
                             name="instructions"
