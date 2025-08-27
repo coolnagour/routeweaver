@@ -60,6 +60,8 @@ const SplitPaymentSettingsSchema = z.object({
   splitPaymentThresholdAmount: z.number().nullable().optional(),
   splitPaymentExtrasType: z.enum(['percentage', 'absolute']).default('percentage'),
   splitPaymentExtrasValue: z.number().nullable().optional(),
+  splitPaymentExtrasInCarType: z.enum(['percentage', 'absolute']).default('percentage'),
+  splitPaymentExtrasInCarValue: z.number().nullable().optional(),
   splitPaymentTollsType: z.enum(['percentage', 'absolute']).default('percentage'),
   splitPaymentTollsValue: z.number().nullable().optional(),
   splitPaymentTipsType: z.enum(['percentage', 'absolute']).default('percentage'),

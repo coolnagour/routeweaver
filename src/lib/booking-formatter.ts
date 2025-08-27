@@ -112,7 +112,7 @@ export const formatBookingForApi = ({ booking, server, siteId, accountId }: Book
 
     // Add split payment settings if enabled
     if (booking.splitPaymentSettings?.splitPaymentEnabled) {
-        const { splitPaymentEnabled, splitPaymentType, splitPaymentValue, splitPaymentMinAmount, splitPaymentThresholdAmount, splitPaymentExtrasType, splitPaymentExtrasValue, splitPaymentTollsType, splitPaymentTollsValue, splitPaymentTipsType, splitPaymentTipsValue } = booking.splitPaymentSettings;
+        const { splitPaymentEnabled, splitPaymentType, splitPaymentValue, splitPaymentMinAmount, splitPaymentThresholdAmount, splitPaymentExtrasType, splitPaymentExtrasValue, splitPaymentExtrasInCarType, splitPaymentExtrasInCarValue, splitPaymentTollsType, splitPaymentTollsValue, splitPaymentTipsType, splitPaymentTipsValue } = booking.splitPaymentSettings;
         payload.split_payment_settings = {
             split_payment_enabled: 1,
             split_payment_type: splitPaymentType,
@@ -121,6 +121,8 @@ export const formatBookingForApi = ({ booking, server, siteId, accountId }: Book
             split_payment_threshold_amount: splitPaymentThresholdAmount?.toString(),
             split_payment_extras_type: splitPaymentExtrasType,
             split_payment_extras_value: splitPaymentExtrasValue?.toString(),
+            split_payment_extras_in_car_type: splitPaymentExtrasInCarType,
+            split_payment_extras_in_car_value: splitPaymentExtrasInCarValue?.toString(),
             split_payment_tolls_type: splitPaymentTollsType,
             split_payment_tolls_value: splitPaymentTollsValue?.toString(),
             split_payment_tips_type: splitPaymentTipsType,

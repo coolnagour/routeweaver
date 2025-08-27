@@ -1023,7 +1023,7 @@ export default function BookingForm({
                                             name="splitPaymentSettings.splitPaymentExtrasValue"
                                             render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>Extras Split</FormLabel>
+                                                <FormLabel>Server Extras Split</FormLabel>
                                                 <div className="flex items-center gap-2">
                                                     <div className="relative flex-grow">
                                                         <FormField
@@ -1043,6 +1043,45 @@ export default function BookingForm({
                                                     <FormField
                                                         control={form.control}
                                                         name="splitPaymentSettings.splitPaymentExtrasType"
+                                                        render={({ field: typeField }) => (
+                                                            <FormControl>
+                                                                <SegmentedControl value={typeField.value || 'percentage'} onValueChange={typeField.onChange}>
+                                                                    <SegmentedControlButton value="percentage" title="Percentage"><Percent className="h-4 w-4"/></SegmentedControlButton>
+                                                                    <SegmentedControlButton value="absolute" title="Absolute"><DollarSign className="h-4 w-4"/></SegmentedControlButton>
+                                                                </SegmentedControl>
+                                                            </FormControl>
+                                                        )}
+                                                    />
+                                                </div>
+                                                <FormMessage />
+                                            </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="splitPaymentSettings.splitPaymentExtrasInCarValue"
+                                            render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Extra In Car Split</FormLabel>
+                                                <div className="flex items-center gap-2">
+                                                    <div className="relative flex-grow">
+                                                        <FormField
+                                                            control={form.control}
+                                                            name="splitPaymentSettings.splitPaymentExtrasInCarType"
+                                                            render={({ field: typeField }) => (
+                                                                <>
+                                                                    {typeField.value === 'absolute' 
+                                                                        ? <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /> 
+                                                                        : <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /> 
+                                                                    }
+                                                                    <Input type="number" placeholder={typeField.value === 'absolute' ? "e.g., 5.00" : "e.g., 50"} {...field} onChange={(e) => handleNumberChange(e, field)} value={field.value ?? ''} className="bg-background pl-10"/>
+                                                                </>
+                                                            )}
+                                                        />
+                                                    </div>
+                                                    <FormField
+                                                        control={form.control}
+                                                        name="splitPaymentSettings.splitPaymentExtrasInCarType"
                                                         render={({ field: typeField }) => (
                                                             <FormControl>
                                                                 <SegmentedControl value={typeField.value || 'percentage'} onValueChange={typeField.onChange}>
