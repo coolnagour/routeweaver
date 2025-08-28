@@ -20,10 +20,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { CalendarIcon, MapPin, PlusCircle, X, User, Phone, Clock, MessageSquare, ChevronsUpDown, Sparkles, Loader2, Info, Hash, Car, Map, DollarSign, Lock, ShieldQuestion, Wallet, Percent, Key, Trash2, FileJson, Users } from 'lucide-react';
+import { CalendarIcon, MapPin, PlusCircle, X, User, Phone, Clock, MessageSquare, ChevronsUpDown, Sparkles, Loader2, Info, Hash, Car, Map, DollarSign, Lock, ShieldQuestion, Wallet, Percent, Key, Trash2, FileJson, Users, ShoppingBasket, MinusCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, setHours, setMinutes } from 'date-fns';
-import type { Booking, Stop, SuggestionInput, StopType, Location, AccountField } from '@/types';
+import type { Booking, Stop, SuggestionInput, StopType, Location, AccountField, Extra } from '@/types';
 import { BookingSchema } from '@/types';
 import ViaStop from './via-stop';
 import AddressAutocomplete from './address-autocomplete';
@@ -37,6 +37,7 @@ import { Textarea } from '../ui/textarea';
 import { useServer } from '@/context/server-context';
 import { Separator } from '../ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { getExtras } from '@/services/icabbi';
 
 const FormLocationSchema = z.object({
   address: z.string(),
@@ -71,6 +72,11 @@ const AccountFieldDataSchema = z.object({
     value: z.string(),
 });
 
+const BookingExtraSchema = z.object({
+    id: z.number(),
+    quantity: z.number(),
+});
+
 // Create a form-specific schema by extending the base BookingSchema to handle Date objects
 const FormBookingSchema = BookingSchema.extend({
   stops: z.array(FormStopSchema).min(1, 'At least one stop is required.'), // Min 1 for Hold On, min 2 for regular
@@ -79,6 +85,7 @@ const FormBookingSchema = BookingSchema.extend({
       value: z.string(),
   })).optional(),
   fields: z.array(AccountFieldDataSchema).optional(),
+  extras_config: z.array(BookingExtraSchema).optional(),
 }).refine(data => {
     if (data.holdOn) return data.stops.length === 2 && data.stops[0].stopType === 'pickup' && data.stops[1].stopType === 'dropoff';
     return data.stops.length >= 2;
@@ -188,6 +195,9 @@ export default function BookingForm({
   const sortedInitialStops = [...initialData.stops].sort((a, b) => a.order - b.order);
   const [isScheduled, setIsScheduled] = useState(!!sortedInitialStops.find(s => s.stopType === 'pickup')?.dateTime);
   
+  const [availableExtras, setAvailableExtras] = useState<Extra[]>([]);
+  const [isLoadingExtras, setIsLoadingExtras] = useState(false);
+
   const form = useForm<BookingFormData>({
     resolver: zodResolver(FormBookingSchema),
     defaultValues: initialData,
@@ -239,6 +249,7 @@ export default function BookingForm({
       },
       metadata: initialData.metadata || [],
       fields: initialData.fields || [],
+      extras_config: initialData.extras_config || [],
       modified: initialData.modified || false,
     };
     form.reset(formData);
@@ -272,6 +283,7 @@ export default function BookingForm({
   const currentStops = useWatch({ control: form.control, name: 'stops' });
   const isHoldOn = useWatch({ control: form.control, name: 'holdOn' });
   const splitPaymentEnabled = useWatch({ control: form.control, name: 'splitPaymentSettings.splitPaymentEnabled' });
+  const extrasConfig = useWatch({ control: form.control, name: 'extras_config' });
   
   const isEditingExisting = !!initialData.bookingServerId;
 
@@ -507,6 +519,48 @@ export default function BookingForm({
         default:
             return <FileJson className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />;
     }
+  };
+
+  const handleFetchExtras = async () => {
+    if (!server || availableExtras.length > 0) return;
+    setIsLoadingExtras(true);
+    try {
+        const extras = await getExtras(server);
+        setAvailableExtras(extras);
+    } catch (error) {
+        toast({
+            title: 'Failed to fetch extras',
+            description: error instanceof Error ? error.message : 'An unknown error occurred.',
+            variant: 'destructive',
+        });
+    } finally {
+        setIsLoadingExtras(false);
+    }
+  };
+
+  const handleExtraQuantityChange = (extraId: string, delta: number) => {
+    const numericExtraId = parseInt(extraId, 10);
+    const currentExtras = form.getValues('extras_config') || [];
+    const existingExtra = currentExtras.find(e => e.id === numericExtraId);
+    
+    let newQuantity = delta;
+    if (existingExtra) {
+        newQuantity = existingExtra.quantity + delta;
+    }
+
+    if (newQuantity > 0) {
+        const newExtras = currentExtras.filter(e => e.id !== numericExtraId);
+        form.setValue('extras_config', [...newExtras, { id: numericExtraId, quantity: newQuantity }]);
+    } else {
+        const newExtras = currentExtras.filter(e => e.id !== numericExtraId);
+        form.setValue('extras_config', newExtras);
+    }
+  };
+
+  const getExtraQuantity = (extraId: string) => {
+      const numericExtraId = parseInt(extraId, 10);
+      const extra = extrasConfig?.find(e => e.id === numericExtraId);
+      return extra ? extra.quantity : 0;
   };
   
   const firstStop = stopFields[0];
@@ -766,6 +820,58 @@ export default function BookingForm({
                         </Button>
                     </CollapsibleTrigger>
                     <CollapsibleContent className="space-y-4 pt-4">
+                        <Collapsible onOpenChange={(open) => open && handleFetchExtras()}>
+                            <CollapsibleTrigger asChild>
+                                <Button type="button" variant="link" size="sm" className="p-0 h-auto flex items-center gap-2">
+                                    <ShoppingBasket className="h-4 w-4" /> Extras
+                                </Button>
+                            </CollapsibleTrigger>
+                            <CollapsibleContent className="p-4 border rounded-lg space-y-4 bg-muted/20">
+                                {isLoadingExtras ? (
+                                    <div className="flex items-center justify-center p-4">
+                                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                                    </div>
+                                ) : availableExtras.length > 0 ? (
+                                    availableExtras.map((extra) => (
+                                        <div key={extra.id} className="flex items-center justify-between">
+                                            <div>
+                                                <Label htmlFor={`extra-${extra.id}`}>{extra.name}</Label>
+                                                <p className="text-xs text-muted-foreground">
+                                                    Value: {parseFloat(extra.value).toFixed(2)}
+                                                </p>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="icon"
+                                                    className="h-8 w-8"
+                                                    onClick={() => handleExtraQuantityChange(extra.id, -1)}
+                                                    disabled={getExtraQuantity(extra.id) === 0}
+                                                >
+                                                    <MinusCircle className="h-4 w-4" />
+                                                </Button>
+                                                <span className="w-10 text-center font-medium">
+                                                    {getExtraQuantity(extra.id)}
+                                                </span>
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="icon"
+                                                    className="h-8 w-8"
+                                                    onClick={() => handleExtraQuantityChange(extra.id, 1)}
+                                                >
+                                                    <PlusCircle className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <p className="text-sm text-muted-foreground text-center">No extras available for this server.</p>
+                                )}
+                            </CollapsibleContent>
+                        </Collapsible>
+
                         {accountFields.length > 0 && (
                             <div className="p-4 border rounded-lg space-y-4 bg-muted/20">
                                 <h3 className="font-semibold text-lg text-primary">Account Fields</h3>

@@ -3,7 +3,7 @@
 'use server';
 
 import type { ServerConfig } from "@/types";
-import type { Booking, Account, Site, AccountField } from "@/types";
+import type { Booking, Account, Site, AccountField, Extra } from "@/types";
 import { formatBookingForApi } from "@/lib/booking-formatter";
 import parsePhoneNumberFromString, { getCountryCallingCode } from 'libphonenumber-js';
 
@@ -405,4 +405,23 @@ export async function dispatchBooking(server: ServerConfig, tripId: string, driv
     });
     
     return response;
+}
+
+export async function getExtras(server: ServerConfig): Promise<Extra[]> {
+    const response = await callIcabbiApi({
+        server,
+        method: 'GET',
+        endpoint: 'extras/index',
+    });
+
+    if (response && response.body && response.body.extras) {
+        return response.body.extras.map((extra: any) => ({
+            id: extra.id,
+            name: extra.name,
+            value: extra.value,
+            editable: extra.editable,
+        }));
+    }
+
+    return [];
 }

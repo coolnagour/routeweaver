@@ -80,6 +80,20 @@ const AccountFieldDataSchema = z.object({
     value: z.string(),
 });
 
+export const ExtraSchema = z.object({
+    id: z.string(),
+    name: z.string(),
+    value: z.string(),
+    editable: z.string(),
+});
+export type Extra = z.infer<typeof ExtraSchema>;
+
+export const BookingExtraSchema = z.object({
+    id: z.number(),
+    quantity: z.number(),
+});
+export type BookingExtra = z.infer<typeof BookingExtraSchema>;
+
 export const BookingSchema = z.object({
   id: z.string(),
   bookingServerId: z.number().optional(),
@@ -95,6 +109,7 @@ export const BookingSchema = z.object({
   splitPaymentSettings: SplitPaymentSettingsSchema.optional(),
   metadata: z.array(MetadataSchema).optional(),
   fields: z.array(AccountFieldDataSchema).optional(),
+  extras_config: z.array(BookingExtraSchema).optional(),
   modified: z.boolean().optional(),
 });
 export type Booking = z.infer<typeof BookingSchema>;
@@ -232,6 +247,7 @@ const GenkitBookingSchema = z.object({
   splitPaymentSettings: SplitPaymentSettingsSchema.optional(),
   metadata: z.array(MetadataSchema).optional(),
   fields: z.array(AccountFieldDataSchema).optional(),
+  extras_config: z.array(BookingExtraSchema).optional(),
   modified: z.boolean().optional(),
 });
 

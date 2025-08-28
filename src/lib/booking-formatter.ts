@@ -151,6 +151,11 @@ export const formatBookingForApi = ({ booking, server, siteId, accountId }: Book
         }, {} as Record<string, string>);
     }
 
+    // Add extras config if it exists
+    if (booking.extras_config && booking.extras_config.length > 0) {
+        payload.extras_config = booking.extras_config;
+    }
+
 
     return payload;
 };
