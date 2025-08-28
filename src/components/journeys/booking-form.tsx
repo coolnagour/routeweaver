@@ -832,40 +832,49 @@ export default function BookingForm({
                                         <Loader2 className="h-6 w-6 animate-spin text-primary" />
                                     </div>
                                 ) : availableExtras.length > 0 ? (
-                                    availableExtras.map((extra) => (
-                                        <div key={extra.id} className="flex items-center justify-between">
-                                            <div>
-                                                <Label htmlFor={`extra-${extra.id}`}>{extra.name}</Label>
-                                                <p className="text-xs text-muted-foreground">
-                                                    Value: {parseFloat(extra.value).toFixed(2)}
-                                                </p>
+                                    availableExtras.map((extra) => {
+                                        const quantity = getExtraQuantity(extra.id);
+                                        const total = quantity * parseFloat(extra.value);
+                                        return (
+                                            <div key={extra.id} className="flex items-center justify-between">
+                                                <div>
+                                                    <Label htmlFor={`extra-${extra.id}`}>{extra.name}</Label>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        Value: {parseFloat(extra.value).toFixed(2)}
+                                                    </p>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                     {quantity > 0 && (
+                                                        <span className="text-sm font-medium w-16 text-right">
+                                                            {total.toFixed(2)}
+                                                        </span>
+                                                     )}
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="icon"
+                                                        className="h-8 w-8"
+                                                        onClick={() => handleExtraQuantityChange(extra.id, -1)}
+                                                        disabled={quantity === 0}
+                                                    >
+                                                        <MinusCircle className="h-4 w-4" />
+                                                    </Button>
+                                                    <span className="w-10 text-center font-medium">
+                                                        {quantity}
+                                                    </span>
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="icon"
+                                                        className="h-8 w-8"
+                                                        onClick={() => handleExtraQuantityChange(extra.id, 1)}
+                                                    >
+                                                        <PlusCircle className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
                                             </div>
-                                            <div className="flex items-center gap-2">
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    size="icon"
-                                                    className="h-8 w-8"
-                                                    onClick={() => handleExtraQuantityChange(extra.id, -1)}
-                                                    disabled={getExtraQuantity(extra.id) === 0}
-                                                >
-                                                    <MinusCircle className="h-4 w-4" />
-                                                </Button>
-                                                <span className="w-10 text-center font-medium">
-                                                    {getExtraQuantity(extra.id)}
-                                                </span>
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    size="icon"
-                                                    className="h-8 w-8"
-                                                    onClick={() => handleExtraQuantityChange(extra.id, 1)}
-                                                >
-                                                    <PlusCircle className="h-4 w-4" />
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    ))
+                                        )
+                                    })
                                 ) : (
                                     <p className="text-sm text-muted-foreground text-center">No extras available for this server.</p>
                                 )}
