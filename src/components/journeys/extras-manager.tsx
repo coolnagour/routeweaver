@@ -1,8 +1,9 @@
 
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useFormContext, useFieldArray, useWatch, Controller } from 'react-hook-form';
+import { useFormContext, useFieldArray, Controller } from 'react-hook-form';
 import {
   Collapsible,
   CollapsibleContent,
@@ -21,25 +22,27 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { getExtras } from '@/services/icabbi';
-import type { Extra, ServerConfig } from '@/types';
+import type { Extra, ServerConfig, BookingExtra } from '@/types';
 import { ShoppingBasket, Loader2, PlusCircle, MinusCircle, Trash2 } from 'lucide-react';
+import type { Control } from 'react-hook-form';
 
 interface ExtrasManagerProps {
   server: ServerConfig | null;
+  control: Control<any>; // Receive control from parent
 }
 
-export default function ExtrasManager({ server }: ExtrasManagerProps) {
+export default function ExtrasManager({ server, control }: ExtrasManagerProps) {
   const { toast } = useToast();
   const [availableExtras, setAvailableExtras] = useState<Extra[]>([]);
   const [isLoadingExtras, setIsLoadingExtras] = useState(false);
   const [isExtrasSearchOpen, setIsExtrasSearchOpen] = useState(false);
 
-  const { control } = useFormContext();
-
-  const { fields: extrasFields, append, remove, update } = useFieldArray({
+  const { fields, append, remove, update } = useFieldArray({
     control,
     name: 'extras_config',
   });
+
+  const bookingExtras = fields as (BookingExtra & { id: string })[];
 
   const handleFetchExtras = async () => {
     if (!server || availableExtras.length > 0) return;
@@ -59,7 +62,7 @@ export default function ExtrasManager({ server }: ExtrasManagerProps) {
   };
 
   const handleAddExtra = (extra: Extra) => {
-    const newExtra = { id: parseInt(extra.id, 10), quantity: 1 };
+    const newExtra: BookingExtra = { id: parseInt(extra.id, 10), quantity: 1 };
     append(newExtra);
     setIsExtrasSearchOpen(false);
   };
@@ -69,13 +72,17 @@ export default function ExtrasManager({ server }: ExtrasManagerProps) {
   }
 
   const handleExtraQuantityChange = (index: number, delta: number) => {
-    const currentQuantity = extrasFields[index].quantity;
+    const currentQuantity = bookingExtras[index].quantity;
     const newQuantity = Math.max(0, currentQuantity + delta);
-    update(index, { ...extrasFields[index], quantity: newQuantity });
+    if (newQuantity === 0) {
+      remove(index); // Remove the extra if quantity becomes 0
+    } else {
+      update(index, { ...bookingExtras[index], quantity: newQuantity });
+    }
   };
   
   const unselectedExtras = availableExtras.filter(
-    (extra) => !extrasFields.some((selected) => selected.id === parseInt(extra.id, 10))
+    (extra) => !bookingExtras.some((selected) => selected.id === parseInt(extra.id, 10))
   );
 
   return (
@@ -118,10 +125,10 @@ export default function ExtrasManager({ server }: ExtrasManagerProps) {
               </PopoverContent>
             </Popover>
 
-            {extrasFields.length > 0 && <Separator />}
+            {bookingExtras.length > 0 && <Separator />}
 
             <div className="space-y-2">
-              {extrasFields.map((field, index) => {
+              {bookingExtras.map((field, index) => {
                 const extraDetails = availableExtras.find((e) => parseInt(e.id, 10) === field.id);
                 if (!extraDetails) return null;
                 const total = field.quantity * parseFloat(extraDetails.value);
