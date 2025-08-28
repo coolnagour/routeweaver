@@ -193,9 +193,10 @@ export default function JourneyMap({ stops, onLocationSelect, isSelectionMode = 
   const [center, setCenter] = useState({ lat: 51.5074, lng: -0.1278 });
   
   const fitBounds = useCallback(() => {
-      if (mapRef.current && stops && stops.length > 0) {
+      const validStopsForBounds = stops.filter(stop => stop.location && (stop.location.lat !== 0 || stop.location.lng !== 0));
+      if (mapRef.current && validStopsForBounds.length > 0) {
         const bounds = new google.maps.LatLngBounds();
-        stops.forEach(stop => {
+        validStopsForBounds.forEach(stop => {
           if (stop.location && stop.location.lat && stop.location.lng) {
             bounds.extend(new google.maps.LatLng(stop.location.lat, stop.location.lng));
           }
@@ -263,7 +264,12 @@ export default function JourneyMap({ stops, onLocationSelect, isSelectionMode = 
     </div>
   );
 
-  const validStops = stops.filter(stop => stop.location && typeof stop.location.lat === 'number' && typeof stop.location.lng === 'number');
+  const validStops = stops.filter(stop => 
+    stop.location && 
+    typeof stop.location.lat === 'number' && 
+    typeof stop.location.lng === 'number' &&
+    (stop.location.lat !== 0 || stop.location.lng !== 0) // Filter out (0,0) coordinates
+  );
   
   // Create a list of unique location groups in the order they appear in the journey
   const uniqueLocationGroupsInOrder: StopGroup[] = [];
