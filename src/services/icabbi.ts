@@ -132,9 +132,10 @@ export async function updateBooking(server: ServerConfig, { booking, siteId, acc
 
     // Add split payment settings only if they are enabled.
     if (booking.splitPaymentSettings?.splitPaymentEnabled) {
-        const { splitPaymentEnabled, splitPaymentType, splitPaymentValue, splitPaymentMinAmount, splitPaymentThresholdAmount, splitPaymentExtrasType, splitPaymentExtrasValue, splitPaymentExtrasInCarType, splitPaymentExtrasInCarValue, splitPaymentTollsType, splitPaymentTollsValue, splitPaymentTipsType, splitPaymentTipsValue } = booking.splitPaymentSettings;
+        const { splitPaymentEnabled, splitPaymentBasedOn, splitPaymentType, splitPaymentValue, splitPaymentMinAmount, splitPaymentThresholdAmount, splitPaymentExtrasType, splitPaymentExtrasValue, splitPaymentExtrasInCarType, splitPaymentExtrasInCarValue, splitPaymentTollsType, splitPaymentTollsValue, splitPaymentTipsType, splitPaymentTipsValue } = booking.splitPaymentSettings;
         payload.split_payment_settings = {
             split_payment_enabled: splitPaymentEnabled ? 1 : 0,
+            split_payment_based_on: splitPaymentBasedOn,
             split_payment_type: splitPaymentType,
             split_payment_value: splitPaymentValue?.toString(),
             split_payment_min_amount: splitPaymentMinAmount?.toString(),

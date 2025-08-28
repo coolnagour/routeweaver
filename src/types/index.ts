@@ -54,6 +54,7 @@ export type Stop = z.infer<typeof StopSchema>;
 
 const SplitPaymentSettingsSchema = z.object({
   splitPaymentEnabled: z.boolean().default(false),
+  splitPaymentBasedOn: z.enum(['account', 'passenger']).optional(),
   splitPaymentType: z.enum(['percentage', 'absolute']).default('percentage'),
   splitPaymentValue: z.number().nullable().optional(),
   splitPaymentMinAmount: z.number().nullable().optional(),

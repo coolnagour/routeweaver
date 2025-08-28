@@ -20,7 +20,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { CalendarIcon, MapPin, PlusCircle, X, User, Phone, Clock, MessageSquare, ChevronsUpDown, Sparkles, Loader2, Info, Hash, Car, Map, DollarSign, Lock, ShieldQuestion, Wallet, Percent, Key, Trash2, FileJson } from 'lucide-react';
+import { CalendarIcon, MapPin, PlusCircle, X, User, Phone, Clock, MessageSquare, ChevronsUpDown, Sparkles, Loader2, Info, Hash, Car, Map, DollarSign, Lock, ShieldQuestion, Wallet, Percent, Key, Trash2, FileJson, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, setHours, setMinutes } from 'date-fns';
 import type { Booking, Stop, SuggestionInput, StopType, Location, AccountField } from '@/types';
@@ -36,6 +36,7 @@ import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
 import { useServer } from '@/context/server-context';
 import { Separator } from '../ui/separator';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 const FormLocationSchema = z.object({
   address: z.string(),
@@ -228,6 +229,7 @@ export default function BookingForm({
       cost: initialData.cost,
       splitPaymentSettings: {
         ...initialData.splitPaymentSettings,
+        splitPaymentBasedOn: initialData.splitPaymentSettings?.splitPaymentBasedOn ?? undefined,
         splitPaymentValue: initialData.splitPaymentSettings?.splitPaymentValue ?? undefined,
         splitPaymentExtrasValue: initialData.splitPaymentSettings?.splitPaymentExtrasValue ?? undefined,
         splitPaymentTollsValue: initialData.splitPaymentSettings?.splitPaymentTollsValue ?? undefined,
@@ -942,6 +944,27 @@ export default function BookingForm({
                                 />
                                 {splitPaymentEnabled && (
                                 <div className="p-4 border rounded-lg space-y-4 bg-muted/20">
+                                    <FormField
+                                        control={form.control}
+                                        name="splitPaymentSettings.splitPaymentBasedOn"
+                                        render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Payment Split Based On</FormLabel>
+                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <FormControl>
+                                                <SelectTrigger className="bg-background">
+                                                    <SelectValue placeholder="Select a basis" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                <SelectItem value="account">Account</SelectItem>
+                                                <SelectItem value="passenger">Passenger</SelectItem>
+                                            </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                        )}
+                                    />
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <FormField
                                             control={form.control}
