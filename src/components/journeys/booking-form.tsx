@@ -199,7 +199,11 @@ export default function BookingForm({
 
   const form = useForm<BookingFormData>({
     resolver: zodResolver(FormBookingSchema),
-    defaultValues: initialData,
+    defaultValues: {
+      ...initialData,
+      stops: [], // Will be reset in useEffect
+      extras_config: initialData.extras_config || [], // Ensure this is initialized
+    },
   });
   
   const { fields: stopFields, insert: insertStop, remove: removeStop, update, replace } = useFieldArray({
