@@ -219,11 +219,6 @@ export default function BookingForm({
     name: "fields",
   });
   
-  const { fields: extrasFields, append: appendExtra, remove: removeExtra, update: updateExtra } = useFieldArray({
-    control: form.control,
-    name: 'extras_config',
-  });
-
   useEffect(() => {
     const sortedStops = [...initialData.stops].sort((a,b) => a.order - b.order);
     const formData = {
@@ -784,8 +779,8 @@ export default function BookingForm({
                     </CollapsibleTrigger>
                     <CollapsibleContent className="space-y-4 pt-4">
                         <ExtrasManager
-                            control={form.control}
                             server={server}
+                            control={form.control}
                         />
 
                         {accountFields.length > 0 && (

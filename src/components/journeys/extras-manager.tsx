@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -62,7 +61,8 @@ export default function ExtrasManager({ server, control }: ExtrasManagerProps) {
   };
 
   const handleAddExtra = (extra: Extra) => {
-    const newExtra: BookingExtra = { id: parseInt(extra.id, 10), quantity: 1 };
+    // Add with quantity of 0 as requested
+    const newExtra: BookingExtra = { id: parseInt(extra.id, 10), quantity: 0 };
     append(newExtra);
     setIsExtrasSearchOpen(false);
   };
@@ -74,11 +74,7 @@ export default function ExtrasManager({ server, control }: ExtrasManagerProps) {
   const handleExtraQuantityChange = (index: number, delta: number) => {
     const currentQuantity = bookingExtras[index].quantity;
     const newQuantity = Math.max(0, currentQuantity + delta);
-    if (newQuantity === 0) {
-        update(index, { ...bookingExtras[index], quantity: 0 });
-    } else {
-      update(index, { ...bookingExtras[index], quantity: newQuantity });
-    }
+    update(index, { ...bookingExtras[index], quantity: newQuantity });
   };
   
   const unselectedExtras = availableExtras.filter(
