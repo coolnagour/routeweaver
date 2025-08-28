@@ -24,7 +24,7 @@ import { CalendarIcon, MapPin, PlusCircle, X, User, Phone, Clock, MessageSquare,
 import { cn } from '@/lib/utils';
 import { format, setHours, setMinutes } from 'date-fns';
 import type { Booking, Stop, SuggestionInput, StopType, Location, AccountField, Extra } from '@/types';
-import { BookingSchema } from '@/types';
+import { BookingSchema, FormBookingSchema as ImportedFormBookingSchema } from '@/types';
 import ViaStop from './via-stop';
 import AddressAutocomplete from './address-autocomplete';
 import { generateSuggestion } from '@/ai/flows/suggestion-flow';
@@ -39,89 +39,8 @@ import { Separator } from '../ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import ExtrasManager from './extras-manager';
 
-const FormLocationSchema = z.object({
-  address: z.string(),
-  lat: z.number(),
-  lng: z.number(),
-});
-
-const FormStopSchema = z.object({
-  id: z.string(),
-  order: z.number(),
-  location: FormLocationSchema.optional(),
-  stopType: z.enum(['pickup', 'dropoff']),
-  bookingSegmentId: z.number().optional(),
-  dateTime: z.date().optional(),
-  name: z.string().optional(),
-  phone: z.string().optional(),
-  pickupStopId: z.string().optional(),
-  instructions: z.string().optional(),
-}).refine(data => {
-    // Address is only truly required for pickup stops.
-    if (data.stopType === 'pickup') {
-        return !!data.location && data.location.address && data.location.address.trim() !== '';
-    }
-    return true;
-}, {
-    message: "Address is required for pickup stops.",
-    path: ['location.address'],
-});
-
-const AccountFieldDataSchema = z.object({
-    id: z.string(),
-    value: z.string(),
-});
-
-const BookingExtraSchema = z.object({
-    id: z.number(),
-    quantity: z.number(),
-});
-
-// Create a form-specific schema by extending the base BookingSchema to handle Date objects
-const FormBookingSchema = BookingSchema.extend({
-  stops: z.array(FormStopSchema).min(1, 'At least one stop is required.'), // Min 1 for Hold On, min 2 for regular
-  metadata: z.array(z.object({
-      key: z.string(),
-      value: z.string(),
-  })).optional(),
-  fields: z.array(AccountFieldDataSchema).optional(),
-  extras_config: z.array(BookingExtraSchema).optional(),
-}).refine(data => {
-    if (data.holdOn) return data.stops.length === 2 && data.stops[0].stopType === 'pickup' && data.stops[1].stopType === 'dropoff';
-    return data.stops.length >= 2;
-}, {
-    message: 'A standard booking requires at least a pickup and dropoff.',
-    path: ['stops'],
-}).refine(data => {
-    // If it's a dropoff, it MUST have a pickupStopId
-    const hasInvalidDropoff = data.stops.some(s => s.stopType === 'dropoff' && !s.pickupStopId);
-    if (hasInvalidDropoff) return false;
-    return true;
-}, {
-    message: 'A passenger must be selected for this drop-off.',
-    path: ['stops'], 
-}).refine(data => {
-    const sortedStops = [...data.stops].sort((a,b) => a.order - b.order);
-    const firstPickupTime = sortedStops.find(s => s.stopType === 'pickup')?.dateTime?.getTime();
-    if (!firstPickupTime) return true;
-
-    const subsequentPickups = sortedStops.filter(s => s.stopType === 'pickup' && s.dateTime);
-    return subsequentPickups.every(p => !p.dateTime || p.dateTime.getTime() >= firstPickupTime);
-}, {
-    message: "Subsequent pickup times must not be before the first pickup.",
-    path: ["stops"],
-}).refine(data => {
-    // The first stop (which is always the primary pickup) must have an address.
-    const firstStop = data.stops[0];
-    if (firstStop && firstStop.stopType === 'pickup' && (!firstStop.location || !firstStop.location.address || !firstStop.location.address.trim() === '')) {
-        return false;
-    }
-    return true;
-}, {
-    message: 'Pickup address is required.',
-    path: ['stops', 0, 'location', 'address'],
-});
-
+// Use the imported schema directly
+const FormBookingSchema = ImportedFormBookingSchema;
 
 type BookingFormData = z.infer<typeof FormBookingSchema>;
 
@@ -390,18 +309,13 @@ export default function BookingForm({
 
 
   function onSubmit(values: BookingFormData) {
-    const { formState: { isDirty, errors } } = form;
-
     const cleanedMetadata = values.metadata?.filter(m => m.key.trim() !== '') || [];
     const finalValues = { 
         ...values, 
         metadata: cleanedMetadata,
-        modified: isDirty || !values.bookingServerId, // Mark as modified if the form is dirty or if it's a new booking
+        modified: form.formState.isDirty || !values.bookingServerId, // Mark as modified if the form is dirty or if it's a new booking
     };
     
-    console.log('[BookingForm] onSubmit values:', JSON.stringify(finalValues, null, 2));
-    console.log('[BookingForm] form errors:', errors);
-
     const bookingToSave: Booking = { ...finalValues, stops: [] };
     
     const stopsToSave = finalValues.stops.map(stop => {
@@ -417,6 +331,16 @@ export default function BookingForm({
 
     onSave(bookingToSave);
   }
+
+  // New handler to log errors if validation fails
+  const onInvalid = (errors: any) => {
+    console.error("Booking form validation failed:", errors);
+    toast({
+        variant: "destructive",
+        title: "Invalid Booking Data",
+        description: "Please check the form for errors. Some required fields might be missing.",
+    });
+  };
   
   const handleScheduledToggle = (checked: boolean) => {
     setIsScheduled(checked);
@@ -531,7 +455,7 @@ export default function BookingForm({
   return (
       <Card>
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)}>
+            <form onSubmit={form.handleSubmit(onSubmit, onInvalid)}>
             <CardHeader>
                 <div className="flex justify-between items-center">
                     <CardTitle className="font-headline text-xl">{isTrulyNew ? 'Add New Booking' : 'Edit Booking'}</CardTitle>
@@ -779,8 +703,8 @@ export default function BookingForm({
                     </CollapsibleTrigger>
                     <CollapsibleContent className="space-y-4 pt-4">
                         <ExtrasManager
-                            server={server}
-                            control={form.control}
+                           control={form.control}
+                           server={server}
                         />
 
                         {accountFields.length > 0 && (

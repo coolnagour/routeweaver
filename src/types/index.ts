@@ -114,6 +114,84 @@ export const BookingSchema = z.object({
 });
 export type Booking = z.infer<typeof BookingSchema>;
 
+const FormLocationSchema = z.object({
+  address: z.string(),
+  lat: z.number(),
+  lng: z.number(),
+});
+
+const FormStopSchema = z.object({
+  id: z.string(),
+  order: z.number(),
+  location: FormLocationSchema.optional(),
+  stopType: z.enum(['pickup', 'dropoff']),
+  bookingSegmentId: z.number().optional(),
+  dateTime: z.date().optional(),
+  name: z.string().optional(),
+  phone: z.string().optional(),
+  pickupStopId: z.string().optional(),
+  instructions: z.string().optional(),
+}).refine(data => {
+    // Address is only truly required for pickup stops.
+    if (data.stopType === 'pickup') {
+        return !!data.location && data.location.address && data.location.address.trim() !== '';
+    }
+    return true;
+}, {
+    message: "Address is required for pickup stops.",
+    path: ['location.address'],
+});
+
+const FormBookingExtraSchema = z.object({
+    id: z.string().optional(), // `id` from useFieldArray, not from our data
+    extraId: z.number(),
+    quantity: z.number(),
+});
+
+export const FormBookingSchema = BookingSchema.extend({
+  stops: z.array(FormStopSchema).min(1, 'At least one stop is required.'),
+  metadata: z.array(z.object({
+      key: z.string(),
+      value: z.string(),
+  })).optional(),
+  fields: z.array(AccountFieldDataSchema).optional(),
+  extras_config: z.array(FormBookingExtraSchema).optional(),
+}).refine(data => {
+    if (data.holdOn) return data.stops.length === 2 && data.stops[0].stopType === 'pickup' && data.stops[1].stopType === 'dropoff';
+    return data.stops.length >= 2;
+}, {
+    message: 'A standard booking requires at least a pickup and dropoff.',
+    path: ['stops'],
+}).refine(data => {
+    // If it's a dropoff, it MUST have a pickupStopId
+    const hasInvalidDropoff = data.stops.some(s => s.stopType === 'dropoff' && !s.pickupStopId);
+    if (hasInvalidDropoff) return false;
+    return true;
+}, {
+    message: 'A passenger must be selected for this drop-off.',
+    path: ['stops'], 
+}).refine(data => {
+    const sortedStops = [...data.stops].sort((a,b) => a.order - b.order);
+    const firstPickupTime = sortedStops.find(s => s.stopType === 'pickup')?.dateTime?.getTime();
+    if (!firstPickupTime) return true;
+
+    const subsequentPickups = sortedStops.filter(s => s.stopType === 'pickup' && s.dateTime);
+    return subsequentPickups.every(p => !p.dateTime || p.dateTime.getTime() >= firstPickupTime);
+}, {
+    message: "Subsequent pickup times must not be before the first pickup.",
+    path: ["stops"],
+}).refine(data => {
+    // The first stop (which is always the primary pickup) must have an address.
+    const firstStop = data.stops[0];
+    if (firstStop && firstStop.stopType === 'pickup' && (!firstStop.location || !firstStop.location.address || !firstStop.location.address.trim() === '')) {
+        return false;
+    }
+    return true;
+}, {
+    message: 'Pickup address is required.',
+    path: ['stops', 0, 'location', 'address'],
+});
+
 
 export const AccountFieldSchema = z.object({
     id: z.string(),
