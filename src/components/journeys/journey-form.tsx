@@ -231,7 +231,7 @@ function JourneyFormInner({
 
     setIsSubmitting(true);
     try {
-        await onPublish(journeyData as Journey);
+        await onPublish(journeyData as Journey | JourneyTemplate);
       } catch (error) {
         console.error("Failed to publish journey:", error);
         toast({
@@ -587,7 +587,7 @@ function JourneyFormInner({
                                     <Save className="mr-2 h-4 w-4" /> {isEditing ? 'Update Journey' : 'Save Draft'}
                                 </Button>
                                 
-                                <Button onClick={handlePublishJourney} disabled={isSubmitting || !isEditing || (journeyData.bookings || []).length === 0 || !journeyData.site || !journeyData.account} className="flex-1">
+                                <Button onClick={handlePublishJourney} disabled={isSubmitting || !onPublish || (journeyData.bookings || []).length === 0 || !journeyData.site || !journeyData.account} className="flex-1">
                                     {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
                                     {publishButtonText}
                                 </Button>

@@ -11,6 +11,7 @@ import { useTemplates } from '@/hooks/use-templates';
 import { useServer } from '@/context/server-context';
 import { v4 as uuidv4 } from 'uuid';
 import SaveTemplateDialog from '@/components/journeys/save-template-dialog';
+import { saveJourney } from '@/ai/flows/journey-flow';
 
 export default function NewJourneyPage() {
   const router = useRouter();
@@ -62,6 +63,50 @@ export default function NewJourneyPage() {
       title: 'Journey Saved!',
       description: 'Your journey has been saved as a draft.',
     });
+    router.push(`/journeys/${newJourney.id}/edit`);
+  };
+
+  const handlePublish = async (journeyData: Journey | JourneyTemplate) => {
+     if (!server) {
+      toast({ variant: 'destructive', title: 'No Server Selected' });
+      router.push('/');
+      return;
+    }
+    
+    // First, save a local draft
+    const newJourney: Journey = {
+      id: uuidv4(),
+      serverScope: server.uuid,
+      status: 'Draft',
+      ...journeyData,
+    };
+    await addOrUpdateJourney(newJourney);
+
+    // Then, publish it
+    const result = await saveJourney({ 
+      bookings: newJourney.bookings || [], 
+      server, 
+      siteId: newJourney.site!.id, 
+      accountId: newJourney.account!.id,
+      price: newJourney.price,
+      cost: newJourney.cost,
+      enable_messaging_service: newJourney.enable_messaging_service,
+    });
+    
+    // Finally, update the local record with server info
+    await addOrUpdateJourney({
+        ...newJourney,
+        bookings: result.bookings,
+        status: 'Scheduled',
+        journeyServerId: result.journeyServerId,
+        orderedStops: result.orderedStops,
+    });
+
+    toast({
+      title: 'Journey Published!',
+      description: result.message,
+    });
+    
     router.push(`/journeys/${newJourney.id}/edit`);
   };
 
@@ -122,6 +167,7 @@ export default function NewJourneyPage() {
         key={initialData ? (initialData as Journey).id : 'new'} 
         initialData={initialData}
         onSave={handleSaveDraft}
+        onPublish={handlePublish}
         onSaveTemplate={handleOpenSaveTemplateDialog}
         isEditing={false}
       />
