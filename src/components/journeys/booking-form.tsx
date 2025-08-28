@@ -20,7 +20,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { CalendarIcon, MapPin, PlusCircle, X, User, Phone, Clock, MessageSquare, ChevronsUpDown, Sparkles, Loader2, Info, Hash, Car, Map, DollarSign, Lock, ShieldQuestion, Wallet, Percent, Key, Trash2, FileJson, Users, ShoppingBasket, MinusCircle, Search } from 'lucide-react';
+import { CalendarIcon, MapPin, PlusCircle, X, User, Phone, Clock, MessageSquare, ChevronsUpDown, Sparkles, Loader2, Info, Hash, Car, Map, DollarSign, Lock, ShieldQuestion, Wallet, Percent, Key, Trash2, FileJson, Users, ShoppingBasket, MinusCircle, Search, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, setHours, setMinutes } from 'date-fns';
 import type { Booking, Stop, SuggestionInput, StopType, Location, AccountField, Extra } from '@/types';
@@ -38,6 +38,7 @@ import { useServer } from '@/context/server-context';
 import { Separator } from '../ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { getExtras } from '@/services/icabbi';
+import { Command, CommandInput, CommandItem, CommandList, CommandEmpty } from '@/components/ui/command';
 
 const FormLocationSchema = z.object({
   address: z.string(),
@@ -197,7 +198,7 @@ export default function BookingForm({
   
   const [availableExtras, setAvailableExtras] = useState<Extra[]>([]);
   const [isLoadingExtras, setIsLoadingExtras] = useState(false);
-  const [extrasSearchTerm, setExtrasSearchTerm] = useState('');
+  const [isExtrasSearchOpen, setIsExtrasSearchOpen] = useState(false);
 
   const form = useForm<BookingFormData>({
     resolver: zodResolver(FormBookingSchema),
@@ -219,6 +220,11 @@ export default function BookingForm({
     name: "fields",
   });
   
+  const { fields: extrasFields, append: appendExtra, remove: removeExtra } = useFieldArray({
+    control: form.control,
+    name: "extras_config",
+  });
+
   useEffect(() => {
     const sortedStops = [...initialData.stops].sort((a,b) => a.order - b.order);
     const formData = {
@@ -284,7 +290,6 @@ export default function BookingForm({
   const currentStops = useWatch({ control: form.control, name: 'stops' });
   const isHoldOn = useWatch({ control: form.control, name: 'holdOn' });
   const splitPaymentEnabled = useWatch({ control: form.control, name: 'splitPaymentSettings.splitPaymentEnabled' });
-  const extrasConfig = useWatch({ control: form.control, name: 'extras_config' });
   
   const isEditingExisting = !!initialData.bookingServerId;
 
@@ -539,39 +544,25 @@ export default function BookingForm({
     }
   };
 
-  const handleExtraQuantityChange = (extraId: string, delta: number) => {
-    const numericExtraId = parseInt(extraId, 10);
-    const currentExtras = form.getValues('extras_config') || [];
-    const existingExtraIndex = currentExtras.findIndex(e => e.id === numericExtraId);
-    
-    let newQuantity = delta;
-    if (existingExtraIndex > -1) {
-        newQuantity = currentExtras[existingExtraIndex].quantity + delta;
-    }
-
-    if (newQuantity < 0) {
-        newQuantity = 0;
-    }
-
-    const newExtras = [...currentExtras];
-    if (existingExtraIndex > -1) {
-        newExtras[existingExtraIndex] = { ...newExtras[existingExtraIndex], quantity: newQuantity };
-    } else {
-        newExtras.push({ id: numericExtraId, quantity: newQuantity });
-    }
-    
-    form.setValue('extras_config', newExtras, { shouldDirty: true });
-  };
-
-  const getExtraQuantity = (extraId: string) => {
-      const numericExtraId = parseInt(extraId, 10);
-      const extra = extrasConfig?.find(e => e.id === numericExtraId);
-      return extra ? extra.quantity : 0;
+  const handleExtraQuantityChange = (extraIndex: number, delta: number) => {
+    const currentQuantity = extrasFields[extraIndex].quantity;
+    const newQuantity = Math.max(0, currentQuantity + delta);
+    form.setValue(`extras_config.${extraIndex}.quantity`, newQuantity, { shouldDirty: true });
   };
   
-  const filteredExtras = availableExtras.filter(extra =>
-    extra.name.toLowerCase().includes(extrasSearchTerm.toLowerCase())
+  const handleAddExtra = (extra: Extra) => {
+      appendExtra({ id: parseInt(extra.id, 10), quantity: 1 });
+      setIsExtrasSearchOpen(false);
+  }
+
+  const handleRemoveExtra = (index: number) => {
+      removeExtra(index);
+  }
+  
+  const unselectedExtras = availableExtras.filter(
+    (extra) => !extrasFields.some((selected) => selected.id === parseInt(extra.id, 10))
   );
+
 
   const firstStop = stopFields[0];
   const lastStop = stopFields[stopFields.length - 1];
@@ -843,61 +834,87 @@ export default function BookingForm({
                                     </div>
                                 ) : availableExtras.length > 0 ? (
                                     <>
-                                        <div className="relative">
-                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                            <Input
-                                                placeholder="Search extras..."
-                                                value={extrasSearchTerm}
-                                                onChange={(e) => setExtrasSearchTerm(e.target.value)}
-                                                className="pl-10 bg-background"
-                                            />
-                                        </div>
-                                        {filteredExtras.map((extra) => {
-                                            const quantity = getExtraQuantity(extra.id);
-                                            const total = quantity * parseFloat(extra.value);
-                                            return (
-                                                <div key={extra.id} className="flex items-center justify-between">
-                                                    <div>
-                                                        <Label htmlFor={`extra-${extra.id}`}>{extra.name}</Label>
-                                                        <p className="text-xs text-muted-foreground">
-                                                            Value: {parseFloat(extra.value).toFixed(2)}
-                                                        </p>
-                                                    </div>
-                                                    <div className="flex items-center gap-2">
-                                                        {quantity > 0 && (
+                                        <Popover open={isExtrasSearchOpen} onOpenChange={setIsExtrasSearchOpen}>
+                                            <PopoverTrigger asChild>
+                                                <Button variant="outline" className="w-full justify-start">
+                                                    <PlusCircle className="mr-2 h-4 w-4"/>
+                                                    Add Extra
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                                                <Command>
+                                                    <CommandInput placeholder="Search extras..." />
+                                                    <CommandList>
+                                                        <CommandEmpty>No extras found.</CommandEmpty>
+                                                        {unselectedExtras.map((extra) => (
+                                                            <CommandItem
+                                                                key={extra.id}
+                                                                value={extra.name}
+                                                                onSelect={() => handleAddExtra(extra)}
+                                                            >
+                                                                {extra.name}
+                                                            </CommandItem>
+                                                        ))}
+                                                    </CommandList>
+                                                </Command>
+                                            </PopoverContent>
+                                        </Popover>
+
+                                        {extrasFields.length > 0 && <Separator />}
+
+                                        <div className="space-y-2">
+                                            {extrasFields.map((field, index) => {
+                                                const extraDetails = availableExtras.find(e => parseInt(e.id, 10) === field.id);
+                                                if (!extraDetails) return null;
+                                                const total = field.quantity * parseFloat(extraDetails.value);
+
+                                                return (
+                                                    <div key={field.id} className="flex items-center justify-between">
+                                                        <div>
+                                                            <Label>{extraDetails.name}</Label>
+                                                            <p className="text-xs text-muted-foreground">
+                                                                Value: {parseFloat(extraDetails.value).toFixed(2)}
+                                                            </p>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
                                                             <span className="text-sm font-medium w-16 text-right">
                                                                 {total.toFixed(2)}
                                                             </span>
-                                                        )}
-                                                        <Button
-                                                            type="button"
-                                                            variant="outline"
-                                                            size="icon"
-                                                            className="h-8 w-8"
-                                                            onClick={() => handleExtraQuantityChange(extra.id, -1)}
-                                                            disabled={quantity === 0}
-                                                        >
-                                                            <MinusCircle className="h-4 w-4" />
-                                                        </Button>
-                                                        <span className="w-10 text-center font-medium">
-                                                            {quantity}
-                                                        </span>
-                                                        <Button
-                                                            type="button"
-                                                            variant="outline"
-                                                            size="icon"
-                                                            className="h-8 w-8"
-                                                            onClick={() => handleExtraQuantityChange(extra.id, 1)}
-                                                        >
-                                                            <PlusCircle className="h-4 w-4" />
-                                                        </Button>
+                                                            <Button
+                                                                type="button"
+                                                                variant="outline"
+                                                                size="icon"
+                                                                className="h-8 w-8"
+                                                                onClick={() => handleExtraQuantityChange(index, -1)}
+                                                            >
+                                                                <MinusCircle className="h-4 w-4" />
+                                                            </Button>
+                                                            <span className="w-10 text-center font-medium">
+                                                                {field.quantity}
+                                                            </span>
+                                                            <Button
+                                                                type="button"
+                                                                variant="outline"
+                                                                size="icon"
+                                                                className="h-8 w-8"
+                                                                onClick={() => handleExtraQuantityChange(index, 1)}
+                                                            >
+                                                                <PlusCircle className="h-4 w-4" />
+                                                            </Button>
+                                                            <Button
+                                                                type="button"
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-8 w-8 text-destructive"
+                                                                onClick={() => handleRemoveExtra(index)}
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            )
-                                        })}
-                                        {filteredExtras.length === 0 && (
-                                            <p className="text-sm text-muted-foreground text-center py-4">No extras found for "{extrasSearchTerm}".</p>
-                                        )}
+                                                );
+                                            })}
+                                        </div>
                                     </>
                                 ) : (
                                     <p className="text-sm text-muted-foreground text-center">No extras available for this server.</p>
