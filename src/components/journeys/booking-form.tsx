@@ -37,8 +37,6 @@ import { Textarea } from '../ui/textarea';
 import { useServer } from '@/context/server-context';
 import { Separator } from '../ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { getExtras } from '@/services/icabbi';
-import { Command, CommandInput, CommandItem, CommandList, CommandEmpty } from '@/components/ui/command';
 import ExtrasManager from './extras-manager';
 
 const FormLocationSchema = z.object({
@@ -219,6 +217,11 @@ export default function BookingForm({
   const { fields: customFields, replace: replaceCustomFields } = useFieldArray({
     control: form.control,
     name: "fields",
+  });
+  
+  const { fields: extrasFields, append: appendExtra, remove: removeExtra, update: updateExtra } = useFieldArray({
+    control: form.control,
+    name: 'extras_config',
   });
 
   useEffect(() => {
@@ -780,7 +783,10 @@ export default function BookingForm({
                         </Button>
                     </CollapsibleTrigger>
                     <CollapsibleContent className="space-y-4 pt-4">
-                       <ExtrasManager server={server} control={form.control} />
+                        <ExtrasManager
+                            control={form.control}
+                            server={server}
+                        />
 
                         {accountFields.length > 0 && (
                             <div className="p-4 border rounded-lg space-y-4 bg-muted/20">

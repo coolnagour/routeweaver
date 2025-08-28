@@ -75,7 +75,7 @@ export default function ExtrasManager({ server, control }: ExtrasManagerProps) {
     const currentQuantity = bookingExtras[index].quantity;
     const newQuantity = Math.max(0, currentQuantity + delta);
     if (newQuantity === 0) {
-      remove(index); // Remove the extra if quantity becomes 0
+        update(index, { ...bookingExtras[index], quantity: 0 });
     } else {
       update(index, { ...bookingExtras[index], quantity: newQuantity });
     }
