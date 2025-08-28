@@ -153,7 +153,10 @@ export const formatBookingForApi = ({ booking, server, siteId, accountId }: Book
 
     // Add extras config if it exists
     if (booking.extras_config && booking.extras_config.length > 0) {
-        payload.extras_config = booking.extras_config;
+        payload.extras_config = booking.extras_config.map(extra => ({
+            id: extra.extraId,
+            quantity: extra.quantity,
+        }));
     }
 
 

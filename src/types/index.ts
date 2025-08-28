@@ -89,7 +89,7 @@ export const ExtraSchema = z.object({
 export type Extra = z.infer<typeof ExtraSchema>;
 
 export const BookingExtraSchema = z.object({
-    id: z.number(),
+    extraId: z.number(),
     quantity: z.number(),
 });
 export type BookingExtra = z.infer<typeof BookingExtraSchema>;

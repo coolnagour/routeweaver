@@ -190,7 +190,10 @@ export async function updateBooking(server: ServerConfig, { booking, siteId, acc
 
     // Add extras config if it exists
     if (booking.extras_config && booking.extras_config.length > 0) {
-        payload.extras_config = booking.extras_config;
+        payload.extras_config = booking.extras_config.map(extra => ({
+            id: extra.extraId,
+            quantity: extra.quantity,
+        }));
     }
 
 

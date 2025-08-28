@@ -61,8 +61,7 @@ export default function ExtrasManager({ server, control }: ExtrasManagerProps) {
   };
 
   const handleAddExtra = (extra: Extra) => {
-    // Add with quantity of 0 as requested
-    const newExtra: BookingExtra = { id: parseInt(extra.id, 10), quantity: 0 };
+    const newExtra = { extraId: parseInt(extra.id, 10), quantity: 0 };
     append(newExtra);
     setIsExtrasSearchOpen(false);
   };
@@ -78,7 +77,7 @@ export default function ExtrasManager({ server, control }: ExtrasManagerProps) {
   };
   
   const unselectedExtras = availableExtras.filter(
-    (extra) => !bookingExtras.some((selected) => selected.id === parseInt(extra.id, 10))
+    (extra) => !bookingExtras.some((selected) => selected.extraId === parseInt(extra.id, 10))
   );
 
   return (
@@ -125,7 +124,7 @@ export default function ExtrasManager({ server, control }: ExtrasManagerProps) {
 
             <div className="space-y-2">
               {bookingExtras.map((field, index) => {
-                const extraDetails = availableExtras.find((e) => parseInt(e.id, 10) === field.id);
+                const extraDetails = availableExtras.find((e) => parseInt(e.id, 10) === field.extraId);
                 if (!extraDetails) return null;
                 const total = field.quantity * parseFloat(extraDetails.value);
 
