@@ -63,7 +63,23 @@ export async function callIcabbiApi({ server, method, endpoint, body, headers: c
 
         if (!response.ok) {
             console.error('iCabbi API Error:', response.status, responseText);
-            throw new Error(`API call failed with status ${response.status}: ${responseText || response.statusText}`);
+            let errorMessage = `API call failed with status ${response.status}: ${responseText || response.statusText}`;
+            try {
+                const errorJson = JSON.parse(responseText);
+                if (errorJson.message) {
+                    errorMessage = errorJson.message;
+                }
+                if (errorJson.body && typeof errorJson.body === 'object') {
+                    const details = Object.entries(errorJson.body).map(([key, value]) => `${key}: ${value}`).join(', ');
+                    if (details) {
+                        errorMessage += ` - ${details}`;
+                    }
+                }
+            } catch (e) {
+                // responseText was not valid JSON, stick with the original error
+            }
+
+            throw new Error(errorMessage);
         }
         
         if (response.status === 204 || !responseText) {
@@ -73,7 +89,18 @@ export async function callIcabbiApi({ server, method, endpoint, body, headers: c
         const jsonResponse = JSON.parse(responseText);
 
         if (jsonResponse.status && jsonResponse.status.type === 'error' || jsonResponse.error) {
-            const errorMessage = jsonResponse.message || (jsonResponse.status && jsonResponse.status.message) || 'Unknown API error';
+            let errorMessage = jsonResponse.message || (jsonResponse.status && jsonResponse.status.message) || 'Unknown API error';
+            
+            // Check for detailed error messages in the body, which can be an object or a string
+            if (jsonResponse.body) {
+                if (typeof jsonResponse.body === 'object' && Object.keys(jsonResponse.body).length > 0) {
+                    const details = Object.entries(jsonResponse.body).map(([key, value]) => `${key.charAt(0).toUpperCase() + key.slice(1)}: ${value}`).join(', ');
+                    errorMessage += ` - ${details}`;
+                } else if (typeof jsonResponse.body === 'string') {
+                    errorMessage += ` - ${jsonResponse.body}`;
+                }
+            }
+            
             console.error('iCabbi API Logic Error:', errorMessage);
             throw new Error(`API Error: ${errorMessage}`);
         }
