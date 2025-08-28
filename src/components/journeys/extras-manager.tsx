@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useFormContext, useFieldArray, Controller } from 'react-hook-form';
+import { useFieldArray, useFormContext } from 'react-hook-form';
 import {
   Collapsible,
   CollapsibleContent,
@@ -22,19 +22,20 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { getExtras } from '@/services/icabbi';
 import type { Extra, ServerConfig, BookingExtra } from '@/types';
-import { ShoppingBasket, Loader2, PlusCircle, MinusCircle, Trash2 } from 'lucide-react';
-import type { Control } from 'react-hook-form';
+import { ShoppingBasket, Loader2, PlusCircle, MinusCircle, Trash2, Info } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 
 interface ExtrasManagerProps {
   server: ServerConfig | null;
-  control: Control<any>; // Receive control from parent
 }
 
-export default function ExtrasManager({ server, control }: ExtrasManagerProps) {
+export default function ExtrasManager({ server }: ExtrasManagerProps) {
   const { toast } = useToast();
   const [availableExtras, setAvailableExtras] = useState<Extra[]>([]);
   const [isLoadingExtras, setIsLoadingExtras] = useState(false);
   const [isExtrasSearchOpen, setIsExtrasSearchOpen] = useState(false);
+
+  const { control } = useFormContext(); // Use context to get control
 
   const { fields, append, remove, update } = useFieldArray({
     control,
@@ -88,6 +89,13 @@ export default function ExtrasManager({ server, control }: ExtrasManagerProps) {
         </Button>
       </CollapsibleTrigger>
       <CollapsibleContent className="p-4 border rounded-lg space-y-4 bg-muted/20">
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertTitle>Note</AlertTitle>
+          <AlertDescription>
+            Set a quantity to add the extra to the booking from the server. Leave the quantity as 0 to make the extra available for the driver to add in the car.
+          </AlertDescription>
+        </Alert>
         {isLoadingExtras ? (
           <div className="flex items-center justify-center p-4">
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
