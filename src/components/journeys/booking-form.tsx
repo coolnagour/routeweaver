@@ -776,7 +776,7 @@ export default function BookingForm({
                         </Button>
                     </CollapsibleTrigger>
                     <CollapsibleContent className="space-y-4 pt-4">
-                       <ExtrasManager form={form} server={server} />
+                       <ExtrasManager server={server} />
 
                         {accountFields.length > 0 && (
                             <div className="p-4 border rounded-lg space-y-4 bg-muted/20">

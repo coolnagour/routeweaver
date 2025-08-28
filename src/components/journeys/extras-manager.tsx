@@ -25,17 +25,16 @@ import type { Extra, ServerConfig } from '@/types';
 import { ShoppingBasket, Loader2, PlusCircle, MinusCircle, Trash2 } from 'lucide-react';
 
 interface ExtrasManagerProps {
-  form: any;
   server: ServerConfig | null;
 }
 
-export default function ExtrasManager({ form, server }: ExtrasManagerProps) {
+export default function ExtrasManager({ server }: ExtrasManagerProps) {
   const { toast } = useToast();
   const [availableExtras, setAvailableExtras] = useState<Extra[]>([]);
   const [isLoadingExtras, setIsLoadingExtras] = useState(false);
   const [isExtrasSearchOpen, setIsExtrasSearchOpen] = useState(false);
 
-  const { control } = form;
+  const { control } = useFormContext();
 
   const { fields: extrasFields, append, remove, update } = useFieldArray({
     control,
@@ -60,7 +59,8 @@ export default function ExtrasManager({ form, server }: ExtrasManagerProps) {
   };
 
   const handleAddExtra = (extra: Extra) => {
-    append({ id: parseInt(extra.id, 10), quantity: 1 });
+    const newExtra = { id: parseInt(extra.id, 10), quantity: 1 };
+    append(newExtra);
     setIsExtrasSearchOpen(false);
   };
   
