@@ -5,13 +5,18 @@ import { useState, useEffect, useCallback } from 'react';
 import { useServer } from '@/context/server-context';
 import type { Journey } from '@/types';
 import persistenceService from '@/services/persistence-service';
+import { useAuth } from './use-auth';
+
+const persistenceType = process.env.NEXT_PUBLIC_PERSISTENCE_TYPE;
 
 export function useJourneys() {
   const { server } = useServer();
+  const { user } = useAuth();
   const [journeys, setJourneys] = useState<Journey[] | null>(null);
   const [loading, setLoading] = useState(true);
 
   const serverScope = server?.uuid;
+  const userId = user?.uid;
 
   const refreshJourneys = useCallback(async () => {
     if (!serverScope) {
@@ -19,9 +24,16 @@ export function useJourneys() {
       setLoading(false);
       return;
     }
+    
+    if (persistenceType === 'server' && !userId) {
+        setJourneys([]);
+        setLoading(false);
+        return;
+    }
+
     setLoading(true);
     try {
-      const allJourneys = await persistenceService.getJourneys(serverScope);
+      const allJourneys = await persistenceService.getJourneys(serverScope, userId);
       setJourneys(allJourneys.sort((a,b) => (b.journeyServerId || 0) - (a.journeyServerId || 0)));
     } catch (error) {
       console.error("Failed to load journeys from persistence layer", error);
@@ -29,7 +41,7 @@ export function useJourneys() {
     } finally {
       setLoading(false);
     }
-  }, [serverScope]);
+  }, [serverScope, userId]);
 
   useEffect(() => {
     refreshJourneys();
@@ -39,9 +51,12 @@ export function useJourneys() {
     if (!serverScope) {
         throw new Error("Cannot save journey without a server scope.");
     }
+    if (persistenceType === 'server' && !userId) {
+        throw new Error("Cannot save journey without a user ID for server persistence.");
+    }
     
     const journeyWithScope = { ...journey, serverScope };
-    await persistenceService.saveJourney(journeyWithScope);
+    await persistenceService.saveJourney(journeyWithScope, userId);
     
     setJourneys(prev => {
         if (!prev) return [journeyWithScope];
@@ -58,12 +73,15 @@ export function useJourneys() {
         }
         return newJourneys;
     });
-  }, [serverScope]);
+  }, [serverScope, userId]);
   
   const deleteJourney = useCallback(async (journeyId: string) => {
-    await persistenceService.deleteJourney(journeyId);
+     if (persistenceType === 'server' && !userId) {
+        throw new Error("Cannot delete journey without a user ID for server persistence.");
+    }
+    await persistenceService.deleteJourney(journeyId, userId);
     setJourneys(prev => prev ? prev.filter(j => j.id !== journeyId) : []);
-  }, []);
+  }, [userId]);
 
   return { journeys, loading, addOrUpdateJourney, deleteJourney, refreshJourneys };
 }

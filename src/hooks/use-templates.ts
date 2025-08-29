@@ -5,13 +5,18 @@ import { useState, useEffect, useCallback } from 'react';
 import { useServer } from '@/context/server-context';
 import type { JourneyTemplate } from '@/types';
 import persistenceService from '@/services/persistence-service';
+import { useAuth } from './use-auth';
+
+const persistenceType = process.env.NEXT_PUBLIC_PERSISTENCE_TYPE;
 
 export function useTemplates() {
   const { server } = useServer();
+  const { user } = useAuth();
   const [templates, setTemplates] = useState<JourneyTemplate[] | null>(null);
   const [loading, setLoading] = useState(true);
 
   const serverScope = server?.uuid;
+  const userId = user?.uid;
 
   const refreshTemplates = useCallback(async () => {
     if (!serverScope) {
@@ -19,9 +24,14 @@ export function useTemplates() {
       setLoading(false);
       return;
     }
+    if (persistenceType === 'server' && !userId) {
+        setTemplates([]);
+        setLoading(false);
+        return;
+    }
     setLoading(true);
     try {
-      const allTemplates = await persistenceService.getTemplates(serverScope);
+      const allTemplates = await persistenceService.getTemplates(serverScope, userId);
       setTemplates(allTemplates.sort((a,b) => a.name.localeCompare(b.name)));
     } catch (error) {
       console.error("Failed to load templates from persistence layer", error);
@@ -29,7 +39,7 @@ export function useTemplates() {
     } finally {
       setLoading(false);
     }
-  }, [serverScope]);
+  }, [serverScope, userId]);
 
   useEffect(() => {
     refreshTemplates();
@@ -39,9 +49,12 @@ export function useTemplates() {
     if (!serverScope) {
         throw new Error("Cannot save template without a server scope.");
     }
+     if (persistenceType === 'server' && !userId) {
+        throw new Error("Cannot save template without a user ID for server persistence.");
+    }
     
     const templateWithScope = { ...template, serverScope };
-    await persistenceService.saveTemplate(templateWithScope);
+    await persistenceService.saveTemplate(templateWithScope, userId);
     
     setTemplates(prev => {
         if (!prev) return [templateWithScope];
@@ -55,12 +68,15 @@ export function useTemplates() {
         }
         return newTemplates.sort((a,b) => a.name.localeCompare(b.name));
     });
-  }, [serverScope]);
+  }, [serverScope, userId]);
   
   const deleteTemplate = useCallback(async (templateId: string) => {
-    await persistenceService.deleteTemplate(templateId);
+     if (persistenceType === 'server' && !userId) {
+        throw new Error("Cannot delete template without a user ID for server persistence.");
+    }
+    await persistenceService.deleteTemplate(templateId, userId);
     setTemplates(prev => prev ? prev.filter(t => t.id !== templateId) : []);
-  }, []);
+  }, [userId]);
 
   return { templates, loading, addOrUpdateTemplate, deleteTemplate, refreshTemplates };
 }

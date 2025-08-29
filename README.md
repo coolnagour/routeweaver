@@ -1,4 +1,4 @@
-# Firebase Studio
+npx drizzle-kit push# Firebase Studio
 
 This is a NextJS starter in Firebase Studio.
 

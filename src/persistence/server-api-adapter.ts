@@ -1,11 +1,13 @@
+
 'server-only';
 
 import type { StorageAdapter } from "./storage-adapter";
 import type { Journey, JourneyTemplate, Booking } from "@/types";
 import { db } from "@/lib/drizzle";
-import { journeys, bookings as bookingsTable, templates, templateBookings } from "@/lib/drizzle/schema";
-import { eq } from "drizzle-orm";
+import { users, journeys, bookings as bookingsTable, templates, templateBookings } from "@/lib/drizzle/schema";
+import { eq, and } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
+import { getUserId } from "@/actions/user-actions";
 
 
 // Helper function to rehydrate a journey from DB parts
@@ -83,10 +85,13 @@ const rehydrateTemplate = (templateData: any, bookingsData: any[]): JourneyTempl
 
 
 class ServerApiAdapter implements StorageAdapter {
-  async getJourneys(serverScope: string): Promise<Journey[]> {
-    console.log(`[ServerApiAdapter] Getting journeys for scope: ${serverScope}`);
+  async getJourneys(serverScope: string, userId: string): Promise<Journey[]> {
+    console.log(`[ServerApiAdapter] Getting journeys for scope: ${serverScope} and user: ${userId}`);
     const journeyRecords = await db.query.journeys.findMany({
-      where: eq(journeys.serverScope, serverScope),
+      where: and(
+        eq(journeys.serverScope, serverScope),
+        eq(journeys.userId, userId)
+      ),
       with: {
         bookings: true,
       },
@@ -95,8 +100,8 @@ class ServerApiAdapter implements StorageAdapter {
     return journeyRecords.map(j => rehydrateJourney(j, j.bookings));
   }
 
-  async saveJourney(journey: Journey): Promise<void> {
-    console.log(`[ServerApiAdapter] Saving journey ID: ${journey.id}`);
+  async saveJourney(journey: Journey, userId: string): Promise<void> {
+    console.log(`[ServerApiAdapter] Saving journey ID: ${journey.id} for user: ${userId}`);
     const { bookings, site, account, ...journeyData } = journey;
 
     const flattenedJourney = {
@@ -107,6 +112,7 @@ class ServerApiAdapter implements StorageAdapter {
       accountId: account?.id,
       accountName: account?.name,
       accountRef: account?.ref,
+      userId: userId,
     };
 
     // Use a transaction to ensure atomicity
@@ -137,16 +143,22 @@ class ServerApiAdapter implements StorageAdapter {
     });
   }
 
-  async deleteJourney(journeyId: string): Promise<void> {
-    console.log(`[ServerApiAdapter] Deleting journey ID: ${journeyId}`);
+  async deleteJourney(journeyId: string, userId: string): Promise<void> {
+    console.log(`[ServerApiAdapter] Deleting journey ID: ${journeyId} for user: ${userId}`);
     // Drizzle will cascade delete associated bookings from the 'bookings' table
-    await db.delete(journeys).where(eq(journeys.id, journeyId));
+    await db.delete(journeys).where(and(
+        eq(journeys.id, journeyId),
+        eq(journeys.userId, userId)
+    ));
   }
   
-  async getTemplates(serverScope: string): Promise<JourneyTemplate[]> {
-    console.log(`[ServerApiAdapter] Getting templates for scope: ${serverScope}`);
+  async getTemplates(serverScope: string, userId: string): Promise<JourneyTemplate[]> {
+    console.log(`[ServerApiAdapter] Getting templates for scope: ${serverScope} and user: ${userId}`);
     const templateRecords = await db.query.templates.findMany({
-      where: eq(templates.serverScope, serverScope),
+      where: and(
+        eq(templates.serverScope, serverScope),
+        eq(templates.userId, userId)
+      ),
       with: {
         bookings: true,
       },
@@ -155,8 +167,8 @@ class ServerApiAdapter implements StorageAdapter {
     return templateRecords.map(t => rehydrateTemplate(t, t.bookings));
   }
   
-  async saveTemplate(template: JourneyTemplate): Promise<void> {
-    console.log(`[ServerApiAdapter] Saving template ID: ${template.id}`);
+  async saveTemplate(template: JourneyTemplate, userId: string): Promise<void> {
+    console.log(`[ServerApiAdapter] Saving template ID: ${template.id} for user: ${userId}`);
     const { bookings, site, account, ...templateData } = template;
     
     const flattenedTemplate = {
@@ -167,6 +179,7 @@ class ServerApiAdapter implements StorageAdapter {
         accountId: account?.id,
         accountName: account?.name,
         accountRef: account?.ref,
+        userId: userId,
     };
 
     await db.transaction(async (tx) => {
@@ -193,9 +206,12 @@ class ServerApiAdapter implements StorageAdapter {
     });
   }
 
-  async deleteTemplate(templateId: string): Promise<void> {
-    console.log(`[ServerApiAdapter] Deleting template ID: ${templateId}`);
-    await db.delete(templates).where(eq(templates.id, templateId));
+  async deleteTemplate(templateId: string, userId: string): Promise<void> {
+    console.log(`[ServerApiAdapter] Deleting template ID: ${templateId} for user: ${userId}`);
+    await db.delete(templates).where(and(
+        eq(templates.id, templateId),
+        eq(templates.userId, userId)
+    ));
   }
 }
 

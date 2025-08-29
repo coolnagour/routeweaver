@@ -8,6 +8,7 @@ import { auth } from '@/lib/firebase';
 import { usePathname, useRouter } from 'next/navigation';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { useServer } from './server-context';
+import { upsertUser } from '@/actions/user-actions';
 
 interface AuthContextType {
   user: User | null;
@@ -42,12 +43,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { server } = useServer();
   const [isConfigValid, setIsConfigValid] = useState(true);
+  const persistenceType = process.env.NEXT_PUBLIC_PERSISTENCE_TYPE;
+
+  const handleUserLogin = async (user: User) => {
+    if (persistenceType === 'server') {
+        try {
+            await upsertUser({
+                id: user.uid,
+                email: user.email!,
+                displayName: user.displayName,
+                photoURL: user.photoURL,
+            });
+            console.log(`User ${user.uid} upserted to server DB.`);
+        } catch (error) {
+            console.error("Failed to upsert user:", error);
+            // Decide how to handle this error. For now, we'll log it.
+            // The user is still logged in on the client.
+        }
+    }
+    setUser(user);
+  }
 
   useEffect(() => {
     // Check if we should use mock auth
     if (process.env.NEXT_PUBLIC_USE_MOCK_AUTH === 'true') {
       console.log("Using mock user for development.");
-      setUser(mockUser);
+      handleUserLogin(mockUser);
       setLoading(false);
       return;
     }
@@ -63,11 +84,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsConfigValid(true);
 
     // REAL AUTH
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      setLoading(false);
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            await handleUserLogin(user);
+        } else {
+            setUser(null);
+        }
+        setLoading(false);
     });
     return () => unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
