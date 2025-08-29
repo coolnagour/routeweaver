@@ -3,8 +3,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useServer } from '@/context/server-context';
-import { getAllFromDbByServer, setInDb, deleteFromDb } from '@/lib/db';
 import type { Journey } from '@/types';
+import persistenceService from '@/services/persistence-service';
 
 export function useJourneys() {
   const { server } = useServer();
@@ -21,10 +21,10 @@ export function useJourneys() {
     }
     setLoading(true);
     try {
-      const allJourneys = await getAllFromDbByServer('recent-journeys', serverScope);
+      const allJourneys = await persistenceService.getJourneys(serverScope);
       setJourneys(allJourneys.sort((a,b) => (b.journeyServerId || 0) - (a.journeyServerId || 0)));
     } catch (error) {
-      console.error("Failed to load journeys from DB", error);
+      console.error("Failed to load journeys from persistence layer", error);
       setJourneys([]);
     } finally {
       setLoading(false);
@@ -41,9 +41,7 @@ export function useJourneys() {
     }
     
     const journeyWithScope = { ...journey, serverScope };
-    console.log('[useJourneys] addOrUpdateJourney - Saving to DB:', JSON.stringify(journeyWithScope, null, 2));
-    
-    await setInDb('recent-journeys', journeyWithScope);
+    await persistenceService.saveJourney(journeyWithScope);
     
     setJourneys(prev => {
         if (!prev) return [journeyWithScope];
@@ -63,7 +61,7 @@ export function useJourneys() {
   }, [serverScope]);
   
   const deleteJourney = useCallback(async (journeyId: string) => {
-    await deleteFromDb('recent-journeys', journeyId);
+    await persistenceService.deleteJourney(journeyId);
     setJourneys(prev => prev ? prev.filter(j => j.id !== journeyId) : []);
   }, []);
 

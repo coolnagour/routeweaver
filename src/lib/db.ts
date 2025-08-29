@@ -4,9 +4,9 @@ import { openDB } from 'idb';
 import type { ServerConfig, JourneyTemplate, Journey } from '@/types';
 
 const DB_NAME = 'RouteWeaverDB';
-const DB_VERSION = 3; // Bump version for schema change
+const DB_VERSION = 3; 
 
-interface RouteWeaverDB extends DBSchema {
+export interface RouteWeaverDB extends DBSchema {
   'server-configs': {
     key: string;
     value: ServerConfig[];
@@ -32,7 +32,7 @@ export type StoreValue<T extends StoreName> = RouteWeaverDB[T]['value'];
 
 let dbPromise: Promise<IDBPDatabase<RouteWeaverDB>> | null = null;
 
-const getDb = () => {
+export const getDb = () => {
   if (!dbPromise) {
     dbPromise = openDB<RouteWeaverDB>(DB_NAME, DB_VERSION, {
       upgrade(db, oldVersion) {
@@ -67,17 +67,6 @@ export async function getFromDb<T extends StoreName>(storeName: T, key: string):
   return db.get(storeName, key);
 }
 
-export async function getAllFromDb<T extends StoreName>(storeName: T): Promise<StoreValue<T>[]> {
-  const db = await getDb();
-  return db.getAll(storeName);
-}
-
-export async function getAllFromDbByServer<T extends 'recent-journeys' | 'journey-templates'>(storeName: T, serverScope: string): Promise<T extends 'recent-journeys' ? Journey[] : JourneyTemplate[]> {
-    const db = await getDb();
-    return db.getAllFromIndex(storeName, 'by-server', serverScope);
-}
-
-
 export async function setInDb<T extends StoreName>(storeName: T, value: StoreValue<T>, key?: string): Promise<IDBValidKey> {
   const db = await getDb();
   if (key) {
@@ -86,7 +75,12 @@ export async function setInDb<T extends StoreName>(storeName: T, value: StoreVal
   return db.put(storeName, value);
 }
 
-export async function deleteFromDb<T extends StoreName>(storeName: T, key: string): Promise<void> {
-    const db = await getDb();
-    return db.delete(storeName, key);
+export async function getAllFromDbByServer<T extends 'recent-journeys' | 'journey-templates'>(storeName: T, serverScope: string): Promise<StoreValue<T>[]> {
+  const db = await getDb();
+  return db.getAllFromIndex(storeName, 'by-server', serverScope);
+}
+
+export async function deleteFromDb(storeName: StoreName, key: string): Promise<void> {
+  const db = await getDb();
+  await db.delete(storeName, key);
 }

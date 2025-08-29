@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { getFromDb, setInDb, getAllFromDbByServer, deleteFromDb as dbDelete, type StoreName, type StoreValue, type Journey, type JourneyTemplate } from '@/lib/db';
+import { getFromDb, setInDb, getAllFromDbByServer, deleteFromDb, type StoreName, type StoreValue, type Journey, type JourneyTemplate } from '@/lib/db';
 
 const GLOBAL_SCOPE_KEY = 'global';
 
@@ -92,7 +92,7 @@ function useIndexedDB<T extends StoreValue<StoreName>>(
 
     const deleteItem = useCallback(async (id: string) => {
         if (!isClient) return;
-        await dbDelete(storeName, id);
+        await deleteFromDb(storeName, id);
         refreshCollection();
     }, [isClient, storeName, refreshCollection]);
 

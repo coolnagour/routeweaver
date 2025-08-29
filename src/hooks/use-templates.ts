@@ -3,8 +3,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useServer } from '@/context/server-context';
-import { getAllFromDbByServer, setInDb, deleteFromDb } from '@/lib/db';
 import type { JourneyTemplate } from '@/types';
+import persistenceService from '@/services/persistence-service';
 
 export function useTemplates() {
   const { server } = useServer();
@@ -21,10 +21,10 @@ export function useTemplates() {
     }
     setLoading(true);
     try {
-      const allTemplates = await getAllFromDbByServer('journey-templates', serverScope);
+      const allTemplates = await persistenceService.getTemplates(serverScope);
       setTemplates(allTemplates.sort((a,b) => a.name.localeCompare(b.name)));
     } catch (error) {
-      console.error("Failed to load templates from DB", error);
+      console.error("Failed to load templates from persistence layer", error);
       setTemplates([]);
     } finally {
       setLoading(false);
@@ -41,7 +41,7 @@ export function useTemplates() {
     }
     
     const templateWithScope = { ...template, serverScope };
-    await setInDb('journey-templates', templateWithScope);
+    await persistenceService.saveTemplate(templateWithScope);
     
     setTemplates(prev => {
         if (!prev) return [templateWithScope];
@@ -58,7 +58,7 @@ export function useTemplates() {
   }, [serverScope]);
   
   const deleteTemplate = useCallback(async (templateId: string) => {
-    await deleteFromDb('journey-templates', templateId);
+    await persistenceService.deleteTemplate(templateId);
     setTemplates(prev => prev ? prev.filter(t => t.id !== templateId) : []);
   }, []);
 
