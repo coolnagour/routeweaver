@@ -21,11 +21,23 @@ const mockUser: User = {
     uid: 'mock-user-id',
     email: 'dev@icabbi.com',
     displayName: 'Mock Developer',
-    photoURL: 'https://placehold.co/40x40.png',
+    photoURL: 'https://picsum.photos/40/40',
     emailVerified: true,
     isAnonymous: false,
-    metadata: {},
-    providerData: [],
+    metadata: {
+        creationTime: new Date().toISOString(),
+        lastSignInTime: new Date().toISOString(),
+    },
+    providerData: [
+        {
+            providerId: 'google.com',
+            uid: '1234567890',
+            displayName: 'Mock Developer',
+            email: 'dev@icabbi.com',
+            photoURL: 'https://picsum.photos/40/40',
+            phoneNumber: null,
+        }
+    ],
     providerId: 'mock',
     tenantId: null,
     delete: async () => {},
@@ -116,8 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             <p className="mt-2 text-muted-foreground">
                 Firebase credentials are not set up correctly. Please check your <code>.env</code> file at the root of your project and ensure the following variables are present and correct:
             </p>
-            <pre className="mt-4 rounded-md bg-muted p-4 text-left text-sm text-muted-foreground overflow-auto">
-                <code>
+            <pre className="mt-4 rounded-md bg-muted p-4 text-left text-sm text-muted-foreground overflow-auto"><code>
                 NEXT_PUBLIC_FIREBASE_API_KEY="your_api_key"<br/>
                 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="your_auth_domain"<br/>
                 NEXT_PUBLIC_FIREBASE_PROJECT_ID="your_project_id"<br/>
@@ -125,9 +136,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID="your_sender_id"<br/>
                 NEXT_PUBLIC_FIREBASE_APP_ID="your_app_id"<br/>
                 NEXT_PUBLIC_ALLOWED_DOMAIN="your_allowed_domain.com"<br/>
-                NEXT_PUBLIC_GOOGLE_MAPS_API_KEY="your_maps_api_key"<br/>
-                </code>
-            </pre>
+                NEXT_PUBLIC_GOOGLE_MAPS_API_KEY="your_maps_api_key"
+            </code></pre>
             <p className="mt-4 text-sm text-muted-foreground">
                 After updating the <code>.env</code> file, you will need to restart the development server.
             </p>
