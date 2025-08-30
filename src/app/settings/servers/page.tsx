@@ -2,7 +2,6 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import useIndexedDB from '@/hooks/use-indexed-db';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -36,7 +35,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import type { ServerConfig } from '@/types';
 import { ServerConfigSchema } from '@/types';
@@ -45,32 +43,29 @@ import { Edit, PlusCircle, Trash2, Server, Upload, Download } from 'lucide-react
 import { useToast } from '@/hooks/use-toast';
 import ServerForm from '@/components/settings/server-form';
 import { v4 as uuidv4 } from 'uuid';
+import { getServers, saveServer, deleteServer } from '@/actions/server-actions';
+import { Loader2 } from 'lucide-react';
 
 const ServerConfigsArraySchema = z.array(ServerConfigSchema);
 
 export default function ServerSettingsPage() {
-  const [servers, setServers] = useIndexedDB<ServerConfig[]>('server-configs', []);
+  const [servers, setServers] = useState<ServerConfig[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingServer, setEditingServer] = useState<ServerConfig | undefined>(undefined);
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // One-time migration to add UUIDs to existing server configs
   useEffect(() => {
-    if (!servers) return;
-    let hasChanges = false;
-    const migratedServers = servers.map(s => {
-        if (!s.uuid) {
-            hasChanges = true;
-            return { ...s, uuid: uuidv4() };
-        }
-        return s;
-    });
-    if (hasChanges) {
-        setServers(migratedServers);
+    async function fetchServers() {
+        setLoading(true);
+        const serverList = await getServers();
+        setServers(serverList);
+        setLoading(false);
     }
-  }, [servers, setServers]);
-  
+    fetchServers();
+  }, []);
+
   const handleAddClick = () => {
     setEditingServer(undefined);
     setIsDialogOpen(true);
@@ -81,44 +76,47 @@ export default function ServerSettingsPage() {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = (serverToDelete: ServerConfig) => {
-    if (!servers) return;
-    setServers(servers.filter((s) => s.uuid !== serverToDelete.uuid));
-    toast({
-      title: 'Server Deleted',
-      description: 'The server configuration has been removed.',
-      variant: 'destructive',
-    });
+  const handleDelete = async (serverToDelete: ServerConfig) => {
+    if (!serverToDelete.uuid) return;
+    const result = await deleteServer(serverToDelete.uuid);
+    if (result.success) {
+      setServers(servers.filter((s) => s.uuid !== serverToDelete.uuid));
+      toast({
+        title: 'Server Deleted',
+        description: 'The server configuration has been removed.',
+        variant: 'destructive',
+      });
+    } else {
+       toast({ title: 'Error Deleting Server', description: result.message, variant: 'destructive' });
+    }
   };
 
-  const handleSave = (data: ServerConfig) => {
-    if (!servers) return;
+  const handleSave = async (data: ServerConfig) => {
+    let serverToSave: ServerConfig;
     if (editingServer) {
-      // Editing existing server
-      const isDuplicate = servers.some(
-        s => (s.host === data.host && s.companyId === data.companyId) && s.uuid !== editingServer.uuid
-      );
-      if (isDuplicate) {
-        toast({ title: 'Duplicate Server', description: 'Another server with this Host and Company ID already exists.', variant: 'destructive' });
-        return;
-      }
-      setServers(servers.map((s) => (s.uuid === editingServer.uuid ? data : s)));
-      toast({ title: 'Server Updated', description: 'The server configuration has been saved.' });
+        serverToSave = { ...data, uuid: editingServer.uuid };
     } else {
-      // Adding new server
-      if (servers.some(s => s.host === data.host && s.companyId === data.companyId)) {
-        toast({ title: 'Duplicate Server', description: 'A server with this Host and Company ID already exists.', variant: 'destructive' });
-        return;
-      }
-      setServers([...servers, { ...data, uuid: uuidv4() }]);
-      toast({ title: 'Server Added', description: 'The new server configuration has been added.' });
+        serverToSave = { ...data, uuid: uuidv4() };
     }
-    setIsDialogOpen(false);
-    setEditingServer(undefined);
+
+    const result = await saveServer(serverToSave);
+    if (result.success) {
+        if (editingServer) {
+            setServers(servers.map((s) => (s.uuid === editingServer.uuid ? serverToSave : s)));
+            toast({ title: 'Server Updated', description: 'The server configuration has been saved.' });
+        } else {
+            setServers([...servers, serverToSave]);
+            toast({ title: 'Server Added', description: 'The new server configuration has been added.' });
+        }
+        setIsDialogOpen(false);
+        setEditingServer(undefined);
+    } else {
+        toast({ title: 'Error Saving Server', description: result.message, variant: 'destructive' });
+    }
   };
 
   const handleExport = () => {
-    if (!servers) return;
+    if (!servers || servers.length === 0) return;
     const jsonString = JSON.stringify(servers, null, 2);
     const blob = new Blob([jsonString], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -141,7 +139,7 @@ export default function ServerSettingsPage() {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const text = e.target?.result;
         if (typeof text !== 'string') {
@@ -149,7 +147,6 @@ export default function ServerSettingsPage() {
         }
         const parsedJson = JSON.parse(text);
         
-        // Validate the structure of the imported JSON
         const validationResult = ServerConfigsArraySchema.safeParse(parsedJson);
 
         if (!validationResult.success) {
@@ -162,17 +159,23 @@ export default function ServerSettingsPage() {
             uuid: s.uuid || uuidv4(),
         }));
         
-        // Filter out duplicates based on host and companyId
-        const currentServers = servers || [];
-        const existingServerKeys = new Set(currentServers.map(s => `${s.host}-${s.companyId}`));
-        const newServers = importedServers.filter(s => !existingServerKeys.has(`${s.host}-${s.companyId}`));
+        const existingServerKeys = new Set(servers.map(s => `${s.host}-${s.companyId}`));
+        const newServersToSave = importedServers.filter(s => !existingServerKeys.has(`${s.host}-${s.companyId}`));
         
-        if (newServers.length > 0) {
-          setServers([...currentServers, ...newServers]);
-          toast({
-            title: 'Import Successful',
-            description: `${newServers.length} new server configuration(s) added.`,
-          });
+        if (newServersToSave.length > 0) {
+            let successCount = 0;
+            for(const server of newServersToSave) {
+                const result = await saveServer(server);
+                if (result.success) {
+                    successCount++;
+                }
+            }
+            const newServerList = await getServers();
+            setServers(newServerList);
+            toast({
+                title: 'Import Complete',
+                description: `${successCount} new server configuration(s) added.`,
+            });
         } else {
           toast({
             title: 'No New Servers Imported',
@@ -188,7 +191,6 @@ export default function ServerSettingsPage() {
           description: error instanceof Error ? error.message : 'Please check the file and try again.',
         });
       } finally {
-        // Reset the file input value to allow re-uploading the same file
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
         }
@@ -248,7 +250,12 @@ export default function ServerSettingsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {servers && servers.length > 0 ? (
+          {loading ? (
+             <div className="text-center py-16">
+                <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+                <p className="mt-2 text-muted-foreground">Loading server configurations...</p>
+             </div>
+          ) : servers && servers.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>

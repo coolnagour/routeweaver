@@ -1,8 +1,7 @@
 
 'use client';
 
-import { createContext, useContext, type ReactNode } from 'react';
-import useIndexedDB from '@/hooks/use-indexed-db';
+import { createContext, useContext, useState, type ReactNode } from 'react';
 import type { ServerConfig } from '@/types';
 
 interface ServerContextType {
@@ -13,7 +12,7 @@ interface ServerContextType {
 export const ServerContext = createContext<ServerContextType | undefined>(undefined);
 
 export function ServerProvider({ children }: { children: ReactNode }) {
-  const [server, setServer] = useIndexedDB<ServerConfig | null>('selected-server', null);
+  const [server, setServer] = useState<ServerConfig | null>(null);
 
   return (
     <ServerContext.Provider value={{ server, setServer }}>

@@ -1,14 +1,13 @@
 
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useServer } from '@/context/server-context';
 import { Server, PlusCircle, ChevronRight, Search, Upload } from 'lucide-react';
-import useIndexedDB from '@/hooks/use-indexed-db';
 import type { ServerConfig } from '@/types';
 import { ServerConfigSchema } from '@/types';
 import ServerForm from '@/components/settings/server-form';
@@ -23,42 +22,60 @@ import {
 } from '@/components/ui/dialog';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
+import { getServers, saveServer } from '@/actions/server-actions';
+import useIndexedDB from '@/hooks/use-indexed-db';
 
 const ServerConfigsArraySchema = z.array(ServerConfigSchema);
 
 export default function SelectServerPage() {
   const { setServer } = useServer();
   const router = useRouter();
-  const [servers, setServers] = useIndexedDB<ServerConfig[]>('server-configs', []);
+  const [servers, setServers] = useState<ServerConfig[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleSelectServer = (serverConfig: ServerConfig) => {
-    if (servers) {
-        const updatedServers = servers.map(s => {
-            if (s.uuid === serverConfig.uuid) {
-                return { ...s, usageCount: (s.usageCount || 0) + 1 };
-            }
-            return s;
-        });
-        setServers(updatedServers);
+  useEffect(() => {
+    async function fetchServers() {
+        setLoading(true);
+        const serverList = await getServers();
+        // Set a default usageCount if it's not present
+        const serversWithDefaults = serverList.map(s => ({ ...s, usageCount: s.usageCount || 0 }));
+        setServers(serversWithDefaults);
+        setLoading(false);
     }
+    fetchServers();
+  }, []);
+
+  const handleSelectServer = (serverConfig: ServerConfig) => {
+    // We update usage count on the client for immediate feedback,
+    // but the canonical update should happen on the server if needed.
+    // For now, we'll just handle it client-side for sorting.
+    const updatedServers = servers.map(s => {
+        if (s.uuid === serverConfig.uuid) {
+            return { ...s, usageCount: (s.usageCount || 0) + 1 };
+        }
+        return s;
+    });
+    setServers(updatedServers);
+
     setServer(serverConfig);
     router.push('/journeys/new');
   };
   
-  const handleSave = (data: ServerConfig) => {
-      if (!servers) return;
-      if (servers.some(s => s.host === data.host && s.companyId === data.companyId)) {
-        toast({ title: 'Duplicate Server', description: 'A server with this Host and Company ID already exists.', variant: 'destructive' });
-        return;
-      }
+  const handleSave = async (data: ServerConfig) => {
       const newServer = { ...data, uuid: uuidv4(), usageCount: 0 };
-      setServers([...servers, newServer]);
-      toast({ title: 'Server Added', description: 'The new server configuration has been added.' });
-    setIsDialogOpen(false);
+      const result = await saveServer(newServer);
+
+      if (result.success) {
+        setServers(prev => [...prev, newServer]);
+        toast({ title: 'Server Added', description: 'The new server configuration has been added.' });
+        setIsDialogOpen(false);
+      } else {
+        toast({ title: 'Error Adding Server', description: result.message, variant: 'destructive' });
+      }
   };
   
   const filteredAndSortedServers = servers 
@@ -79,7 +96,7 @@ export default function SelectServerPage() {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const text = e.target?.result;
         if (typeof text !== 'string') {
@@ -100,15 +117,17 @@ export default function SelectServerPage() {
             usageCount: s.usageCount || 0,
         }));
         
-        const currentServers = servers || [];
-        const existingServerKeys = new Set(currentServers.map(s => `${s.host}-${s.companyId}`));
-        const newServers = importedServers.filter(s => !existingServerKeys.has(`${s.host}-${s.companyId}`));
+        const existingServerKeys = new Set(servers.map(s => `${s.host}-${s.companyId}`));
+        const newServersToSave = importedServers.filter(s => !existingServerKeys.has(`${s.host}-${s.companyId}`));
         
-        if (newServers.length > 0) {
-          setServers([...currentServers, ...newServers]);
+        if (newServersToSave.length > 0) {
+          for (const serverToSave of newServersToSave) {
+            await saveServer(serverToSave);
+          }
+          setServers(prev => [...prev, ...newServersToSave]);
           toast({
             title: 'Import Successful',
-            description: `${newServers.length} new server configuration(s) added.`,
+            description: `${newServersToSave.length} new server configuration(s) added.`,
           });
         } else {
           toast({
@@ -193,7 +212,11 @@ export default function SelectServerPage() {
                 </div>
             </CardHeader>
             <CardContent className="flex flex-col gap-2">
-                {filteredAndSortedServers.length > 0 ? (
+                {loading ? (
+                    <div className="col-span-full text-center py-10">
+                        <p className="text-muted-foreground">Loading servers...</p>
+                    </div>
+                ) : filteredAndSortedServers.length > 0 ? (
                     filteredAndSortedServers.map((server) => (
                         <div 
                           key={server.uuid || `${server.host}-${server.companyId}`}
@@ -213,7 +236,7 @@ export default function SelectServerPage() {
                 ) : (
                     <div className="col-span-full text-center py-10 border-2 border-dashed rounded-lg">
                         <p className="text-muted-foreground">
-                            { !servers ? 'Loading servers...' : searchTerm ? `No servers found for "${searchTerm}".` : "No servers configured."}
+                            { searchTerm ? `No servers found for "${searchTerm}".` : "No servers configured."}
                         </p>
                         <p className="text-sm text-muted-foreground">
                             { !searchTerm && 'Click "Add Server" to get started.'}

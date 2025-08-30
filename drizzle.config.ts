@@ -1,8 +1,6 @@
 
+import 'dotenv/config';
 import { defineConfig } from "drizzle-kit";
-import * as dotenv from 'dotenv';
-
-dotenv.config({ path: '.env' });
 
 const tursoDbUrl = process.env.TURSO_DATABASE_URL;
 const tursoAuthToken = process.env.TURSO_AUTH_TOKEN;
