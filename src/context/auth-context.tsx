@@ -109,7 +109,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (loading || !isConfigValid) return;
+    if (loading) return; // Don't run this effect until the auth state is determined
+
+    if (!isConfigValid) {
+        // If config is invalid, we don't need to do any auth checks/redirects
+        // The component will render an error message instead.
+        return;
+    }
 
     const isAuthPage = pathname === '/login';
 
@@ -117,7 +123,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       router.push('/login');
     }
     
-  }, [user, server, loading, router, pathname, isConfigValid]);
+  }, [user, loading, router, pathname, isConfigValid]);
 
   if (!isConfigValid) {
     return (
