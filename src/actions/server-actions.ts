@@ -60,25 +60,27 @@ export async function getServersDb(): Promise<ServerConfig[]> {
 export async function saveServerDb(server: ServerConfig): Promise<{ success: boolean; message?: string }> {
   console.log(`[DB] Attempting to save server: ${server.name}`, server);
   try {
-    if (server.uuid) {
-      console.log(`[DB] Server has UUID ${server.uuid}. Updating existing server.`);
-      await db.update(servers).set(server).where(eq(servers.uuid, server.uuid));
-      console.log(`[DB] Successfully updated server ID: ${server.uuid}`);
+    const existingServer = await db.query.servers.findFirst({
+        where: and(
+            eq(servers.host, server.host),
+            eq(servers.companyId, server.companyId)
+        ),
+    });
+
+    if (existingServer) {
+        console.log(`[DB] Server with host ${server.host} and companyId ${server.companyId} already exists. Updating it.`);
+        await db.update(servers)
+          .set({ ...server, uuid: existingServer.uuid }) // Ensure we use the existing UUID
+          .where(eq(servers.uuid, existingServer.uuid));
+        console.log(`[DB] Successfully updated server ID: ${existingServer.uuid}`);
     } else {
-      console.log(`[DB] Server has no UUID. Inserting new server.`);
-      const newServer = {
-          name: server.name,
-          host: server.host,
-          apiPath: server.apiPath,
-          appKey: server.appKey,
-          secretKey: server.secretKey,
-          companyId: server.companyId,
-          countryCodes: server.countryCodes,
-          usageCount: server.usageCount || 0,
-      };
-      await db.insert(servers).values(newServer);
-      console.log(`[DB] Successfully inserted new server: ${newServer.name}`);
+        console.log(`[DB] Server is new. Inserting.`);
+        // Ensure a UUID exists for the new record
+        const newServer = { ...server, uuid: server.uuid || uuidv4() };
+        await db.insert(servers).values(newServer);
+        console.log(`[DB] Successfully inserted new server: ${newServer.name} with UUID: ${newServer.uuid}`);
     }
+
     // Revalidate paths to ensure UI updates after DB change
     revalidatePath('/');
     revalidatePath('/settings/servers');
@@ -218,5 +220,3 @@ export async function deleteTemplateDb(templateId: string, userId: string): Prom
         eq(templates.userId, userId)
     ));
 }
-
-    
