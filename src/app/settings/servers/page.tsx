@@ -42,7 +42,7 @@ import { z } from 'zod';
 import { Edit, PlusCircle, Trash2, Server, Upload, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ServerForm from '@/components/settings/server-form';
-import { getServers, saveServer, deleteServer } from '@/actions/server-actions';
+import * as persistence from '@/services/persistence';
 import { Loader2 } from 'lucide-react';
 
 const ServerConfigsArraySchema = z.array(ServerConfigSchema);
@@ -57,7 +57,7 @@ export default function ServerSettingsPage() {
 
   const fetchServers = async () => {
     setLoading(true);
-    const serverList = await getServers();
+    const serverList = await persistence.getServers();
     setServers(serverList);
     setLoading(false);
   }
@@ -78,7 +78,7 @@ export default function ServerSettingsPage() {
 
   const handleDelete = async (serverToDelete: ServerConfig) => {
     if (!serverToDelete.uuid) return;
-    const result = await deleteServer(serverToDelete.uuid);
+    const result = await persistence.deleteServer(serverToDelete.uuid);
     if (result.success) {
       setServers(servers.filter((s) => s.uuid !== serverToDelete.uuid));
       toast({
@@ -92,7 +92,7 @@ export default function ServerSettingsPage() {
   };
 
   const handleSave = async (data: ServerConfig) => {
-    const result = await saveServer(data);
+    const result = await persistence.saveServer(data);
     
     if (result.success) {
         // Refetch all servers to get the latest state
@@ -154,9 +154,15 @@ export default function ServerSettingsPage() {
             let successCount = 0;
             for(const server of newServersToSave) {
                 // Pass server data without a client-side uuid.
-                const result = await saveServer(server as ServerConfig);
+                const result = await persistence.saveServer(server as ServerConfig);
                 if (result.success) {
                     successCount++;
+                } else {
+                    toast({
+                        title: `Could not import "${server.name}"`,
+                        description: result.message,
+                        variant: 'destructive',
+                    });
                 }
             }
             await fetchServers(); // Refetch the list

@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useServer } from '@/context/server-context';
 import type { Journey } from '@/types';
-import persistenceService from '@/services/persistence-service';
+import * as persistence from '@/services/persistence';
 import { useAuth } from './use-auth';
 
 const persistenceType = process.env.NEXT_PUBLIC_PERSISTENCE_TYPE;
@@ -33,7 +33,7 @@ export function useJourneys() {
 
     setLoading(true);
     try {
-      const allJourneys = await persistenceService.getJourneys(serverScope, userId);
+      const allJourneys = await persistence.getJourneys(serverScope, userId!);
       setJourneys(allJourneys.sort((a,b) => (b.journeyServerId || 0) - (a.journeyServerId || 0)));
     } catch (error) {
       console.error("Failed to load journeys from persistence layer", error);
@@ -56,7 +56,7 @@ export function useJourneys() {
     }
     
     const journeyWithScope = { ...journey, serverScope };
-    await persistenceService.saveJourney(journeyWithScope, userId);
+    await persistence.saveJourney(journeyWithScope, userId!);
     
     setJourneys(prev => {
         if (!prev) return [journeyWithScope];
@@ -79,7 +79,7 @@ export function useJourneys() {
      if (persistenceType === 'server' && !userId) {
         throw new Error("Cannot delete journey without a user ID for server persistence.");
     }
-    await persistenceService.deleteJourney(journeyId, userId);
+    await persistence.deleteJourney(journeyId, userId!);
     setJourneys(prev => prev ? prev.filter(j => j.id !== journeyId) : []);
   }, [userId]);
 

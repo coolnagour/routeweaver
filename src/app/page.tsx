@@ -21,7 +21,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { z } from 'zod';
-import { getServers, saveServer } from '@/actions/server-actions';
+import * as persistence from '@/services/persistence';
 import { v4 as uuidv4 } from 'uuid';
 
 const ServerConfigsArraySchema = z.array(ServerConfigSchema);
@@ -39,7 +39,7 @@ export default function SelectServerPage() {
   useEffect(() => {
     async function fetchServers() {
         setLoading(true);
-        const serverList = await getServers();
+        const serverList = await persistence.getServers();
         // Set a default usageCount if it's not present
         const serversWithDefaults = serverList.map(s => ({ ...s, usageCount: s.usageCount || 0 }));
         setServers(serversWithDefaults);
@@ -62,11 +62,11 @@ export default function SelectServerPage() {
   };
   
   const handleSave = async (data: ServerConfig) => {
-      const result = await saveServer(data);
+      const result = await persistence.saveServer(data);
 
       if (result.success) {
         // Refetch the servers to get the complete list with the new one
-        const newServerList = await getServers();
+        const newServerList = await persistence.getServers();
         setServers(newServerList.map(s => ({...s, usageCount: s.usageCount || 0})));
         toast({ title: 'Server Added', description: 'The new server configuration has been added.' });
         setIsDialogOpen(false);
@@ -119,9 +119,9 @@ export default function SelectServerPage() {
         
         if (newServersToSave.length > 0) {
           for (const serverToSave of newServersToSave) {
-            await saveServer(serverToSave);
+            await persistence.saveServer(serverToSave);
           }
-          const newServerList = await getServers();
+          const newServerList = await persistence.getServers();
           setServers(newServerList.map(s => ({...s, usageCount: s.usageCount || 0})));
           toast({
             title: 'Import Successful',

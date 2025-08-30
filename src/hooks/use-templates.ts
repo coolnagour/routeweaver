@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useServer } from '@/context/server-context';
 import type { JourneyTemplate } from '@/types';
-import persistenceService from '@/services/persistence-service';
+import * as persistence from '@/services/persistence';
 import { useAuth } from './use-auth';
 
 const persistenceType = process.env.NEXT_PUBLIC_PERSISTENCE_TYPE;
@@ -31,7 +31,7 @@ export function useTemplates() {
     }
     setLoading(true);
     try {
-      const allTemplates = await persistenceService.getTemplates(serverScope, userId);
+      const allTemplates = await persistence.getTemplates(serverScope, userId!);
       setTemplates(allTemplates.sort((a,b) => a.name.localeCompare(b.name)));
     } catch (error) {
       console.error("Failed to load templates from persistence layer", error);
@@ -54,7 +54,7 @@ export function useTemplates() {
     }
     
     const templateWithScope = { ...template, serverScope };
-    await persistenceService.saveTemplate(templateWithScope, userId);
+    await persistence.saveTemplate(templateWithScope, userId!);
     
     setTemplates(prev => {
         if (!prev) return [templateWithScope];
@@ -74,7 +74,7 @@ export function useTemplates() {
      if (persistenceType === 'server' && !userId) {
         throw new Error("Cannot delete template without a user ID for server persistence.");
     }
-    await persistenceService.deleteTemplate(templateId, userId);
+    await persistence.deleteTemplate(templateId, userId!);
     setTemplates(prev => prev ? prev.filter(t => t.id !== templateId) : []);
   }, [userId]);
 
