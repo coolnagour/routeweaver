@@ -108,24 +108,30 @@ export default function SelectServerPage() {
           throw new Error('The imported file has an invalid format.');
         }
 
-        const importedServers: ServerConfig[] = validationResult.data.map(s => ({
-            ...s,
-            uuid: s.uuid || undefined, // Let the backend handle UUID generation
-            usageCount: s.usageCount || 0,
-        }));
+        const importedServers: ServerConfig[] = validationResult.data;
         
         const existingServerKeys = new Set(servers.map(s => `${s.host}-${s.companyId}`));
         const newServersToSave = importedServers.filter(s => !existingServerKeys.has(`${s.host}-${s.companyId}`));
         
         if (newServersToSave.length > 0) {
+          let successCount = 0;
           for (const serverToSave of newServersToSave) {
-            await persistence.saveServer(serverToSave);
+            const result = await persistence.saveServer(serverToSave);
+            if (result.success) {
+              successCount++;
+            } else {
+              toast({
+                  title: `Could not import "${serverToSave.name}"`,
+                  description: result.message,
+                  variant: 'destructive',
+              });
+            }
           }
           const newServerList = await persistence.getServers();
           setServers(newServerList.map(s => ({...s, usageCount: s.usageCount || 0})));
           toast({
             title: 'Import Successful',
-            description: `${newServersToSave.length} new server configuration(s) added.`,
+            description: `${successCount} new server configuration(s) added.`,
           });
         } else {
           toast({
@@ -247,3 +253,5 @@ export default function SelectServerPage() {
     </div>
   );
 }
+
+    
