@@ -12,7 +12,9 @@
     "typecheck": "tsc --noEmit",
     "test": "tsx src/ai/flows/journey-payload-flow.test.ts",
     "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
     "@genkit-ai/googleai": "^1.14.1",
