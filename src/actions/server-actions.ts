@@ -20,10 +20,10 @@ export async function getServers(): Promise<ServerConfig[]> {
 export async function saveServer(server: ServerConfig): Promise<{ success: boolean; message?: string }> {
   try {
     if (server.uuid) {
-      // Update
+      // Update existing server
       await db.update(servers).set(server).where(eq(servers.uuid, server.uuid));
     } else {
-      // Insert
+      // Insert new server
       await db.insert(servers).values(server);
     }
     revalidatePath('/settings/servers');
