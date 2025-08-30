@@ -7,9 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 export const users = sqliteTable('users', {
     id: text('id').primaryKey(),
-    email: text('email', {
-        mode: "text"
-    }).notNull().unique(),
+    email: text('email', { mode: "text" }).notNull().unique(),
     displayName: text('display_name'),
     photoURL: text('photo_url'),
 });
@@ -22,7 +20,7 @@ export const servers = sqliteTable('servers', {
     appKey: text('app_key').notNull(),
     secretKey: text('secret_key').notNull(),
     companyId: text('company_id').notNull(),
-    countryCodes: text('country_codes').notNull().$type<string[]>(),
+    countryCodes: text('country_codes', { mode: 'json' }).notNull().$type<string[]>(),
     usageCount: integer('usage_count').default(0),
 });
 
