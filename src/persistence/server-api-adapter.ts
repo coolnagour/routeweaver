@@ -7,7 +7,6 @@ import { db } from "@/lib/drizzle";
 import { users, journeys, bookings as bookingsTable, templates, templateBookings } from "@/lib/drizzle/schema";
 import { eq, and } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
-import { getUserId } from "@/actions/user-actions";
 
 
 // Helper function to rehydrate a journey from DB parts
