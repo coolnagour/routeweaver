@@ -19,19 +19,24 @@ export type UserData = z.infer<typeof UserSchema>;
 export async function upsertUser(userData: UserData) {
     const validatedData = UserSchema.parse(userData);
 
-    // This logic performs a more reliable "upsert" for Turso/libSQL.
-    // It first attempts an update. If no rows are affected, it means the user
-    // does not exist, and it proceeds to insert the new user.
     try {
-        const result = await db.update(users)
-            .set({
-                email: validatedData.email,
-                displayName: validatedData.displayName,
-                photoURL: validatedData.photoURL,
-            })
-            .where(eq(users.id, validatedData.id));
+        // This is a more robust upsert logic that first queries for the user.
+        // It's more compatible than relying on `rowsAffected` which can be inconsistent.
+        const existingUser = await db.query.users.findFirst({
+            where: eq(users.id, validatedData.id),
+        });
 
-        if (result.rowsAffected === 0) {
+        if (existingUser) {
+            // User exists, update them
+            await db.update(users)
+                .set({
+                    email: validatedData.email,
+                    displayName: validatedData.displayName,
+                    photoURL: validatedData.photoURL,
+                })
+                .where(eq(users.id, validatedData.id));
+        } else {
+            // User does not exist, insert them
             await db.insert(users).values({
                 id: validatedData.id,
                 email: validatedData.email,
@@ -41,8 +46,7 @@ export async function upsertUser(userData: UserData) {
         }
     } catch (error) {
         console.error("Error during upsertUser:", error);
-        // If the update fails for a reason other than "not found" (e.g., database connection issue),
-        // we re-throw the error to ensure it's surfaced.
+        // Re-throw the error to ensure it's surfaced.
         throw error;
     }
 
