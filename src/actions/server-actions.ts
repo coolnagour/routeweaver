@@ -1,15 +1,18 @@
 
 'use server';
 
-import { db } from '@/lib/drizzle';
-import { servers } from '@/lib/drizzle/schema';
+import persistenceService from '@/services/persistence-service';
 import type { ServerConfig } from '@/types';
-import { eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
+import { auth } from 'firebase-admin';
+
+// Note: In server-side persistence mode, these actions are not user-specific.
+// In a real-world multi-tenant app, you would pass the userId to the persistence layer.
+// For this app's purpose (single user or all users share servers), this is okay.
 
 export async function getServers(): Promise<ServerConfig[]> {
   try {
-    const serverList = await db.query.servers.findMany();
+    const serverList = await persistenceService.getServers();
     return serverList;
   } catch (error) {
     console.error("Failed to fetch servers:", error);
@@ -19,19 +22,15 @@ export async function getServers(): Promise<ServerConfig[]> {
 
 export async function saveServer(server: ServerConfig): Promise<{ success: boolean; message?: string }> {
   try {
-    if (server.uuid) {
-      // Update existing server
-      await db.update(servers).set(server).where(eq(servers.uuid, server.uuid));
-    } else {
-      // Insert new server
-      await db.insert(servers).values(server);
-    }
+    await persistenceService.saveServer(server);
     revalidatePath('/settings/servers');
     revalidatePath('/');
     return { success: true };
   } catch (error) {
     console.error("Failed to save server:", error);
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+    // This UNIQUE constraint check is specific to the Drizzle/Turso implementation
+    // A more generic approach would involve parsing error codes if the adapter provided them.
     if (errorMessage.includes('UNIQUE constraint failed')) {
         return { success: false, message: 'A server with this Host and Company ID already exists.' };
     }
@@ -41,7 +40,7 @@ export async function saveServer(server: ServerConfig): Promise<{ success: boole
 
 export async function deleteServer(uuid: string): Promise<{ success: boolean; message?: string }> {
     try {
-        await db.delete(servers).where(eq(servers.uuid, uuid));
+        await persistenceService.deleteServer(uuid);
         revalidatePath('/settings/servers');
         revalidatePath('/');
         return { success: true };

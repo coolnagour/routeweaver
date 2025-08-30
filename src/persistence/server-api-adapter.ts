@@ -2,9 +2,9 @@
 'server-only';
 
 import type { StorageAdapter } from "./storage-adapter";
-import type { Journey, JourneyTemplate, Booking } from "@/types";
+import type { Journey, JourneyTemplate, Booking, ServerConfig } from "@/types";
 import { db } from "@/lib/drizzle";
-import { users, journeys, bookings as bookingsTable, templates, template_bookings } from "@/lib/drizzle/schema";
+import { users, journeys, bookings as bookingsTable, templates, template_bookings, servers } from "@/lib/drizzle/schema";
 import { eq, and } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 
@@ -84,6 +84,30 @@ const rehydrateTemplate = (templateData: any, bookingsData: any[]): JourneyTempl
 
 
 class ServerApiAdapter implements StorageAdapter {
+  
+  // Server Methods
+  async getServers(): Promise<ServerConfig[]> {
+    console.log(`[ServerApiAdapter] Getting all servers.`);
+    return await db.query.servers.findMany();
+  }
+  
+  async saveServer(server: ServerConfig): Promise<void> {
+    console.log(`[ServerApiAdapter] Saving server: ${server.name}`);
+    if (server.uuid) {
+      // Update existing server
+      await db.update(servers).set(server).where(eq(servers.uuid, server.uuid));
+    } else {
+      // Insert new server. Drizzle/DB will generate the UUID.
+      await db.insert(servers).values(server);
+    }
+  }
+
+  async deleteServer(serverId: string): Promise<void> {
+    console.log(`[ServerApiAdapter] Deleting server ID: ${serverId}`);
+    await db.delete(servers).where(eq(servers.uuid, serverId));
+  }
+
+  // Journey Methods
   async getJourneys(serverScope: string, userId: string): Promise<Journey[]> {
     console.log(`[ServerApiAdapter] Getting journeys for scope: ${serverScope} and user: ${userId}`);
     const journeyRecords = await db.query.journeys.findMany({

@@ -4,12 +4,12 @@ import { openDB } from 'idb';
 import type { ServerConfig, JourneyTemplate, Journey } from '@/types';
 
 const DB_NAME = 'RouteWeaverDB';
-const DB_VERSION = 3; 
+const DB_VERSION = 4; // Increment version for schema change
 
 export interface RouteWeaverDB extends DBSchema {
-  'server-configs': {
-    key: string;
-    value: ServerConfig[];
+  'servers': {
+    key: string; // server.uuid
+    value: ServerConfig;
   };
   'journey-templates': {
     key: string; // template.id
@@ -20,10 +20,6 @@ export interface RouteWeaverDB extends DBSchema {
     key: string; // journey.id
     value: Journey;
     indexes: { 'by-server': string }; // To query by server scope
-  };
-  'selected-server': {
-    key: string;
-    value: ServerConfig | null;
   };
 }
 
@@ -36,8 +32,10 @@ export const getDb = () => {
   if (!dbPromise) {
     dbPromise = openDB<RouteWeaverDB>(DB_NAME, DB_VERSION, {
       upgrade(db, oldVersion) {
-        if (!db.objectStoreNames.contains('server-configs')) {
-          db.createObjectStore('server-configs');
+        if (oldVersion < 4) {
+            if (!db.objectStoreNames.contains('servers')) {
+                db.createObjectStore('servers', { keyPath: 'uuid' });
+            }
         }
         if (oldVersion < 3) {
             if (db.objectStoreNames.contains('journey-templates')) {
@@ -53,9 +51,6 @@ export const getDb = () => {
             const journeyStore = db.createObjectStore('recent-journeys', { keyPath: 'id' });
             journeyStore.createIndex('by-server', 'serverScope');
         }
-        if (!db.objectStoreNames.contains('selected-server')) {
-            db.createObjectStore('selected-server');
-        }
       },
     });
   }
@@ -67,11 +62,13 @@ export async function getFromDb<T extends StoreName>(storeName: T, key: string):
   return db.get(storeName, key);
 }
 
-export async function setInDb<T extends StoreName>(storeName: T, value: StoreValue<T>, key?: string): Promise<IDBValidKey> {
+export async function getAllFromDb<T extends StoreName>(storeName: T): Promise<StoreValue<T>[]> {
+    const db = await getDb();
+    return db.getAll(storeName);
+}
+
+export async function setInDb<T extends StoreName>(storeName: T, value: StoreValue<T>): Promise<IDBValidKey> {
   const db = await getDb();
-  if (key) {
-    return db.put(storeName, value, key);
-  }
   return db.put(storeName, value);
 }
 

@@ -42,7 +42,6 @@ import { z } from 'zod';
 import { Edit, PlusCircle, Trash2, Server, Upload, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ServerForm from '@/components/settings/server-form';
-import { v4 as uuidv4 } from 'uuid';
 import { getServers, saveServer, deleteServer } from '@/actions/server-actions';
 import { Loader2 } from 'lucide-react';
 
@@ -56,13 +55,14 @@ export default function ServerSettingsPage() {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const fetchServers = async () => {
+    setLoading(true);
+    const serverList = await getServers();
+    setServers(serverList);
+    setLoading(false);
+  }
+
   useEffect(() => {
-    async function fetchServers() {
-        setLoading(true);
-        const serverList = await getServers();
-        setServers(serverList);
-        setLoading(false);
-    }
     fetchServers();
   }, []);
 
@@ -92,24 +92,12 @@ export default function ServerSettingsPage() {
   };
 
   const handleSave = async (data: ServerConfig) => {
-    const serverToSave: ServerConfig = editingServer ? { ...data, uuid: editingServer.uuid } : { ...data, uuid: uuidv4() };
-
-    // For new servers, we let the DB assign uuid, so we pass undefined.
-    // For existing, we pass the uuid.
-    const payload = editingServer ? serverToSave : { ...data, uuid: undefined };
-
-    const result = await saveServer(payload);
+    const result = await saveServer(data);
     
     if (result.success) {
-        if (editingServer) {
-            setServers(servers.map((s) => (s.uuid === editingServer.uuid ? serverToSave : s)));
-            toast({ title: 'Server Updated', description: 'The server configuration has been saved.' });
-        } else {
-            // After successful insert, we need to refresh the list to get the new server with its uuid.
-            const newServerList = await getServers();
-            setServers(newServerList);
-            toast({ title: 'Server Added', description: 'The new server configuration has been added.' });
-        }
+        // Refetch all servers to get the latest state
+        await fetchServers();
+        toast({ title: editingServer ? 'Server Updated' : 'Server Added', description: 'The server configuration has been saved.' });
         setIsDialogOpen(false);
         setEditingServer(undefined);
     } else {
@@ -171,8 +159,7 @@ export default function ServerSettingsPage() {
                     successCount++;
                 }
             }
-            const newServerList = await getServers();
-            setServers(newServerList);
+            await fetchServers(); // Refetch the list
             toast({
                 title: 'Import Complete',
                 description: `${successCount} new server configuration(s) added.`,

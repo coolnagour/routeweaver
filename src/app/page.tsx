@@ -20,10 +20,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import { getServers, saveServer } from '@/actions/server-actions';
-import useIndexedDB from '@/hooks/use-indexed-db';
+import { v4 as uuidv4 } from 'uuid';
 
 const ServerConfigsArraySchema = z.array(ServerConfigSchema);
 
@@ -50,9 +49,6 @@ export default function SelectServerPage() {
   }, []);
 
   const handleSelectServer = (serverConfig: ServerConfig) => {
-    // We update usage count on the client for immediate feedback,
-    // but the canonical update should happen on the server if needed.
-    // For now, we'll just handle it client-side for sorting.
     const updatedServers = servers.map(s => {
         if (s.uuid === serverConfig.uuid) {
             return { ...s, usageCount: (s.usageCount || 0) + 1 };
@@ -66,11 +62,12 @@ export default function SelectServerPage() {
   };
   
   const handleSave = async (data: ServerConfig) => {
-      const newServer = { ...data, uuid: uuidv4(), usageCount: 0 };
-      const result = await saveServer(newServer);
+      const result = await saveServer(data);
 
       if (result.success) {
-        setServers(prev => [...prev, newServer]);
+        // Refetch the servers to get the complete list with the new one
+        const newServerList = await getServers();
+        setServers(newServerList.map(s => ({...s, usageCount: s.usageCount || 0})));
         toast({ title: 'Server Added', description: 'The new server configuration has been added.' });
         setIsDialogOpen(false);
       } else {
@@ -113,7 +110,7 @@ export default function SelectServerPage() {
 
         const importedServers: ServerConfig[] = validationResult.data.map(s => ({
             ...s,
-            uuid: s.uuid || uuidv4(),
+            uuid: s.uuid || undefined, // Let the backend handle UUID generation
             usageCount: s.usageCount || 0,
         }));
         
@@ -124,7 +121,8 @@ export default function SelectServerPage() {
           for (const serverToSave of newServersToSave) {
             await saveServer(serverToSave);
           }
-          setServers(prev => [...prev, ...newServersToSave]);
+          const newServerList = await getServers();
+          setServers(newServerList.map(s => ({...s, usageCount: s.usageCount || 0})));
           toast({
             title: 'Import Successful',
             description: `${newServersToSave.length} new server configuration(s) added.`,
