@@ -58,12 +58,14 @@ export async function getServersDb(): Promise<ServerConfig[]> {
 }
 
 export async function saveServerDb(server: ServerConfig): Promise<{ success: boolean; message?: string }> {
-  console.log(`[DB] Saving server: ${server.name}`);
+  console.log(`[DB] Attempting to save server: ${server.name}`, server);
   try {
     if (server.uuid) {
+      console.log(`[DB] Server has UUID ${server.uuid}. Updating existing server.`);
       await db.update(servers).set(server).where(eq(servers.uuid, server.uuid));
+      console.log(`[DB] Successfully updated server ID: ${server.uuid}`);
     } else {
-      // Create a new server object for insertion, letting the DB handle the default UUID.
+      console.log(`[DB] Server has no UUID. Inserting new server.`);
       const newServer = {
           name: server.name,
           host: server.host,
@@ -75,20 +77,23 @@ export async function saveServerDb(server: ServerConfig): Promise<{ success: boo
           usageCount: server.usageCount || 0,
       };
       await db.insert(servers).values(newServer);
+      console.log(`[DB] Successfully inserted new server: ${newServer.name}`);
     }
+    // Revalidate paths to ensure UI updates after DB change
     revalidatePath('/');
     revalidatePath('/settings/servers');
     return { success: true };
   } catch (error) {
      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
-     // Check for UNIQUE constraint violation from SQLite
-     if (errorMessage.includes('UNIQUE constraint failed') || errorMessage.includes('SQLite error: UNIQUE constraint failed')) {
-        return { success: false, message: 'A server with this Host and Company ID already exists.' };
-     }
      console.error("[DB] Error saving server:", errorMessage);
+     // Check for UNIQUE constraint violation from SQLite which can happen on import
+     if (errorMessage.includes('UNIQUE constraint failed') || errorMessage.includes('SQLite error: UNIQUE constraint failed')) {
+        return { success: false, message: `A server with Host '${server.host}' and Company ID '${server.companyId}' already exists.` };
+     }
      return { success: false, message: errorMessage };
   }
 }
+
 
 export async function deleteServerDb(serverId: string): Promise<{ success: boolean; message?: string }> {
   console.log(`[DB] Deleting server ID: ${serverId}`);

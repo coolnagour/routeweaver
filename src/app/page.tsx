@@ -88,10 +88,11 @@ export default function SelectServerPage() {
     fileInputRef.current?.click();
   };
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    console.log(`[Import] Starting import from file: ${file.name}`);
     const reader = new FileReader();
     reader.onload = async (e) => {
       try {
@@ -99,27 +100,35 @@ export default function SelectServerPage() {
         if (typeof text !== 'string') {
           throw new Error('File content is not readable text.');
         }
+        console.log('[Import] File read successfully.');
         const parsedJson = JSON.parse(text);
+        console.log('[Import] File parsed as JSON:', parsedJson);
         
         const validationResult = ServerConfigsArraySchema.safeParse(parsedJson);
 
         if (!validationResult.success) {
-          console.error("Invalid JSON structure:", validationResult.error.flatten().fieldErrors);
+          console.error("[Import] Invalid JSON structure:", validationResult.error.flatten().fieldErrors);
           throw new Error('The imported file has an invalid format.');
         }
+        console.log('[Import] JSON format validated successfully.');
 
         const importedServers: ServerConfig[] = validationResult.data;
         
         const existingServerKeys = new Set(servers.map(s => `${s.host}-${s.companyId}`));
         const newServersToSave = importedServers.filter(s => !existingServerKeys.has(`${s.host}-${s.companyId}`));
         
+        console.log(`[Import] Found ${newServersToSave.length} new servers to save.`);
+
         if (newServersToSave.length > 0) {
           let successCount = 0;
           for (const serverToSave of newServersToSave) {
+            console.log(`[Import] Attempting to save server:`, serverToSave);
             const result = await persistence.saveServer(serverToSave);
             if (result.success) {
+              console.log(`[Import] Successfully saved server: ${serverToSave.name}`);
               successCount++;
             } else {
+              console.error(`[Import] Failed to save server "${serverToSave.name}": ${result.message}`);
               toast({
                   title: `Could not import "${serverToSave.name}"`,
                   description: result.message,
@@ -128,12 +137,14 @@ export default function SelectServerPage() {
             }
           }
           const newServerList = await persistence.getServers();
+          console.log('[Import] Refetched server list:', newServerList);
           setServers(newServerList.map(s => ({...s, usageCount: s.usageCount || 0})));
           toast({
             title: 'Import Successful',
             description: `${successCount} new server configuration(s) added.`,
           });
         } else {
+          console.log('[Import] No new servers to import.');
           toast({
             title: 'No New Servers Imported',
             description: 'All configurations in the file already exist.',
@@ -141,7 +152,7 @@ export default function SelectServerPage() {
         }
 
       } catch (error) {
-        console.error("Import error:", error);
+        console.error("[Import] Full error:", error);
         toast({
           variant: 'destructive',
           title: 'Import Failed',
