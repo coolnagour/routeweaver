@@ -69,52 +69,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             console.log(`User ${user.uid} upserted to server DB.`);
         } catch (error) {
             console.error("Failed to upsert user:", error);
-            // Decide how to handle this error. For now, we'll log it.
-            // The user is still logged in on the client.
         }
     }
     setUser(user);
   }
 
   useEffect(() => {
-    // Check if we should use mock auth
-    if (process.env.NEXT_PUBLIC_USE_MOCK_AUTH === 'true') {
-      console.log("Using mock user for development.");
-      handleUserLogin(mockUser);
-      setLoading(false);
-      return;
-    }
+    const initializeAuth = async () => {
+        // Check if we should use mock auth
+        if (process.env.NEXT_PUBLIC_USE_MOCK_AUTH === 'true') {
+            console.log("Using mock user for development.");
+            await handleUserLogin(mockUser);
+            setLoading(false);
+            return;
+        }
 
-    // Check if Firebase config is provided for real auth
-    if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
-      console.error("Firebase config is missing. Please check your .env file.");
-      setIsConfigValid(false);
-      setLoading(false);
-      return;
+        // Check if Firebase config is provided for real auth
+        if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
+            console.error("Firebase config is missing. Please check your .env file.");
+            setIsConfigValid(false);
+            setLoading(false);
+            return;
+        }
+        
+        setIsConfigValid(true);
+
+        // REAL AUTH
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                await handleUserLogin(user);
+            } else {
+                setUser(null);
+            }
+            setLoading(false);
+        });
+        return () => unsubscribe();
     }
     
-    setIsConfigValid(true);
-
-    // REAL AUTH
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-        if (user) {
-            await handleUserLogin(user);
-        } else {
-            setUser(null);
-        }
-        setLoading(false);
-    });
-    return () => unsubscribe();
+    initializeAuth();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    if (loading) return; // Don't run this effect until the auth state is determined
-
-    if (!isConfigValid) {
-        // If config is invalid, we don't need to do any auth checks/redirects
-        // The component will render an error message instead.
-        return;
+    if (loading || !isConfigValid) {
+        return; 
     }
 
     const isAuthPage = pathname === '/login';
@@ -134,16 +132,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             <p className="mt-2 text-muted-foreground">
                 Firebase credentials are not set up correctly. Please check your <code>.env</code> file at the root of your project and ensure the following variables are present and correct:
             </p>
-            <pre className="mt-4 rounded-md bg-muted p-4 text-left text-sm text-muted-foreground overflow-auto"><code>
-                NEXT_PUBLIC_FIREBASE_API_KEY="your_api_key"<br/>
-                NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="your_auth_domain"<br/>
-                NEXT_PUBLIC_FIREBASE_PROJECT_ID="your_project_id"<br/>
-                NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET="your_storage_bucket"<br/>
-                NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID="your_sender_id"<br/>
-                NEXT_PUBLIC_FIREBASE_APP_ID="your_app_id"<br/>
-                NEXT_PUBLIC_ALLOWED_DOMAIN="your_allowed_domain.com"<br/>
+            <pre className="mt-4 rounded-md bg-muted p-4 text-left text-sm text-muted-foreground overflow-auto">
+                <code>
+                NEXT_PUBLIC_FIREBASE_API_KEY="your_api_key"
+                NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="your_auth_domain"
+                NEXT_PUBLIC_FIREBASE_PROJECT_ID="your_project_id"
+                NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET="your_storage_bucket"
+                NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID="your_sender_id"
+                NEXT_PUBLIC_FIREBASE_APP_ID="your_app_id"
+                NEXT_PUBLIC_ALLOWED_DOMAIN="your_allowed_domain.com"
                 NEXT_PUBLIC_GOOGLE_MAPS_API_KEY="your_maps_api_key"
-            </code></pre>
+                </code>
+            </pre>
             <p className="mt-4 text-sm text-muted-foreground">
                 After updating the <code>.env</code> file, you will need to restart the development server.
             </p>
