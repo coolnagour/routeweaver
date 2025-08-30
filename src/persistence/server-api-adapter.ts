@@ -4,7 +4,7 @@
 import type { StorageAdapter } from "./storage-adapter";
 import type { Journey, JourneyTemplate, Booking } from "@/types";
 import { db } from "@/lib/drizzle";
-import { users, journeys, bookings as bookingsTable, templates, templateBookings } from "@/lib/drizzle/schema";
+import { users, journeys, bookings as bookingsTable, templates, template_bookings } from "@/lib/drizzle/schema";
 import { eq, and } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 
@@ -189,7 +189,7 @@ class ServerApiAdapter implements StorageAdapter {
         });
         
         // Delete and re-insert bookings to handle additions/removals/updates
-        await tx.delete(templateBookings).where(eq(templateBookings.templateId, template.id));
+        await tx.delete(template_bookings).where(eq(template_bookings.templateId, template.id));
 
         if (bookings && bookings.length > 0) {
             const bookingsToInsert = bookings.map(b => ({
@@ -199,7 +199,7 @@ class ServerApiAdapter implements StorageAdapter {
                 extrasConfig: b.extras_config || [],
             }));
              if (bookingsToInsert.length > 0) {
-                await tx.insert(templateBookings).values(bookingsToInsert);
+                await tx.insert(template_bookings).values(bookingsToInsert);
              }
         }
     });
