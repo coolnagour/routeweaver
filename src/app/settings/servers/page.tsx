@@ -92,20 +92,22 @@ export default function ServerSettingsPage() {
   };
 
   const handleSave = async (data: ServerConfig) => {
-    let serverToSave: ServerConfig;
-    if (editingServer) {
-        serverToSave = { ...data, uuid: editingServer.uuid };
-    } else {
-        serverToSave = { ...data, uuid: uuidv4() };
-    }
+    const serverToSave: ServerConfig = editingServer ? { ...data, uuid: editingServer.uuid } : { ...data, uuid: uuidv4() };
 
-    const result = await saveServer(serverToSave);
+    // For new servers, we let the DB assign uuid, so we pass undefined.
+    // For existing, we pass the uuid.
+    const payload = editingServer ? serverToSave : { ...data, uuid: undefined };
+
+    const result = await saveServer(payload);
+    
     if (result.success) {
         if (editingServer) {
             setServers(servers.map((s) => (s.uuid === editingServer.uuid ? serverToSave : s)));
             toast({ title: 'Server Updated', description: 'The server configuration has been saved.' });
         } else {
-            setServers([...servers, serverToSave]);
+            // After successful insert, we need to refresh the list to get the new server with its uuid.
+            const newServerList = await getServers();
+            setServers(newServerList);
             toast({ title: 'Server Added', description: 'The new server configuration has been added.' });
         }
         setIsDialogOpen(false);
@@ -153,11 +155,9 @@ export default function ServerSettingsPage() {
           console.error("Invalid JSON structure:", validationResult.error.flatten().fieldErrors);
           throw new Error('The imported file has an invalid format.');
         }
-
-        const importedServers: ServerConfig[] = validationResult.data.map(s => ({
-            ...s,
-            uuid: s.uuid || uuidv4(),
-        }));
+        
+        // Let's not assign UUIDs on the client, the backend will do it.
+        const importedServers = validationResult.data.map(({ uuid, ...s }) => s);
         
         const existingServerKeys = new Set(servers.map(s => `${s.host}-${s.companyId}`));
         const newServersToSave = importedServers.filter(s => !existingServerKeys.has(`${s.host}-${s.companyId}`));
@@ -165,7 +165,8 @@ export default function ServerSettingsPage() {
         if (newServersToSave.length > 0) {
             let successCount = 0;
             for(const server of newServersToSave) {
-                const result = await saveServer(server);
+                // Pass server data without a client-side uuid.
+                const result = await saveServer(server as ServerConfig);
                 if (result.success) {
                     successCount++;
                 }
