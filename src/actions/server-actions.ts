@@ -63,16 +63,29 @@ export async function saveServerDb(server: ServerConfig): Promise<{ success: boo
     if (server.uuid) {
       await db.update(servers).set(server).where(eq(servers.uuid, server.uuid));
     } else {
-      await db.insert(servers).values(server);
+      // Create a new server object for insertion, letting the DB handle the default UUID.
+      const newServer = {
+          name: server.name,
+          host: server.host,
+          apiPath: server.apiPath,
+          appKey: server.appKey,
+          secretKey: server.secretKey,
+          companyId: server.companyId,
+          countryCodes: server.countryCodes,
+          usageCount: server.usageCount || 0,
+      };
+      await db.insert(servers).values(newServer);
     }
     revalidatePath('/');
     revalidatePath('/settings/servers');
     return { success: true };
   } catch (error) {
      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
-     if (errorMessage.includes('UNIQUE constraint failed')) {
+     // Check for UNIQUE constraint violation from SQLite
+     if (errorMessage.includes('UNIQUE constraint failed') || errorMessage.includes('SQLite error: UNIQUE constraint failed')) {
         return { success: false, message: 'A server with this Host and Company ID already exists.' };
      }
+     console.error("[DB] Error saving server:", errorMessage);
      return { success: false, message: errorMessage };
   }
 }

@@ -144,8 +144,7 @@ export default function ServerSettingsPage() {
           throw new Error('The imported file has an invalid format.');
         }
         
-        // Let's not assign UUIDs on the client, the backend will do it.
-        const importedServers = validationResult.data.map(({ uuid, ...s }) => s);
+        const importedServers = validationResult.data;
         
         const existingServerKeys = new Set(servers.map(s => `${s.host}-${s.companyId}`));
         const newServersToSave = importedServers.filter(s => !existingServerKeys.has(`${s.host}-${s.companyId}`));
