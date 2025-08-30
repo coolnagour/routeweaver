@@ -123,7 +123,9 @@ export default function SelectServerPage() {
           let successCount = 0;
           for (const serverToSave of newServersToSave) {
             console.log(`[Import] Attempting to save server:`, serverToSave);
-            const result = await persistence.saveServer(serverToSave);
+            // Pass the server object without a UUID. The backend will handle insertion.
+            const { uuid, ...serverData } = serverToSave;
+            const result = await persistence.saveServer(serverData as ServerConfig);
             if (result.success) {
               console.log(`[Import] Successfully saved server: ${serverToSave.name}`);
               successCount++;

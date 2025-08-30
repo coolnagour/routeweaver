@@ -153,7 +153,8 @@ export default function ServerSettingsPage() {
             let successCount = 0;
             for(const server of newServersToSave) {
                 // Pass server data without a client-side uuid.
-                const result = await persistence.saveServer(server as ServerConfig);
+                const { uuid, ...serverData } = server;
+                const result = await persistence.saveServer(serverData as ServerConfig);
                 if (result.success) {
                     successCount++;
                 } else {

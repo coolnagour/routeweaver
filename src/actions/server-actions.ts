@@ -60,25 +60,17 @@ export async function getServersDb(): Promise<ServerConfig[]> {
 export async function saveServerDb(server: ServerConfig): Promise<{ success: boolean; message?: string }> {
   console.log(`[DB] Attempting to save server: ${server.name}`, server);
   try {
-    const existingServer = await db.query.servers.findFirst({
-        where: and(
-            eq(servers.host, server.host),
-            eq(servers.companyId, server.companyId)
-        ),
-    });
-
-    if (existingServer) {
-        console.log(`[DB] Server with host ${server.host} and companyId ${server.companyId} already exists. Updating it.`);
-        await db.update(servers)
-          .set({ ...server, uuid: existingServer.uuid }) // Ensure we use the existing UUID
-          .where(eq(servers.uuid, existingServer.uuid));
-        console.log(`[DB] Successfully updated server ID: ${existingServer.uuid}`);
+    // This logic now correctly differentiates between create and update based on UUID.
+    // The UNIQUE constraint on (host, companyId) will be handled by the database.
+    if (server.uuid) {
+        console.log(`[DB] Server has UUID ${server.uuid}. Updating.`);
+        await db.update(servers).set(server).where(eq(servers.uuid, server.uuid));
+        console.log(`[DB] Successfully updated server ID: ${server.uuid}`);
     } else {
-        console.log(`[DB] Server is new. Inserting.`);
-        // Ensure a UUID exists for the new record
-        const newServer = { ...server, uuid: server.uuid || uuidv4() };
-        await db.insert(servers).values(newServer);
-        console.log(`[DB] Successfully inserted new server: ${newServer.name} with UUID: ${newServer.uuid}`);
+        console.log(`[DB] Server has no UUID. Inserting.`);
+        // Drizzle/DB will handle generating the default UUID.
+        await db.insert(servers).values(server);
+        console.log(`[DB] Successfully inserted new server: ${server.name}`);
     }
 
     // Revalidate paths to ensure UI updates after DB change
