@@ -7,7 +7,9 @@ import { v4 as uuidv4 } from 'uuid';
 
 export const users = sqliteTable('users', {
     id: text('id').primaryKey(),
-    email: text('email').notNull().unique(),
+    email: text('email', {
+        mode: "text"
+    }).notNull().unique(),
     displayName: text('display_name'),
     photoURL: text('photo_url'),
 });
