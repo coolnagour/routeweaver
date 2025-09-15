@@ -865,7 +865,7 @@ export default function BookingForm({
                                     <div className="space-y-0.5">
                                         <FormLabel className="flex items-center gap-2"><CreditCard />POB Payment</FormLabel>
                                         <p className="text-sm text-muted-foreground">
-                                            Enable to flag this booking for Payment On Board.
+                                            Enable to flag this booking for Payment after onboarding passenger.
                                         </p>
                                     </div>
                                     <FormControl>
