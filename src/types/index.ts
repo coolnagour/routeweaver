@@ -106,6 +106,7 @@ export const BookingSchema = z.object({
   cost: z.number().optional(),
   instructions: z.string().optional(), // Booking-level instructions
   holdOn: z.boolean().optional(),
+  pobPayment: z.boolean().optional(),
   splitPaymentSettings: SplitPaymentSettingsSchema.optional(),
   metadata: z.array(MetadataSchema).optional(),
   fields: z.array(AccountFieldDataSchema).optional(),
@@ -322,6 +323,7 @@ const GenkitBookingSchema = z.object({
   cost: z.number().optional(),
   instructions: z.string().optional(),
   holdOn: z.boolean().optional(),
+  pobPayment: z.boolean().optional(),
   splitPaymentSettings: SplitPaymentSettingsSchema.optional(),
   metadata: z.array(MetadataSchema).optional(),
   fields: z.array(AccountFieldDataSchema).optional(),

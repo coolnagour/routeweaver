@@ -109,6 +109,13 @@ export const formatBookingForApi = ({ booking, server, siteId, accountId }: Book
     if (booking.instructions) {
         payload.instructions = booking.instructions;
     }
+    
+    // Add POB Payment flag
+    if (booking.pobPayment) {
+        payload.pob_payment = 1;
+    } else {
+        payload.pob_payment = 0;
+    }
 
     // Add split payment settings if enabled
     if (booking.splitPaymentSettings?.splitPaymentEnabled) {

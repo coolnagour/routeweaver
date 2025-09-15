@@ -20,7 +20,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { CalendarIcon, MapPin, PlusCircle, X, User, Phone, Clock, MessageSquare, ChevronsUpDown, Sparkles, Loader2, Info, Hash, Car, Map, DollarSign, Lock, ShieldQuestion, Wallet, Percent, Key, Trash2, FileJson, Users, ShoppingBasket, MinusCircle, Search, Check } from 'lucide-react';
+import { CalendarIcon, MapPin, PlusCircle, X, User, Phone, Clock, MessageSquare, ChevronsUpDown, Sparkles, Loader2, Info, Hash, Car, Map, DollarSign, Lock, ShieldQuestion, Wallet, Percent, Key, Trash2, FileJson, Users, ShoppingBasket, MinusCircle, Search, Check, CreditCard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, setHours, setMinutes } from 'date-fns';
 import type { Booking, Stop, SuggestionInput, StopType, Location, AccountField, Extra } from '@/types';
@@ -157,6 +157,7 @@ export default function BookingForm({
       externalAreaCode: initialData.externalAreaCode ?? '',
       price: initialData.price,
       cost: initialData.cost,
+      pobPayment: initialData.pobPayment || false,
       splitPaymentSettings: {
         ...initialData.splitPaymentSettings,
         splitPaymentBasedOn: initialData.splitPaymentSettings?.splitPaymentBasedOn ?? undefined,
@@ -856,6 +857,27 @@ export default function BookingForm({
                             )}
                         />
                         </div>
+                        <FormField
+                            control={form.control}
+                            name="pobPayment"
+                            render={({ field }) => (
+                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-muted/20">
+                                    <div className="space-y-0.5">
+                                        <FormLabel className="flex items-center gap-2"><CreditCard />POB Payment</FormLabel>
+                                        <p className="text-sm text-muted-foreground">
+                                            Enable to flag this booking for Payment On Board.
+                                        </p>
+                                    </div>
+                                    <FormControl>
+                                        <Switch
+                                            checked={field.value}
+                                            onCheckedChange={field.onChange}
+                                            disabled={isEditingExisting}
+                                        />
+                                    </FormControl>
+                                </FormItem>
+                            )}
+                        />
                          <Collapsible>
                             <CollapsibleTrigger asChild>
                                 <Button type="button" variant="link" size="sm" className="p-0 h-auto flex items-center gap-2">
