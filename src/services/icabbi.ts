@@ -164,6 +164,14 @@ export async function updateBooking(server: ServerConfig, { booking, originalBoo
         };
     }
 
+    const originalFirstPickup = originalStops.find(s => s.stopType === 'pickup');
+    const updatedFirstPickup = updatedStops.find(s => s.stopType === 'pickup');
+    
+    if (updatedFirstPickup?.dateTime?.getTime() !== originalFirstPickup?.dateTime?.getTime()) {
+        console.log(`[updateBooking] Date change detected.`);
+        payload.date = updatedFirstPickup!.dateTime!.toISOString();
+    }
+
     if (typeof booking.price === 'number' || typeof booking.cost === 'number') {
         payload.payment = {
             price: booking.price ?? 0,
@@ -194,7 +202,6 @@ export async function updateBooking(server: ServerConfig, { booking, originalBoo
         }));
     }
     
-    // Always include pob_payment in update payload if it exists on the booking object
     if (typeof booking.pobPayment === 'boolean') {
         payload.pob_payment = booking.pobPayment ? 1 : 0;
     }

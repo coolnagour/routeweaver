@@ -515,7 +515,7 @@ export default function BookingForm({
                                         <Label htmlFor="schedule-switch" className="text-sm font-normal">
                                             Schedule for later
                                         </Label>
-                                        <Switch id="schedule-switch" checked={isScheduled} onCheckedChange={handleScheduledToggle} disabled={isEditingExisting} />
+                                        <Switch id="schedule-switch" checked={isScheduled} onCheckedChange={handleScheduledToggle} />
                                     </div>
                                 </div>
                                 <div className="flex gap-2">
@@ -528,7 +528,7 @@ export default function BookingForm({
                                             'w-[calc(50%-0.25rem)] justify-start text-left font-normal bg-background',
                                             !field.value && 'text-muted-foreground'
                                         )}
-                                        disabled={!isScheduled || isEditingExisting}
+                                        disabled={!isScheduled}
                                         >
                                         <CalendarIcon className="mr-2 h-4 w-4" />
                                         {isScheduled
@@ -549,7 +549,7 @@ export default function BookingForm({
                                             newDate.setMinutes(current.getMinutes());
                                             field.onChange(newDate);
                                         }}
-                                        disabled={(date) => date < new Date(new Date().setHours(0,0,0,0)) || isEditingExisting}
+                                        disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
                                         initialFocus
                                     />
                                     </PopoverContent>
@@ -566,7 +566,7 @@ export default function BookingForm({
                                             const newDate = setMinutes(setHours(field.value || new Date(), hours), minutes);
                                             field.onChange(newDate);
                                         }}
-                                        disabled={!isScheduled || isEditingExisting}
+                                        disabled={!isScheduled}
                                     />
                                 </div>
                                 </div>
@@ -690,7 +690,7 @@ export default function BookingForm({
                         getAvailablePickups={getAvailablePickups}
                         onGenerateField={handleGenerateField}
                         generatingFields={generatingFields}
-                        isLocked={isEditingExisting}
+                        isLocked={false}
                         allBookingsInJourney={allBookings}
                     />
                 )}
