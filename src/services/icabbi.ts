@@ -194,8 +194,9 @@ export async function updateBooking(server: ServerConfig, { booking, originalBoo
         }));
     }
     
-    if (booking.pobPayment) {
-        payload.pob_payment = 1;
+    // Always include pob_payment in update payload if it exists on the booking object
+    if (typeof booking.pobPayment === 'boolean') {
+        payload.pob_payment = booking.pobPayment ? 1 : 0;
     }
 
     if (Object.keys(payload).length === 0) {

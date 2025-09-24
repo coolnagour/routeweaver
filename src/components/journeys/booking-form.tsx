@@ -469,7 +469,7 @@ export default function BookingForm({
                     {isEditingExisting && (
                         <span className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                             <Lock className="h-3 w-3" />
-                             Most fields are locked because this booking is already on the server.
+                             Some fields are locked because this booking is already on the server.
                         </span>
                     )}
                 </CardDescription>
@@ -872,7 +872,6 @@ export default function BookingForm({
                                         <Switch
                                             checked={field.value}
                                             onCheckedChange={field.onChange}
-                                            disabled={isEditingExisting}
                                         />
                                     </FormControl>
                                 </FormItem>
