@@ -3,7 +3,7 @@
 'use server';
 
 import type { ServerConfig } from "@/types";
-import type { Booking, Account, Site, AccountField, Extra } from "@/types";
+import type { Booking, Account, Site, AccountField, Extra, Stop } from "@/types";
 import { formatBookingForApi } from "@/lib/booking-formatter";
 import parsePhoneNumberFromString, { getCountryCallingCode } from 'libphonenumber-js';
 
@@ -118,6 +118,7 @@ interface BookingApiContext {
     siteId: number;
     accountId: number;
     fetchOnly?: boolean;
+    originalBooking?: Booking;
 }
 
 export async function createBooking(server: ServerConfig, { booking, siteId, accountId, fetchOnly = false }: BookingApiContext) {
@@ -141,14 +142,28 @@ export async function createBooking(server: ServerConfig, { booking, siteId, acc
     return response.body.booking;
 }
 
-export async function updateBooking(server: ServerConfig, { booking, siteId, accountId }: BookingApiContext) {
+export async function updateBooking(server: ServerConfig, { booking, originalBooking }: BookingApiContext) {
     if (!booking.bookingServerId) {
         throw new Error("Booking must have a bookingServerId to be updated.");
     }
-
-    // For updates, we send payment, split payment, and metadata fields.
-    const payload: any = {};
     
+    const payload: any = {};
+    const originalStops = originalBooking?.stops.sort((a,b) => a.order - b.order) || [];
+    const updatedStops = booking.stops.sort((a,b) => a.order - b.order);
+
+    const originalDestination = originalStops[originalStops.length - 1];
+    const updatedDestination = updatedStops[updatedStops.length - 1];
+
+    if (updatedDestination?.location?.address && updatedDestination.location.address !== originalDestination?.location?.address) {
+        console.log(`[updateBooking] Destination change detected. Old: "${originalDestination?.location?.address}", New: "${updatedDestination.location.address}"`);
+        payload.destination = {
+            lat: updatedDestination.location.lat.toString(),
+            lng: updatedDestination.location.lng.toString(),
+            formatted: updatedDestination.location.address,
+            driver_instructions: updatedDestination.instructions || "",
+        };
+    }
+
     if (typeof booking.price === 'number' || typeof booking.cost === 'number') {
         payload.payment = {
             price: booking.price ?? 0,
@@ -157,55 +172,38 @@ export async function updateBooking(server: ServerConfig, { booking, siteId, acc
         };
     }
 
-    // Add split payment settings only if they are enabled.
     if (booking.splitPaymentSettings?.splitPaymentEnabled) {
-        const { splitPaymentEnabled, splitPaymentBasedOn, splitPaymentType, splitPaymentValue, splitPaymentMinAmount, splitPaymentThresholdAmount, splitPaymentExtrasType, splitPaymentExtrasValue, splitPaymentExtrasInCarType, splitPaymentExtrasInCarValue, splitPaymentTollsType, splitPaymentTollsValue, splitPaymentTipsType, splitPaymentTipsValue } = booking.splitPaymentSettings;
+        const { splitPaymentEnabled, ...settings } = booking.splitPaymentSettings;
         payload.split_payment_settings = {
             split_payment_enabled: splitPaymentEnabled ? 1 : 0,
-            split_payment_based_on: splitPaymentBasedOn,
-            split_payment_type: splitPaymentType,
-            split_payment_value: splitPaymentValue?.toString(),
-            split_payment_min_amount: splitPaymentMinAmount?.toString(),
-            split_payment_threshold_amount: splitPaymentThresholdAmount?.toString(),
-            split_payment_extras_type: splitPaymentExtrasType,
-            split_payment_extras_value: splitPaymentExtrasValue?.toString(),
-            split_payment_extras_in_car_type: splitPaymentExtrasInCarType,
-            split_payment_extras_in_car_value: splitPaymentExtrasInCarValue?.toString(),
-            split_payment_tolls_type: splitPaymentTollsType,
-            split_payment_tolls_value: splitPaymentTollsValue?.toString(),
-            split_payment_tips_type: splitPaymentTipsType,
-            split_payment_tips_value: splitPaymentTipsValue?.toString(),
+            ...settings,
         };
     }
     
-    // Add metadata if it exists
     if (booking.metadata && booking.metadata.length > 0) {
         payload.app_metadata = booking.metadata.reduce((acc, item) => {
-            if (item.key) { // Ensure key is not empty
-                acc[item.key] = item.value;
-            }
+            if (item.key) { acc[item.key] = item.value; }
             return acc;
         }, {} as Record<string, string>);
     }
 
-    // Add extras config if it exists
     if (booking.extras_config && booking.extras_config.length > 0) {
         payload.extras_config = booking.extras_config.map(extra => ({
             id: extra.extraId,
             quantity: extra.quantity,
         }));
     }
+    
+    if (booking.pobPayment) {
+        payload.pob_payment = 1;
+    }
 
-
-    // If there is nothing to update, just return the booking as is.
     if (Object.keys(payload).length === 0) {
-        console.log(`[updateBooking] No payment or metadata changes detected for booking ${booking.bookingServerId}. Skipping API call.`);
-        // Mimic the structure of a successful API call for consistency in the flow.
+        console.log(`[updateBooking] No changes detected for booking ${booking.bookingServerId}. Skipping API call.`);
         const existingBooking = await getBookingById(server, booking.bookingServerId);
         return { ...existingBooking, perma_id: booking.bookingServerId };
     }
 
-    // Extract phone number for the header
     const firstPickup = booking.stops.find(s => s.stopType === 'pickup');
     const defaultCountry = server.countryCodes?.[0]?.toUpperCase() as any;
     let phoneForHeader = '';
@@ -227,13 +225,9 @@ export async function updateBooking(server: ServerConfig, { booking, siteId, acc
         method: 'POST',
         endpoint: `bookings/update/${booking.bookingServerId}`,
         body: payload,
-        headers: {
-            phone: phoneForHeader,
-        }
+        headers: { phone: phoneForHeader }
     });
     
-    // The update response may not contain the full booking object, so we merge it
-    // with the perma_id for consistency in the journey flow.
     const permaId = response.body?.booking?.perma_id || booking.bookingServerId;
     const updatedBookingData = await getBookingById(server, permaId);
     

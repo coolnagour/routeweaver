@@ -66,7 +66,8 @@ const saveJourneyFlow = ai.defineFlow(
           // We only update it if it has been marked as modified on the client.
           if (booking.modified) {
             console.log(`[Journey Flow] Updating existing booking with server ID: ${booking.bookingServerId}`);
-            result = await updateBooking(server, { booking, siteId, accountId });
+            const originalBooking = originalBookingMap.get(booking.id);
+            result = await updateBooking(server, { booking, siteId, accountId, originalBooking });
             isUpdate = true;
           } else {
             console.log(`[Journey Flow] Skipping update for unchanged booking with server ID: ${booking.bookingServerId}. Fetching existing data.`);
