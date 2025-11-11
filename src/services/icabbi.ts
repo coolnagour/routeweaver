@@ -167,10 +167,13 @@ export async function updateBooking(server: ServerConfig, { booking, originalBoo
     const originalFirstPickup = originalStops.find(s => s.stopType === 'pickup');
     const updatedFirstPickup = updatedStops.find(s => s.stopType === 'pickup');
     
-    if (updatedFirstPickup?.dateTime?.getTime() !== originalFirstPickup?.dateTime?.getTime()) {
+    if (updatedFirstPickup?.dateTime?.getTime() !== new Date(originalFirstPickup?.dateTime || '').getTime()) {
         console.log(`[updateBooking] Date change detected.`);
-        payload.date = updatedFirstPickup!.dateTime!.toISOString();
+        if (updatedFirstPickup?.dateTime) {
+            payload.date = updatedFirstPickup.dateTime.toISOString();
+        }
     }
+
 
     if (typeof booking.price === 'number' || typeof booking.cost === 'number') {
         payload.payment = {
@@ -212,12 +215,12 @@ export async function updateBooking(server: ServerConfig, { booking, originalBoo
         return { ...existingBooking, perma_id: booking.bookingServerId };
     }
 
-    const firstPickup = booking.stops.find(s => s.stopType === 'pickup');
+    const firstPickupForHeader = booking.stops.find(s => s.stopType === 'pickup');
     const defaultCountry = server.countryCodes?.[0]?.toUpperCase() as any;
     let phoneForHeader = '';
 
-    if (firstPickup?.phone) {
-        const phoneNumber = parsePhoneNumberFromString(firstPickup.phone, defaultCountry);
+    if (firstPickupForHeader?.phone) {
+        const phoneNumber = parsePhoneNumberFromString(firstPickupForHeader.phone, defaultCountry);
         if (phoneNumber && phoneNumber.isValid()) {
             phoneForHeader = phoneNumber.number as string;
         }
