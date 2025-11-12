@@ -293,7 +293,7 @@ const GenkitStopSchema = z.object({
   location: LocationSchema.optional(),
   stopType: z.enum(['pickup', 'dropoff']),
   bookingSegmentId: z.number().optional(),
-  dateTime: z.union([z.date(), z.string()]).optional().transform(val => val instanceof Date ? val.toISOString() : val),
+  dateTime: z.string().datetime().optional(),
   name: z.string().optional(),
   phone: z.string().optional().refine(val => !val || e164Regex.test(val), {
     message: "Phone number must be in E.164 format (e.g., +15551234567).",

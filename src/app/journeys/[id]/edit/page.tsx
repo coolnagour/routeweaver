@@ -74,8 +74,16 @@ export default function EditJourneyPage() {
         }
     }
 
+    const bookingsForApi = (journeyToPublish.bookings || []).map(b => ({
+      ...b,
+      stops: b.stops.map(s => ({
+        ...s,
+        dateTime: s.dateTime ? new Date(s.dateTime).toISOString() : undefined
+      }))
+    }));
+
     const result = await saveJourney({ 
-      bookings: journeyToPublish.bookings || [], 
+      bookings: bookingsForApi, 
       server, 
       siteId: journeyToPublish.site!.id, 
       accountId: journeyToPublish.account!.id,
@@ -83,7 +91,10 @@ export default function EditJourneyPage() {
       price: journeyToPublish.price,
       cost: journeyToPublish.cost,
       enable_messaging_service: journeyToPublish.enable_messaging_service,
-      originalBookings: journey?.bookings,
+      originalBookings: journey?.bookings.map(b => ({
+        ...b,
+        stops: b.stops.map(s => ({...s, dateTime: s.dateTime ? new Date(s.dateTime).toISOString() : undefined}))
+      })),
     });
     
     await addOrUpdateJourney({

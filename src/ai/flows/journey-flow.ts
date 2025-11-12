@@ -50,7 +50,7 @@ const saveJourneyFlow = ai.defineFlow(
       ...b,
       stops: b.stops.map(s => ({
         ...s,
-        dateTime: s.dateTime && typeof s.dateTime === 'string' ? new Date(s.dateTime) : s.dateTime,
+        dateTime: s.dateTime ? new Date(s.dateTime) : undefined,
       }))
     }));
 
@@ -172,7 +172,10 @@ const saveJourneyFlow = ai.defineFlow(
         
         const finalOrderedStops = orderedStops.map(s => {
           const { parentBookingId, parentBookingServerId, ...stopRest } = s as any;
-          return stopRest;
+          return {
+            ...stopRest,
+            dateTime: stopRest.dateTime?.toISOString(),
+          };
         });
 
         return {

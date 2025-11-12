@@ -82,9 +82,17 @@ export default function NewJourneyPage() {
     };
     await addOrUpdateJourney(newJourney);
 
+    const bookingsForApi = (newJourney.bookings || []).map(b => ({
+      ...b,
+      stops: b.stops.map(s => ({
+        ...s,
+        dateTime: s.dateTime ? new Date(s.dateTime).toISOString() : undefined
+      }))
+    }));
+
     // Then, publish it
     const result = await saveJourney({ 
-      bookings: newJourney.bookings || [], 
+      bookings: bookingsForApi, 
       server, 
       siteId: newJourney.site!.id, 
       accountId: newJourney.account!.id,
