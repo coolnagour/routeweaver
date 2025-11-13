@@ -32,7 +32,7 @@ export async function callIcabbiApi({ server, method, endpoint, body, headers: c
     const bodyString = body ? JSON.stringify(body) : '';
     
     const headers = new Headers({
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json; charset=utf-8',
         'Authorization': 'Basic ' + Buffer.from(`${server.appKey}:${server.secretKey}`).toString('base64'),
         ...customHeaders, // Custom headers will override defaults
     });
@@ -167,7 +167,10 @@ export async function updateBooking(server: ServerConfig, { booking, originalBoo
     const originalFirstPickup = originalStops.find(s => s.stopType === 'pickup');
     const updatedFirstPickup = updatedStops.find(s => s.stopType === 'pickup');
     
-    if (updatedFirstPickup?.dateTime?.getTime() !== new Date(originalFirstPickup?.dateTime || '').getTime()) {
+    const originalTime = originalFirstPickup?.dateTime ? new Date(originalFirstPickup.dateTime).getTime() : 0;
+    const updatedTime = updatedFirstPickup?.dateTime ? new Date(updatedFirstPickup.dateTime).getTime() : 0;
+    
+    if (updatedTime !== originalTime) {
         console.log(`[updateBooking] Date change detected.`);
         if (updatedFirstPickup?.dateTime) {
             payload.date = updatedFirstPickup.dateTime.toISOString();
