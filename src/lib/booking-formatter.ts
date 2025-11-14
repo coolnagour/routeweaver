@@ -122,7 +122,7 @@ export const formatBookingForApi = ({ booking, server, siteId, accountId }: Book
         const { splitPaymentEnabled, splitPaymentBasedOn, splitPaymentType, splitPaymentValue, splitPaymentMinAmount, splitPaymentThresholdAmount, splitPaymentExtrasType, splitPaymentExtrasValue, splitPaymentExtrasInCarType, splitPaymentExtrasInCarValue, splitPaymentTollsType, splitPaymentTollsValue, splitPaymentTipsType, splitPaymentTipsValue } = booking.splitPaymentSettings;
         payload.split_payment_settings = {
             split_payment_enabled: 1,
-            split_payment_based_on: splitPaymentBasedOn,
+            split_payment_based: splitPaymentBasedOn,
             split_payment_type: splitPaymentType,
             split_payment_value: splitPaymentValue?.toString(),
             split_payment_min_amount: splitPaymentMinAmount?.toString(),
