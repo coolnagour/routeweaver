@@ -144,9 +144,20 @@ function JourneyFormInner({
 
         const debugBookingPayloads = generateDebugBookingPayloads(currentBookings, server, currentJourney.site || undefined, currentJourney.account || undefined);
 
+        // When displaying on the map, we need to adjust the index if a "Hold On" booking exists.
+        const nonHoldOnBookings = currentBookings.filter(b => !b.holdOn);
+        const hasHoldOn = currentBookings.length > nonHoldOnBookings.length;
+
         const stopsWithBookingIndex = orderedStops.map(stop => {
             const parentBooking = currentBookings.find(b => b.id === (stop as any).parentBookingId);
-            const bookingIndex = parentBooking?.holdOn ? -1 : currentBookings.findIndex(b => b.id === parentBooking?.id);
+            
+            // If the parent is a Hold On booking, its index is irrelevant for display (-1).
+            if (parentBooking?.holdOn) {
+              return { ...stop, bookingIndex: -1 };
+            }
+            
+            // For regular bookings, find their index within the *filtered* list of non-hold-on bookings.
+            const bookingIndex = nonHoldOnBookings.findIndex(b => b.id === parentBooking?.id);
             return { ...stop, bookingIndex };
         });
 
