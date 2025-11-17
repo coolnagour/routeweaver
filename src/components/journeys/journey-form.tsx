@@ -145,7 +145,8 @@ function JourneyFormInner({
         const debugBookingPayloads = generateDebugBookingPayloads(currentBookings, server, currentJourney.site || undefined, currentJourney.account || undefined);
 
         const stopsWithBookingIndex = orderedStops.map(stop => {
-            const bookingIndex = currentBookings.findIndex(b => b.id === (stop as any).parentBookingId);
+            const parentBooking = currentBookings.find(b => b.id === (stop as any).parentBookingId);
+            const bookingIndex = parentBooking?.holdOn ? -1 : currentBookings.findIndex(b => b.id === parentBooking?.id);
             return { ...stop, bookingIndex };
         });
 
@@ -236,7 +237,15 @@ function JourneyFormInner({
 
     setIsSubmitting(true);
     try {
-        await onPublish(journeyData as Journey | JourneyTemplate);
+        const bookingsForApi = (journeyData.bookings || []).map(b => ({
+          ...b,
+          stops: b.stops.map(s => ({
+            ...s,
+            dateTime: s.dateTime ? new Date(s.dateTime).toISOString() : undefined
+          }))
+        }));
+
+        await onPublish({ ...journeyData, bookings: bookingsForApi } as Journey | JourneyTemplate);
       } catch (error) {
         console.error("Failed to publish journey:", error);
         toast({
