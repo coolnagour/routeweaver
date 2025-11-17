@@ -264,7 +264,7 @@ export default function JourneyMap({ stops, onLocationSelect, isSelectionMode = 
     </div>
   );
 
-  const validStops = stops.filter(stop => 
+  const validStops = stops.map((stop, i) => ({...stop, bookingIndex: stop.bookingIndex ?? i})).filter(stop => 
     stop.location && 
     typeof stop.location.lat === 'number' && 
     typeof stop.location.lng === 'number' &&

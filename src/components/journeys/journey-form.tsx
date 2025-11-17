@@ -39,7 +39,7 @@ interface JourneyFormProps {
 }
 
 interface JourneyPreviewState {
-  orderedStops: (Stop & { parentBookingId?: string })[];
+  orderedStops: (Stop & { parentBookingId?: string, bookingIndex?: number })[];
   journeyPayload: any | null;
   bookings: Booking[];
   bookingPayloads: any[];
@@ -144,7 +144,12 @@ function JourneyFormInner({
 
         const debugBookingPayloads = generateDebugBookingPayloads(currentBookings, server, currentJourney.site || undefined, currentJourney.account || undefined);
 
-        setJourneyPreview({ orderedStops, journeyPayload, isLoading: false, bookings: currentBookings, bookingPayloads: debugBookingPayloads });
+        const stopsWithBookingIndex = orderedStops.map(stop => {
+            const bookingIndex = currentBookings.findIndex(b => b.id === (stop as any).parentBookingId);
+            return { ...stop, bookingIndex };
+        });
+
+        setJourneyPreview({ orderedStops: stopsWithBookingIndex, journeyPayload, isLoading: false, bookings: currentBookings, bookingPayloads: debugBookingPayloads });
     } catch (e) {
         console.error("Error generating journey preview:", e);
         setJourneyPreview({ orderedStops: [], journeyPayload: null, isLoading: false, bookings: currentBookings, bookingPayloads: [] });
