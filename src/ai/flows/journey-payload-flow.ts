@@ -41,7 +41,7 @@ type StopWithParent = Stop & { parentBookingId: string, parentBookingServerId?: 
 export async function generateJourneyPayload(input: JourneyPayloadInput): Promise<JourneyPayloadOutput & { orderedStops: StopWithParent[] }> {
     const { bookings, journeyServerId, enable_messaging_service } = input;
     
-    // Separate "Hold On" bookings from regular bookings
+    // Per rules, there can be only one "Hold On" booking, and it should be first.
     const holdOnBooking = bookings.find(b => b.holdOn);
     const regularBookings = bookings.filter(b => !b.holdOn);
     
