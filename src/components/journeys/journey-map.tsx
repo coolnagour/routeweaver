@@ -301,24 +301,25 @@ export default function JourneyMap({ stops, onLocationSelect, isSelectionMode = 
     const firstStop = stops[0];
     const color = getBookingColor(firstStop.parentBookingId || '');
     
-    // Label is the sequential index of the unique location group
-    const label = (groupIndex + 1).toString();
-    
-    let badgeContent = stops.length.toString();
+    // The main circle label shows P/D and booking index
+    let mainLabel = stops.length.toString();
     if (stops.length === 1) {
         const stopTypeChar = firstStop.stopType === 'pickup' ? 'P' : 'D';
         const bookingIndex = typeof firstStop.bookingIndex === 'number' ? firstStop.bookingIndex + 1 : '';
-        badgeContent = `${stopTypeChar}${bookingIndex}`;
+        mainLabel = `${stopTypeChar}${bookingIndex}`;
     }
+
+    // The small badge shows the sequential index of the unique location group
+    const badgeContent = (groupIndex + 1).toString();
 
     const svg = `
     <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
       <circle cx="20" cy="20" r="16" fill="${color}" stroke="white" stroke-width="2"/>
-      <text x="20" y="22" font-family="Arial, sans-serif" font-size="12" fill="white" text-anchor="middle" dominant-baseline="middle" font-weight="bold">
-        ${label}
+      <text x="20" y="22" font-family="Arial, sans-serif" font-size="${mainLabel.length > 2 ? '10' : '12'}" fill="white" text-anchor="middle" dominant-baseline="middle" font-weight="bold">
+        ${mainLabel}
       </text>
       <circle cx="32" cy="8" r="7" fill="${stops.length > 1 ? '#4A5568' : color}" stroke="white" stroke-width="1.5"/>
-      <text x="32" y="9" font-family="Arial, sans-serif" font-size="${badgeContent.length > 2 ? '7' : '9'}" fill="white" text-anchor="middle" dominant-baseline="middle" font-weight="bold">
+      <text x="32" y="9" font-family="Arial, sans-serif" font-size="9" fill="white" text-anchor="middle" dominant-baseline="middle" font-weight="bold">
         ${badgeContent}
       </text>
     </svg>`;
