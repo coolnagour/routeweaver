@@ -87,6 +87,7 @@ function JourneyFormInner({
     const initialBookings = JSON.parse(JSON.stringify(data.bookings || [])).map((b: any) => ({
       ...b,
       id: b.id || uuidv4(),
+      selected: b.selected ?? true, // Default to selected if not specified (for templates)
       stops: b.stops.map((s: any, index: number) => ({
         ...s,
         id: s.id || uuidv4(),
@@ -246,8 +247,16 @@ function JourneyFormInner({
         return;
     }
 
+    // Check that at least one booking is selected
+    const selectedBookings = (journeyData.bookings || []).filter(b => b.selected !== false);
+    if (selectedBookings.length === 0) {
+        toast({ variant: 'destructive', title: 'No Bookings Selected', description: 'Please select at least one booking to publish.' });
+        return;
+    }
+
     setIsSubmitting(true);
     try {
+        // Send ALL bookings to parent - parent will filter selected ones for API
         const bookingsForApi = (journeyData.bookings || []).map(b => ({
           ...b,
           stops: b.stops.map(s => ({

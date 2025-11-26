@@ -2,12 +2,13 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import type { Booking, Stop, Location, AccountField } from '@/types';
 import BookingForm from './booking-form';
-import { Edit, MapPin, Package, Trash2, UserPlus, Users, Phone, Clock, MessageSquare, Info, Loader2, MoreHorizontal } from 'lucide-react';
+import { Edit, MapPin, Package, Trash2, UserPlus, Users, Phone, Clock, MessageSquare, Info, Loader2, MoreHorizontal, CheckSquare, Square } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { format } from 'date-fns';
 import { useServer } from '@/context/server-context';
@@ -68,10 +69,28 @@ function BookingManager({
         { id: uuidv4(), order: 1, location: emptyLocation, stopType: 'dropoff', pickupStopId: newPickupStopId, instructions: '' }
       ],
       holdOn: false,
+      selected: true, // New bookings are selected by default
     };
     setBookings([...bookings, newBooking]);
     setEditingBooking(newBooking);
     setIsNewBooking(true);
+  };
+
+  const handleToggleSelected = (bookingId: string) => {
+    const newBookings = bookings.map(b =>
+      b.id === bookingId ? { ...b, selected: !b.selected } : b
+    );
+    setBookings(newBookings);
+  };
+
+  const handleSelectAll = () => {
+    const newBookings = bookings.map(b => ({ ...b, selected: true }));
+    setBookings(newBookings);
+  };
+
+  const handleDeselectAll = () => {
+    const newBookings = bookings.map(b => ({ ...b, selected: false }));
+    setBookings(newBookings);
   };
   
   const handleEditBooking = (bookingId: string) => {
@@ -203,6 +222,9 @@ function BookingManager({
   }
   
   const hasHoldOnBooking = bookings.some(b => b.holdOn);
+  const selectedCount = bookings.filter(b => b.selected !== false).length; // Treat undefined as selected (backwards compatibility)
+  const allSelected = bookings.length > 0 && selectedCount === bookings.length;
+  const noneSelected = selectedCount === 0;
   const currentStatus = liveStatus?.status;
   const isArriveEnabled = currentStatus === 'ENROUTE';
   const isMadeContactEnabled = currentStatus === 'ARRIVED';
@@ -236,6 +258,12 @@ function BookingManager({
         </div>
         <CardDescription>
           {bookings.length > 0 ? `This journey has ${bookings.length} booking(s) and ${getTotalPassengers(bookings)} passenger(s).` : 'Click "Add New Booking" to get started.'}
+          {bookings.length > 0 && (
+            <span className="text-xs text-primary flex items-center gap-1 mt-1">
+                <CheckSquare className="h-3 w-3" />
+                {selectedCount} of {bookings.length} booking(s) selected for publishing
+            </span>
+          )}
           {isJourneyPriceSet && (
             <span className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                 <Info className="h-3 w-3" />
@@ -243,17 +271,35 @@ function BookingManager({
             </span>
           )}
         </CardDescription>
+        {bookings.length > 1 && (
+          <div className="flex gap-2 mt-2">
+            <Button variant="outline" size="sm" onClick={handleSelectAll} disabled={allSelected}>
+              <CheckSquare className="mr-2 h-4 w-4" /> Select All
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleDeselectAll} disabled={noneSelected}>
+              <Square className="mr-2 h-4 w-4" /> Deselect All
+            </Button>
+          </div>
+        )}
       </CardHeader>
       <CardContent className="space-y-3">
         {bookings.length > 0 ? (
           bookings.map(booking => {
               if (booking.holdOn) {
+                  const isSelected = booking.selected !== false;
                   return (
-                    <Card key={booking.id} className="p-3">
+                    <Card key={booking.id} className={`p-3 ${!isSelected ? 'opacity-50' : ''}`}>
                         <div className="flex justify-between items-start">
-                             <div className="space-y-2 flex-1">
-                                <p className="font-semibold text-primary">Hold On Booking</p>
-                                <p className="text-sm text-muted-foreground flex items-center gap-2"><Info className="h-4 w-4" />This special booking will wrap the journey.</p>
+                             <div className="flex items-start gap-3 flex-1">
+                                <Checkbox
+                                  checked={isSelected}
+                                  onCheckedChange={() => handleToggleSelected(booking.id)}
+                                  className="mt-1"
+                                />
+                                <div className="space-y-2 flex-1">
+                                  <p className="font-semibold text-primary">Hold On Booking</p>
+                                  <p className="text-sm text-muted-foreground flex items-center gap-2"><Info className="h-4 w-4" />This special booking will wrap the journey.</p>
+                                </div>
                              </div>
                               <div className="flex items-center">
                                   {booking.bookingServerId && (
@@ -316,13 +362,20 @@ function BookingManager({
               }
               const pickups = getPassengersFromStops(booking.stops);
               const bookingDateTime = getBookingDateTime(booking);
+              const isSelected = booking.selected !== false;
               return (
-                  <Card key={booking.id} className="p-3">
+                  <Card key={booking.id} className={`p-3 ${!isSelected ? 'opacity-50' : ''}`}>
                       <div className="flex justify-between items-start">
-                      <div className="space-y-2 flex-1">
-                          {booking.bookingServerId && <p className="font-semibold">Booking ID: {booking.bookingServerId}</p>}
-                          {bookingDateTime ? <p className="font-semibold text-primary">{format(new Date(bookingDateTime), 'PPP p')}</p> : <p className="font-semibold text-primary">ASAP</p>}
-                          <p className="text-sm text-muted-foreground flex items-center gap-2"><Users className="h-4 w-4" />{pickups.length} passenger(s)</p>
+                      <div className="flex items-start gap-3 flex-1">
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={() => handleToggleSelected(booking.id)}
+                            className="mt-1"
+                          />
+                          <div className="space-y-2 flex-1">
+                            {booking.bookingServerId && <p className="font-semibold">Booking ID: {booking.bookingServerId}</p>}
+                            {bookingDateTime ? <p className="font-semibold text-primary">{format(new Date(bookingDateTime), 'PPP p')}</p> : <p className="font-semibold text-primary">ASAP</p>}
+                            <p className="text-sm text-muted-foreground flex items-center gap-2"><Users className="h-4 w-4" />{pickups.length} passenger(s)</p>
                           
                           {[...booking.stops].sort((a, b) => a.order - b.order).map(stop => {
                               const isPickup = stop.stopType === 'pickup';
@@ -357,6 +410,7 @@ function BookingManager({
                                   </div>
                               );
                           })}
+                          </div>
                       </div>
                       <div className="flex items-center">
                           {booking.bookingServerId && (

@@ -72,8 +72,13 @@ export default function NewJourneyPage() {
       router.push('/');
       return;
     }
-    
-    // First, save a local draft
+
+    const allBookings = journeyData.bookings || [];
+    // Filter only selected bookings for publishing (treat undefined as selected)
+    const selectedBookings = allBookings.filter(b => b.selected !== false);
+    const unselectedBookings = allBookings.filter(b => b.selected === false);
+
+    // First, save a local draft with ALL bookings
     const newJourney: Journey = {
       id: uuidv4(),
       serverScope: server.uuid,
@@ -82,7 +87,8 @@ export default function NewJourneyPage() {
     };
     await addOrUpdateJourney(newJourney);
 
-    const bookingsForApi = (newJourney.bookings || []).map(b => ({
+    // Only send selected bookings to the API
+    const bookingsForApi = selectedBookings.map(b => ({
       ...b,
       stops: b.stops.map(s => ({
         ...s,
@@ -90,31 +96,46 @@ export default function NewJourneyPage() {
       }))
     }));
 
-    // Then, publish it
-    const result = await saveJourney({ 
-      bookings: bookingsForApi, 
-      server, 
-      siteId: newJourney.site!.id, 
+    // Then, publish only selected bookings
+    const result = await saveJourney({
+      bookings: bookingsForApi,
+      server,
+      siteId: newJourney.site!.id,
       accountId: newJourney.account!.id,
       price: newJourney.price,
       cost: newJourney.cost,
       enable_messaging_service: newJourney.enable_messaging_service,
     });
-    
-    // Finally, update the local record with server info
+
+    // Convert dateTime strings back to Date objects for published bookings
+    const publishedBookingsWithDates = result.bookings.map(b => ({
+      ...b,
+      stops: b.stops.map(s => ({
+        ...s,
+        dateTime: s.dateTime ? new Date(s.dateTime) : undefined
+      }))
+    }));
+
+    // Merge published bookings with unselected bookings (keep unselected for future publishing)
+    const mergedBookings = [...publishedBookingsWithDates, ...unselectedBookings];
+
+    // Finally, update the local record with server info and ALL bookings
     await addOrUpdateJourney({
         ...newJourney,
-        bookings: result.bookings,
+        bookings: mergedBookings,
         status: 'Scheduled',
         journeyServerId: result.journeyServerId,
-        orderedStops: result.orderedStops,
+        orderedStops: result.orderedStops.map(s => ({
+          ...s,
+          dateTime: s.dateTime ? new Date(s.dateTime) : undefined
+        })),
     });
 
     toast({
       title: 'Journey Published!',
       description: result.message,
     });
-    
+
     router.push(`/journeys/${newJourney.id}/edit`);
   };
 

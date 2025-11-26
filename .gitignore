@@ -45,3 +45,8 @@ firebase-debug.log
 firestore-debug.log
 
 service-account-key.json
+gcloud/
+
+# google maps cache and debug
+.cache/
+.debug/

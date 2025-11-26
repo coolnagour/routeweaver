@@ -60,7 +60,7 @@ export default function EditJourneyPage() {
       router.push('/');
       return;
     }
-    
+
     // Check if the journey already has a server ID and is completed.
     if (journeyToPublish.journeyServerId) {
         const journeyStatus = await getJourneyById(server, journeyToPublish.journeyServerId);
@@ -74,7 +74,13 @@ export default function EditJourneyPage() {
         }
     }
 
-    const bookingsForApi = (journeyToPublish.bookings || []).map(b => ({
+    const allBookings = journeyToPublish.bookings || [];
+    // Filter only selected bookings for publishing (treat undefined as selected)
+    const selectedBookings = allBookings.filter(b => b.selected !== false);
+    const unselectedBookings = allBookings.filter(b => b.selected === false);
+
+    // Only send selected bookings to the API
+    const bookingsForApi = selectedBookings.map(b => ({
       ...b,
       stops: b.stops.map(s => ({
         ...s,
@@ -82,27 +88,42 @@ export default function EditJourneyPage() {
       }))
     }));
 
-    const result = await saveJourney({ 
-      bookings: bookingsForApi, 
-      server, 
-      siteId: journeyToPublish.site!.id, 
+    const result = await saveJourney({
+      bookings: bookingsForApi,
+      server,
+      siteId: journeyToPublish.site!.id,
       accountId: journeyToPublish.account!.id,
-      journeyServerId: journeyToPublish.journeyServerId, 
+      journeyServerId: journeyToPublish.journeyServerId,
       price: journeyToPublish.price,
       cost: journeyToPublish.cost,
       enable_messaging_service: journeyToPublish.enable_messaging_service,
-      originalBookings: journey?.bookings.map(b => ({
+      originalBookings: journey?.bookings.filter(b => b.selected !== false).map(b => ({
         ...b,
         stops: b.stops.map(s => ({...s, dateTime: s.dateTime ? new Date(s.dateTime).toISOString() : undefined}))
       })),
     });
-    
+
+    // Convert dateTime strings back to Date objects for published bookings
+    const publishedBookingsWithDates = result.bookings.map(b => ({
+      ...b,
+      stops: b.stops.map(s => ({
+        ...s,
+        dateTime: s.dateTime ? new Date(s.dateTime) : undefined
+      }))
+    }));
+
+    // Merge published bookings with unselected bookings (keep unselected for future publishing)
+    const mergedBookings = [...publishedBookingsWithDates, ...unselectedBookings];
+
     await addOrUpdateJourney({
         ...(journeyToPublish as Journey),
-        bookings: result.bookings,
+        bookings: mergedBookings,
         status: 'Scheduled',
         journeyServerId: result.journeyServerId,
-        orderedStops: result.orderedStops,
+        orderedStops: result.orderedStops.map(s => ({
+          ...s,
+          dateTime: s.dateTime ? new Date(s.dateTime) : undefined
+        })),
     });
 
     toast({

@@ -112,6 +112,7 @@ export const BookingSchema = z.object({
   fields: z.array(AccountFieldDataSchema).optional(),
   extras_config: z.array(BookingExtraSchema).optional(),
   modified: z.boolean().optional(),
+  selected: z.boolean().optional(), // Whether this booking is selected for publishing
 });
 export type Booking = z.infer<typeof BookingSchema>;
 
