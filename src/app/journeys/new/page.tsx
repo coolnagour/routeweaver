@@ -52,12 +52,12 @@ export default function NewJourneyPage() {
     }
 
     const newJourney: Journey = {
+      ...journeyData,
       id: uuidv4(),
       serverScope: server.uuid,
       status: 'Draft',
-      ...journeyData,
     };
-    
+
     await addOrUpdateJourney(newJourney);
     toast({
       title: 'Journey Saved!',
@@ -67,7 +67,7 @@ export default function NewJourneyPage() {
   };
 
   const handlePublish = async (journeyData: Journey | JourneyTemplate) => {
-     if (!server) {
+     if (!server?.uuid) {
       toast({ variant: 'destructive', title: 'No Server Selected' });
       router.push('/');
       return;
@@ -80,10 +80,10 @@ export default function NewJourneyPage() {
 
     // First, save a local draft with ALL bookings
     const newJourney: Journey = {
+      ...journeyData,
       id: uuidv4(),
       serverScope: server.uuid,
       status: 'Draft',
-      ...journeyData,
     };
     await addOrUpdateJourney(newJourney);
 
