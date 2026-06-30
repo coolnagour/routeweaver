@@ -2,6 +2,7 @@
 
 import type { Booking, ServerConfig } from "@/types";
 import parsePhoneNumberFromString, { getCountryCallingCode } from 'libphonenumber-js';
+import { normalizeCountryCode } from "./utils";
 
 /**
  * @fileOverview A shared utility to format booking data for the API.
@@ -42,7 +43,7 @@ export const formatBookingForApi = ({ booking, server, siteId, accountId }: Book
     const lastStop = sortedStops[sortedStops.length - 1];
     const viaStops = sortedStops.slice(1, -1);
     
-    const defaultCountry = server.countryCodes?.[0]?.toUpperCase() as any;
+    const defaultCountry = normalizeCountryCode(server.countryCodes?.[0]) as any;
     
     // Determine the destination address. If it's a regular booking and the last stop address is missing, default to "As Directed".
     const destinationAddress = booking.holdOn || !lastStop.location?.address

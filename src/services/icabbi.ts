@@ -5,6 +5,7 @@
 import type { ServerConfig } from "@/types";
 import type { Booking, Account, Site, AccountField, Extra, Stop } from "@/types";
 import { formatBookingForApi } from "@/lib/booking-formatter";
+import { normalizeCountryCode } from "@/lib/utils";
 import parsePhoneNumberFromString, { getCountryCallingCode } from 'libphonenumber-js';
 
 
@@ -219,7 +220,7 @@ export async function updateBooking(server: ServerConfig, { booking, originalBoo
     }
 
     const firstPickupForHeader = booking.stops.find(s => s.stopType === 'pickup');
-    const defaultCountry = server.countryCodes?.[0]?.toUpperCase() as any;
+    const defaultCountry = normalizeCountryCode(server.countryCodes?.[0]) as any;
     let phoneForHeader = '';
 
     if (firstPickupForHeader?.phone) {
@@ -250,7 +251,7 @@ export async function updateBooking(server: ServerConfig, { booking, originalBoo
 
 
 export async function getBookingById(server: ServerConfig, permaId: number) {
-    const defaultCountry = server.countryCodes?.[0]?.toUpperCase() as any;
+    const defaultCountry = normalizeCountryCode(server.countryCodes?.[0]) as any;
     const countryCode = getCountryCallingCode(defaultCountry);
     const placeholderPhone = `+${countryCode}0000000000`.slice(0, 15);
 
